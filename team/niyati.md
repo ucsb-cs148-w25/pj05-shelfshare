@@ -1,0 +1,1 @@
+Hello! My name is Niyati I am a 4th year Computer Science Major. I think we could make our app similar to a social media style. For example, a driver can post where they are headed and there could be a thread of people who might want a ride from that person. We could have a filter feature that can filters posts to locations of where the ride starts and ends.
