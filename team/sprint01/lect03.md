@@ -5,13 +5,13 @@ Daily Scrum
 
 ### Attendance: 
 
-- [] Hannah Shakouri (Meeting's Scribe)
-- [] Charlene Patenaude
-- [] Bella Ward 
-- [] Sungchae Park
-- [] Towela Phiri
-- [] Niyati Mummidivarapu
-- [] Srinidhi Sathish
+- [X] Hannah Shakouri (Meeting's Scribe)
+- [X] Charlene Patenaude
+- [X] Bella Ward 
+- [X] Sungchae Park
+- [X] Towela Phiri
+- [X] Niyati Mummidivarapu
+- [X] Srinidhi Sathish
 
 
 ### Notes:
