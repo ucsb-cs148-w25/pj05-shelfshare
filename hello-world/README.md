@@ -26,3 +26,16 @@ Or open [http://localhost:3000](http://localhost:3000).
 Production: https://hello-world-fzvfwqh5m-bellas-projects-97b69602.vercel.app/
 
 Inspect: https://vercel.com/bellas-projects-97b69602/hello-world/GEAowgMmirVLe79UpozKixVZEXHW
+
+
+## Deploy Instructions
+
+Install Vercel CLI:
+```bash
+npm install -g vercel
+```
+ Deploy:
+ ```bash
+vercel
+```
+
