@@ -23,6 +23,6 @@ Or open [http://localhost:3000](http://localhost:3000).
 
 ## Deployed on Vercel
 
-https://hello-world-fzvfwqh5m-bellas-projects-97b69602.vercel.app/
+Production: https://hello-world-fzvfwqh5m-bellas-projects-97b69602.vercel.app/
 
-Inspect
+Inspect: https://vercel.com/bellas-projects-97b69602/hello-world/GEAowgMmirVLe79UpozKixVZEXHW
