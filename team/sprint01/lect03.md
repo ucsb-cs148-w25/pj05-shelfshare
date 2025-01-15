@@ -18,7 +18,7 @@ Daily Scrum
 * Finished problem scenario and User Journey
 * Made the Kanban Board
 * Everyone is working on Hello world project, some memebers have trouble deploying it.
-* Hannah, Niyati, Bella, Sungchae, and Towella are done with the lab.
+* Everyone is done with lab01.
 
 
 ### Future Meetings:
