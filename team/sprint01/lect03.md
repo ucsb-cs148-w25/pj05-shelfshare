@@ -1,26 +1,25 @@
-# Team Meeting 3: Lecture4, 01/15
+# Team Meeting 2: Lecture03, 01/13
 
 ### Type of Meeting
 Daily Scrum
 
 ### Attendance: 
+* Hannah Shakouri (Meeting's Scribe) [x]
+* Charlene Patenaude [x]
+* Bella Ward [x]
+* Sungchae Park [x]
+* Towela Phiri [x]
+* Niyati Mummidivarapu [x]
+* Srinidhi Sathish [x]
 
-- [X] Hannah Shakouri (Meeting's Scribe)
-- [X] Charlene Patenaude
-- [X] Bella Ward 
-- [X] Sungchae Park
-- [X] Towela Phiri
-- [X] Niyati Mummidivarapu
-- [X] Srinidhi Sathish
 
-
-### Notes:
-* Finished problem scenario and User Journey
-* Made the Kanban Board
-* Everyone is working on Hello world project, some memebers have trouble deploying it.
-* Everyone is done with lab01.
+### Scribed Discussion:
+* Updating problem scenario
+* Merging the team.md 
+* All members started with the HelloWorld, we are trying different platforms
 
 
 ### Future Meetings:
+* Wednesday Lecture
 * Friday Section
 * Friday between 2-3:30 (meetings outside of class time)
