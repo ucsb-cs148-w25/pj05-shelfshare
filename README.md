@@ -5,6 +5,9 @@ Our team is developing ShelfShare, which is a social platform for media enthusia
 ## Tech Stack
 We’re using a modern tech stack to build our web app, focusing on simplicity, performance, and a great user experience. Our frontend is built with React and Next.js. On the backend, we’re using Firebase for authentication, real-time database management, and serverless functions. For styling, we chose Tailwind CSS, which makes it easy to create a clean, consistent, and responsive design. This stack helps us work efficiently while delivering a high-quality web app.
 
+## User Roles
+The General User role represents the core audience of ShelfShare—media enthusiasts who want to connect, explore, and share their love for books, movies, and albums. These users can create a profile, rate and review media, build collections, and explore personalized recommendations tailored to their interests. They can also engage with the community by liking, commenting, sharing reviews, and following other users to stay connected.
+
 
 ## Team Members
 | Name        | Github ID   |
