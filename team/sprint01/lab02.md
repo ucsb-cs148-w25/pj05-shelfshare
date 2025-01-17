@@ -11,7 +11,9 @@
 Absent: Hannah Shakouri (Inforemed group beforehand and participated in discussion virtually)
 
 ### Notes:
-* 
+* Went over preliminary UI designs and app flow
+* Started discussions on how work should be divided
+* Starting Kanban Board
 
 ### Future Meetings:
 * Lectures
