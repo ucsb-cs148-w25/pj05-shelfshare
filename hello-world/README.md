@@ -23,9 +23,9 @@ Or open [http://localhost:3000](http://localhost:3000).
 
 ## Deployed on Vercel
 
-Production: [https://hello-world-fzvfwqh5m-bellas-projects-97b69602.vercel.app/](https://hello-world-91atmmdx0-charlenes-projects-20e629cb.vercel.app/)
+Production: (https://hello-world-91atmmdx0-charlenes-projects-20e629cb.vercel.app/)
 
-Inspect: [https://vercel.com/bellas-projects-97b69602/hello-world/GEAowgMmirVLe79UpozKixVZEXHW](https://vercel.com/charlenes-projects-20e629cb/hello-world/3gDAKkcmBsYXEoRpop1brvfuGtpq)
+Inspect: (https://vercel.com/charlenes-projects-20e629cb/hello-world/3gDAKkcmBsYXEoRpop1brvfuGtpq)
 
 
 ## Deploy Instructions
