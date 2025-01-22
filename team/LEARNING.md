@@ -24,7 +24,10 @@
 * Java
 
 ### Towela Phiri:
-* 
+* React
+* Java
+* Javascript
+* HTML
 
 ### Sungchae Park:
 * React
