@@ -1,4 +1,4 @@
-# Team Meeting 5: Lecture04, 01/22
+# Team Meeting 6: Lecture04, 01/22
 
 ### Type of Meeting
 Daily Scrum
