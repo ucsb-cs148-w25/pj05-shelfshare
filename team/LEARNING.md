@@ -1,11 +1,5 @@
 # Team Background
 
-### Emily Thai:
-* React
-* Javascript
-* CSS
-* HTML
-* Java
   
 ### Hannah Shakouri:
 * React
@@ -36,3 +30,6 @@
 * React
 * Java
 * Javascript
+
+### Srinidhi Sathish:
+*
