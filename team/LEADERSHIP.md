@@ -13,6 +13,9 @@
 # Roles
 
 Scrum Master: Towela Phiri
+
 Project Owner: Srinidhi Sathish
+
 Scribe: Hannah Shakouri
+
 Retro Leader (Sprint01): Bella Ward
