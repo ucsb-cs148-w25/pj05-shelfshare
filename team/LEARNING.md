@@ -33,4 +33,6 @@
 * 
 
 ### Sungchae Park:
-* 
+* React
+* Java
+* Javascript
