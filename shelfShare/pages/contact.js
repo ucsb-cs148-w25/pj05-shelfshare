@@ -1,6 +1,6 @@
 // pages/contact.js
 
-import Layout from '@/Components/Layout'
+import Layout from '@/components/Layout'
 import React from 'react'
 
 const Contact = () => {

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import 'bootstrap/dist/css/bootstrap.min.css';
+//import 'bootstrap/dist/css/bootstrap.min.css';
 
 const Navbar = () => {
     return (
@@ -23,7 +23,7 @@ const Navbar = () => {
                                 <Link href="/about"
                                     className="nav-item nav-link 
                                                  text-light">
-                                    Abou
+                                    About
                                 </Link>
                             </li>
                             <li className="nav-item">
