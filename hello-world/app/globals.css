@@ -14,6 +14,78 @@
   }
 }
 
+.background-login {
+  background-image: url('/login_page.png');
+  background-color: #A5D6A7;
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.background-profile {
+  background-image: url('/profile-page.png');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+
+.input_position_username {
+  position: relative;
+  left: -20px;
+  width: 365px;
+  top: 0.5%;
+  padding: 10px;
+}
+
+.input_position_password {
+  position: relative;
+  left: -20px;
+  width: 365px;
+  top: 3%;
+  /* border: 3px solid #73AD21; */
+  padding: 10px;
+}
+
+.button-position {
+  position: relative;
+  left: -10px;
+  top: 20%;
+}
+
+.profile-image {
+  position: relative;
+  left: -32%;
+  top: 18%;
+  width: 20%;  
+  height: 30%;
+}
+
+.text-color {
+  color: #847266;
+}
+
+.text-location1 {
+  position: relative;
+  left: -1%;
+  top: -80;
+  width: 20%;
+  height: 10%;
+}
+
+.text-location2 {
+  position: relative;
+  left: -1%;
+  top: 9%;
+  width: 20%;
+  height: 30%;
+}
+
+
+
+
+
+
 body {
   color: var(--foreground);
   background: var(--background);

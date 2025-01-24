@@ -1,3 +1,5 @@
+
+
 export default function Login() {
   return (
     <div className="flex flex-col justify-center items-center h-screen background-login bg-no-repeat bg-center bg-contain">
@@ -19,4 +21,4 @@ export default function Login() {
 
   );
 }
-
+  
