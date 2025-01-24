@@ -2,7 +2,7 @@ import React from "react";
 
 export default function UserLists() {
   return (
-    <div className="bg-[#5b7463] h-screen flex flex-col items-center justify-center">
+    <div className="bg-[#5A7463] h-screen flex flex-col items-center justify-center">
       {/* Spacer for navbar */}
       <div className="h-1/10"></div> {/* Reduced spacer height */}
 
