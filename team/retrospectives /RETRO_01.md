@@ -44,7 +44,10 @@ have a clear vision for both backend and frontend to make sure everyone is on a 
 
 
 ## Retro Assessment
-The team agreed that improving the PR process is critical to our success. Clear documentation, timely reviews, and better communication during and outside of meetings will strengthen our workflow.
+- The team agreed that improving the PR process is critical to our success. Clear documentation, timely reviews, and better communication during and outside of meetings will strengthen our workflow.
+- The retro went well. There were gaps in conversation but I think it was due to not having enough work done yet to comment on. I woudll say it went well, everyone listened respectfully to others.
+- I would advise the next retro leader to talk more about the goal and get everyone's input on the goal to ensure everyone is on the same page.
+
 
 ## Retro Records
 This retro will be referenced as the starting point for our focus on PR improvements. Follow up retrospectives will assess progress and identify further areas for growth.
