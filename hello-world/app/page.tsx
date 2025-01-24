@@ -1,36 +1,11 @@
-import React from "react";
-
-export default function UserLists() {
+export default function Home() {
   return (
-    <div className="bg-[#5A7463] h-screen flex flex-col items-center justify-center">
-      {/* Spacer for navbar */}
-      <div className="h-1/10"></div> {/* Reduced spacer height */}
-
-      {/* Lists Section */}
-      <div className="space-y-7 w-5/6"> {/* Adjusted container width */}
-        {/* Reading Now */}
-        <div>
-          <h2 className="text-[#DFDDCE] text-3xl font-bold mb-4">Reading Now</h2>
-          <div className="bg-[#847266] h-36 p-6 py-6 rounded-sm shadow-lg text-[#DFDDCE]"> {/* Increased padding */}
-            Book 1, Book 2, Book 3...
-          </div>
-        </div>
-
-        {/* To Be Read */}
-        <div>
-          <h2 className="text-[#DFDDCE] text-3xl font-bold mb-4">To Be Read...</h2>
-          <div className="bg-[#847266] h-36 p-6 py-6 rounded-sm shadow-lg text-[#DFDDCE]"> {/* Increased padding */}
-            Book 4, Book 5, Book 6...
-          </div>
-        </div>
-
-        {/* Previously Read */}
-        <div>
-          <h2 className="text-[#DFDDCE] text-3xl font-bold mb-4">Previously Read</h2>
-          <div className="bg-[#847266] h-36 p-6 py-6 rounded-sm shadow-lg text-[#DFDDCE]"> {/* Increased padding */}
-            Book 7, Book 8, Book 9...
-          </div>
-        </div>
+    <div className="flex justify-center items-center h-screen bg-green-200">
+      <div className="text-center">
+        <h1 className="text-4xl font-bold text-green-800">Hello World</h1>
+        <button className="mt-8 px-6 py-3 bg-pink-400 text-white text-2xl font-normal rounded-full transform transition-all hover:scale-110 hover:bg-pink-500">
+          <span className="mr-2">💖</span>≽^•⩊•^≼
+        </button>
       </div>
     </div>
   );
