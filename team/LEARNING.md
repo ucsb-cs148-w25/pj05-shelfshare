@@ -35,4 +35,6 @@
 * Javascript
 
 ### Srinidhi Sathish:
-*
+* Javascript
+* HTML
+* CSS
