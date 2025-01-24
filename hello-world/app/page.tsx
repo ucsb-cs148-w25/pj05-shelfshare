@@ -1,69 +1,37 @@
 import React from "react";
 
-export default function Browse() {
+export default function UserLists() {
   return (
-    <div className="bg-green-700 h-screen"> {/* Darker green background */}
-      {/* Navbar */}
-      <nav className="flex items-center justify-between px-6 py-4 bg-green-600"> {/* Navbar */}
-        {/* Left Side */}
-        <button className="text-amber-100 text-2xl font-bold">Shelf Share</button>
+    <div className="bg-[#5b7463] h-screen flex flex-col items-center justify-center">
+      {/* Spacer for navbar */}
+      <div className="h-1/10"></div> {/* Reduced spacer height */}
 
-        {/* Middle Section */}
-        <input
-          type="text"
-          placeholder="Search..."
-          className="w-1/4 px-4 py-2 rounded-full border border-green-400 focus:outline-none focus:ring focus:ring-green-300"
-        />
-
-        {/* Right Side */}
-        <div className="flex space-x-6">
-          <button className="text-amber-100 text-lg font-medium hover:underline">
-            Books
-          </button>
-          <button className="text-amber-100 text-lg font-medium hover:underline">
-            Browse
-          </button>
-          <button className="text-amber-100 text-lg font-medium hover:underline">
-            Timeline
-          </button>
-          <button className="text-amber-100 text-lg font-medium hover:underline">
-            My Shelf
-          </button>
-
-          {/* Profile Icon */}
-          <div className="w-8 h-8 bg-green-800 rounded-full flex items-center justify-center text-white">
-            P
-          </div>
-        </div>
-      </nav>
-
-      {/* Main Content */}
-      <div className="p-6 space-y-8"> {/* Add spacing between sections */}
+      {/* Lists Section */}
+      <div className="space-y-7 w-5/6"> {/* Adjusted container width */}
         {/* Reading Now */}
         <div>
-          <h2 className="text-amber-100 text-2xl font-bold mb-4">Reading Now</h2>
-          <div className="bg-brown-600 p-6 rounded-md shadow-md text-white"> {/* Fixed brown color */}
-            Books go here...
+          <h2 className="text-[#bfc4b1] text-4xl font-bold mb-4">Reading Now</h2>
+          <div className="bg-[#847165] h-36 p-6 py-6 rounded-lg shadow-lg text-white"> {/* Increased padding */}
+            Book 1, Book 2, Book 3...
           </div>
         </div>
 
         {/* To Be Read */}
         <div>
-          <h2 className="text-amber-100 text-2xl font-bold mb-4">To Be Read...</h2>
-          <div className="bg-brown-600 p-6 rounded-md shadow-md text-white"> {/* Fixed brown color */}
-            Books go here...
+          <h2 className="text-[#bfc4b1] text-4xl font-bold mb-4">To Be Read...</h2>
+          <div className="bg-[#847165] h-36 p-6 py-6 rounded-lg shadow-lg text-white"> {/* Increased padding */}
+            Book 4, Book 5, Book 6...
           </div>
         </div>
 
         {/* Previously Read */}
         <div>
-          <h2 className="text-amber-100 text-2xl font-bold mb-4">Previously Read</h2>
-          <div className="bg-brown-600 p-6 rounded-md shadow-md text-white"> {/* Fixed brown color */}
-            Books go here...
+          <h2 className="text-[#bfc4b1] text-4xl font-bold mb-4">Previously Read</h2>
+          <div className="bg-[#847165] h-36 p-6 py-6 rounded-lg shadow-lg text-white"> {/* Increased padding */}
+            Book 7, Book 8, Book 9...
           </div>
         </div>
       </div>
     </div>
   );
 }
-
