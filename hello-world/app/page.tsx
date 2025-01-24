@@ -29,7 +29,7 @@ export default function Home() {
           </button>
           <button
             onClick={logOut}
-            className="px-6 py-3 bg-blue-500 text-white text-xl font-normal rounded-full transform transition-all hover:scale-110 hover:bg-blue-600"
+            className="px-6 py-3 bg-purple-500 text-white text-xl font-normal rounded-full transform transition-all hover:scale-110 hover:bg-blue-600"
           >
             <span className="mr-2">🚪</span>Sign out
           </button>
