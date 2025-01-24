@@ -1,19 +1,20 @@
-import './globals.css'; // Importing global styles
-import React, { ReactNode } from 'react';
+import './globals.css';
 import Navbar from "@/components/Navbar";
 
-interface LayoutProps {
-  children: ReactNode;
-}
-
-const Layout: React.FC<LayoutProps> = ({ children }) => {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   return (
-    <div>
-      <Navbar />
-      <main>{children}</main>
-    </div>
-  )
+    <html lang="en">
+      <head>
+        <title>ShelfShare</title>
+      </head>
+      <body>
+        <Navbar />
+        <main>{children}</main>
+      </body>
+    </html>
+  );
 }
-
-export default Layout;
-  
