@@ -9,14 +9,12 @@ const Navbar: React.FC = () => {
 
     return (
         <nav className="navbar-container">
-            {/* Logo on the left */}
             <div className="logo-container">
                 <Link href="/">
                     <img src="/logo.png" alt="ShelfShare Logo" className="h-8 w-8" />
                 </Link>
             </div>
 
-            {/* Search and navigation on the right */}
             <div className="nav-items">
                 <input
                     type="text"
@@ -24,7 +22,6 @@ const Navbar: React.FC = () => {
                     className="search-bar"
                 />
 
-                {/* Media Dropdown */}
                 <div className="relative">
                     <button 
                         className="nav-link flex items-center"
@@ -46,7 +43,6 @@ const Navbar: React.FC = () => {
                 <Link href="/timeline" className="nav-link">Timeline</Link>
                 <Link href="/my-shelf" className="nav-link">My Shelf</Link>
 
-                {/* Profile Dropdown */}
                 <div className="relative">
                     <button 
                         className="nav-link flex items-center"

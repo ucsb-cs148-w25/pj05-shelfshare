@@ -80,10 +80,10 @@ body {
   position: absolute;
   right: 0;
   top: 100%;
-  background-color: white;
-  border: 1px solid #ccc;
+  background-color: #5a7463;
+  /* border: 1px solid #5a7463;
   border-radius: 0.5rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); */
   width: 10rem;
   display: flex;
   flex-direction: column;
