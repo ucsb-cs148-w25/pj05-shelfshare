@@ -7,32 +7,70 @@ export default function UserLists() {
       <div className="h-1/10"></div> {/* Reduced spacer height */}
 
       {/* Lists Section */}
-      <div className="space-y-7 w-5/6"> {/* Adjusted container width */}
+      <div className="space-y-8 w-5/6"> {/* Adjusted container width */}
         {/* Reading Now */}
         <div>
           <h2 className="text-[#DFDDCE] text-3xl font-bold mb-4">Reading Now</h2>
-          <div className="bg-[#847266] h-36 p-6 py-6 rounded-sm shadow-lg text-[#DFDDCE]"> {/* Increased padding */}
-            Book 1, Book 2, Book 3...
+          {/* Shelf Background */}
+          <div
+            className="relative bg-[#847266] border-t-8 border-b-8 border-[#3D2F2A] h-44 flex items-center"
+          >
+            {/* Books */}
+            <div className="flex space-x-4 justify-start ml-4">
+              {Array(4)
+                .fill(null)
+                .map((_, index) => (
+                  <div
+                    key={index}
+                    className="bg-[#3D2F2A] w-32 h-36 rounded-lg"
+                  ></div>
+                ))}
+            </div>
           </div>
         </div>
 
         {/* To Be Read */}
         <div>
           <h2 className="text-[#DFDDCE] text-3xl font-bold mb-4">To Be Read...</h2>
-          <div className="bg-[#847266] h-36 p-6 py-6 rounded-sm shadow-lg text-[#DFDDCE]"> {/* Increased padding */}
-            Book 4, Book 5, Book 6...
+          {/* Shelf Background */}
+          <div
+            className="relative bg-[#847266] border-t-8 border-b-8 border-[#3D2F2A] h-44 flex items-center"
+          >
+            {/* Books */}
+            <div className="flex space-x-4 justify-start ml-4">
+              {Array(4)
+                .fill(null)
+                .map((_, index) => (
+                  <div
+                    key={index}
+                    className="bg-[#3D2F2A] w-32 h-36 rounded-lg"
+                  ></div>
+                ))}
+            </div>
           </div>
         </div>
 
         {/* Previously Read */}
         <div>
           <h2 className="text-[#DFDDCE] text-3xl font-bold mb-4">Previously Read</h2>
-          <div className="bg-[#847266] h-36 p-6 py-6 rounded-sm shadow-lg text-[#DFDDCE]"> {/* Increased padding */}
-            Book 7, Book 8, Book 9...
+          {/* Shelf Background */}
+          <div
+            className="relative bg-[#847266] border-t-8 border-b-8 border-[#3D2F2A] h-44 flex items-center"
+          >
+            {/* Books */}
+            <div className="flex space-x-4 justify-start ml-4">
+              {Array(4)
+                .fill(null)
+                .map((_, index) => (
+                  <div
+                    key={index}
+                    className="bg-[#3D2F2A] w-32 h-36 rounded-lg"
+                  ></div>
+                ))}
+            </div>
           </div>
         </div>
       </div>
     </div>
   );
 }
-
