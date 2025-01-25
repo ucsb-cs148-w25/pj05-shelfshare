@@ -1,11 +1,44 @@
 // components/Navbar.tsx
 "use client"; 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useReducer, useState } from "react";
 import Link from "next/link";
 import { usePathname } from 'next/navigation';
 
+// Define action types
+type Action =
+    | { type: "TOGGLE_DROPDOWN"; dropdown: string }
+    | { type: "CLOSE_DROPDOWNS" };
+
+// Define the state type
+type State = {
+    openDropdown: string | null;
+};
+
+// Initial state
+const initialState: State = {
+    openDropdown: null,
+};
+
+// Reducer function
+const reducer = (state: State, action: Action): State => {
+    switch (action.type) {
+        case "TOGGLE_DROPDOWN":
+            return {
+                openDropdown: state.openDropdown === action.dropdown ? null : action.dropdown,
+            };
+        case "CLOSE_DROPDOWNS":
+            return {
+                openDropdown: null,
+            };
+        default:
+            return state;
+    }
+};
+
 const Navbar: React.FC = () => {
-    const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+    const [state, dispatch] = useReducer(reducer, initialState);
+    const { openDropdown } = state;
+
     const [isClient, setIsClient] = useState(false);
     const pathname = usePathname(); // Get current route
 
@@ -14,14 +47,16 @@ const Navbar: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        setOpenDropdown(null); // Close dropdowns on route change
+        dispatch({ type: "CLOSE_DROPDOWNS" }); // Close dropdowns on route change
     }, [pathname]);
 
-    if (!isClient) return null; // Prevent mismatch by not rendering until client-side
+    if (!isClient) {
+        // Avoid rendering on the server to prevent hydration errors
+        return null;
+    }
 
     const toggleDropdown = (dropdown: string) => {
-        setOpenDropdown(openDropdown === dropdown ? null : dropdown);
-        
+        dispatch({ type: "TOGGLE_DROPDOWN", dropdown });
     };
 
     return (
@@ -83,4 +118,3 @@ const Navbar: React.FC = () => {
 };
 
 export default Navbar;
-
