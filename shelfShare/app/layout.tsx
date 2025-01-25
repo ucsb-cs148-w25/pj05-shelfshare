@@ -1,6 +1,6 @@
 // app/layout.tsx
 import './globals.css';
-import Navbar from "@/components/Navbar";
+import NavbarWrapper from "@/components/NavbarWrapper";
 
 export default function RootLayout({
   children,
@@ -14,7 +14,7 @@ export default function RootLayout({
         <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" />
       </head>
       <body>
-        <Navbar />
+        <NavbarWrapper /> 
         <main>{children}</main>
       </body>
     </html>
