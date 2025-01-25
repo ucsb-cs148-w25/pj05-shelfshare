@@ -21,8 +21,20 @@ Daily Scrum
 
 * Sungchae working on login page, trying to fix the ratio errors
 * Towela and Niyati finished firebase, their PRs is under review
+* Towela will do back end of the Google Oath
 * Hannah and Charlene working on navbar
-* Bella and Srin are working on myShelf and Home page
+* Bella and Srin are working on myShelf and Homepage, and Timeline pages
+* Srin is working on Figma
+* Hannah will work on the book page
+
+### Weekend Assignments (Soft deadline Monday)
+Srin: Finishing Browsepage, Homepage
+Towela: backend for Google OAuth
+Niyati: Figma for Timeline page, Timeline page
+Bella: backend for MyShelf page - API research
+Sungchae: Login page, Profile page
+Hannah: Book page
+Charlene: Finishing nav bar - drop down for Media (books, movies, songs) - profile drop down menu
 
 ### Future Meetings:
 * Lectures
