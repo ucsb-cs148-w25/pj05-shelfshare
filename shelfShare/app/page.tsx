@@ -1,3 +1,4 @@
+// app/page.tsx
 import './globals.css';
 
 export default function Home() {

@@ -1,3 +1,4 @@
+/* app/global.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -30,4 +31,14 @@ body {
 
 .text-custom-brown {
   color: #847266;
+}
+
+.navbar a {
+  float: left;
+  padding: 12px;
+  color: white;
+  text-decoration: none;
+  font-size: 17px;
+  width: 14%; 
+  text-align: center; 
 }
