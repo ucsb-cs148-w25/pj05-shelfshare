@@ -1,32 +1,73 @@
 // components/Navbar.tsx
-import React from "react";
+"use client"; 
+import React, { useState } from "react";
 import Link from "next/link";
 
 const Navbar: React.FC = () => {
+    const [isMediaDropdownOpen, setIsMediaDropdownOpen] = useState(false);
+    const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+
     return (
         <nav className="navbar-container">
+            {/* Logo on the left */}
             <div className="logo-container">
                 <Link href="/">
                     <img src="/logo.png" alt="ShelfShare Logo" className="h-8 w-8" />
                 </Link>
             </div>
 
+            {/* Search and navigation on the right */}
             <div className="nav-items">
                 <input
                     type="text"
                     placeholder="Search"
                     className="search-bar"
                 />
-                <Link href="/books" className="nav-link">Books</Link>
+
+                {/* Media Dropdown */}
+                <div className="relative">
+                    <button 
+                        className="nav-link flex items-center"
+                        onClick={() => setIsMediaDropdownOpen(!isMediaDropdownOpen)}
+                    >
+                        Media <span className="material-icons-outlined ml-1">expand_more</span>
+                    </button>
+
+                    {isMediaDropdownOpen && (
+                        <div className="dropdown-menu">
+                            <Link href="/books" className="dropdown-item">Books</Link>
+                            <Link href="/movies" className="dropdown-item">Movies</Link>
+                            <Link href="/music" className="dropdown-item">Music</Link>
+                        </div>
+                    )}
+                </div>
+
                 <Link href="/browse" className="nav-link">Browse</Link>
                 <Link href="/timeline" className="nav-link">Timeline</Link>
                 <Link href="/my-shelf" className="nav-link">My Shelf</Link>
-                <Link href="/profile" className="nav-link">
-                    <span className="material-icons-outlined text-3xl">account_circle</span>
-                </Link>
+
+                {/* Profile Dropdown */}
+                <div className="relative">
+                    <button 
+                        className="nav-link flex items-center"
+                        onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                    >
+                        <span className="material-icons-outlined text-3xl">account_circle expand_more</span>
+                    </button>
+
+                    {isProfileDropdownOpen && (
+                        <div className="dropdown-menu">
+                            <Link href="/profile" className="dropdown-item">Profile</Link>
+                            <Link href="/friends" className="dropdown-item">Friends</Link>
+                            <Link href="/settings" className="dropdown-item">Settings</Link>
+                            <Link href="/logout" className="dropdown-item">Logout</Link>
+                        </div>
+                    )}
+                </div>
             </div>
         </nav>
     );
 };
 
 export default Navbar;
+
