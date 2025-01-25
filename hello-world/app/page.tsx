@@ -1,12 +1,3 @@
-// export default function Home() {
-//   return (
-//     <div className="flex justify-center items-center h-screen bg-gray-400">
-//       <div className="bg-pink-200 text-venter p-8 rounded-lg shadow-xl">
-//         <h1 className="text-4xl font-bold text-blue-700">Hello World</h1>
-//       </div>
-//     </div>
-//   );
-// }
 "use client";
 import { useAuth } from './context/AuthContext';
 import Login from './pages/Login';
