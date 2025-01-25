@@ -28,13 +28,13 @@ Daily Scrum
 * Hannah will work on the book page
 
 ### Weekend Assignments (Soft deadline Monday)
-Srin: Finishing Browsepage, Homepage
-Towela: backend for Google OAuth
-Niyati: Figma for Timeline page, Timeline page
-Bella: backend for MyShelf page - API research
-Sungchae: Login page, Profile page
-Hannah: Book page
-Charlene: Finishing nav bar - drop down for Media (books, movies, songs) - profile drop down menu
+* Srin: Finishing Browsepage, Homepage
+* Towela: backend for Google OAuth
+* Niyati: Figma for Timeline page, Timeline page
+* Bella: backend for MyShelf page - API research
+* Sungchae: Login page, Profile page
+* Hannah: Book page
+* Charlene: Finishing nav bar - drop down for Media (books, movies, songs) - profile drop down menu
 
 ### Future Meetings:
 * Lectures
