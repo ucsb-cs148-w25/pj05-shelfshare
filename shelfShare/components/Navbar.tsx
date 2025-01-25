@@ -1,11 +1,28 @@
 // components/Navbar.tsx
 "use client"; 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from 'next/navigation';
 
 const Navbar: React.FC = () => {
-    const [isMediaDropdownOpen, setIsMediaDropdownOpen] = useState(false);
-    const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
+    const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+    const [isClient, setIsClient] = useState(false);
+    const pathname = usePathname(); // Get current route
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
+
+    useEffect(() => {
+        setOpenDropdown(null); // Close dropdowns on route change
+    }, [pathname]);
+
+    if (!isClient) return null; // Prevent mismatch by not rendering until client-side
+
+    const toggleDropdown = (dropdown: string) => {
+        setOpenDropdown(openDropdown === dropdown ? null : dropdown);
+        
+    };
 
     return (
         <nav className="navbar-container">
@@ -25,12 +42,12 @@ const Navbar: React.FC = () => {
                 <div className="relative">
                     <button 
                         className="nav-link flex items-center"
-                        onClick={() => setIsMediaDropdownOpen(!isMediaDropdownOpen)}
+                        onClick={() => toggleDropdown("media")}
                     >
                         Media <span className="material-icons-outlined ml-1">expand_more</span>
                     </button>
 
-                    {isMediaDropdownOpen && (
+                    {openDropdown === "media" && (
                         <div className="dropdown-menu">
                             <Link href="/books" className="dropdown-item">Books</Link>
                             <Link href="/movies" className="dropdown-item">Movies</Link>
@@ -46,12 +63,12 @@ const Navbar: React.FC = () => {
                 <div className="relative">
                     <button 
                         className="nav-link flex items-center"
-                        onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                        onClick={() => toggleDropdown("profile")}
                     >
                         <span className="material-icons-outlined text-3xl">account_circle expand_more</span>
                     </button>
 
-                    {isProfileDropdownOpen && (
+                    {openDropdown === "profile" && (
                         <div className="dropdown-menu">
                             <Link href="/profile" className="dropdown-item">Profile</Link>
                             <Link href="/friends" className="dropdown-item">Friends</Link>
