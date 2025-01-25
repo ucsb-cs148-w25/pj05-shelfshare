@@ -30,15 +30,48 @@ body {
 }
 
 .text-custom-brown {
-  color: #847266;
+  color: #3D2F2A;
 }
 
-.navbar a {
-  float: left;
-  padding: 12px;
-  color: white;
-  text-decoration: none;
-  font-size: 17px;
-  width: 14%; 
-  text-align: center; 
+.nav-link {
+  color: #DFDDCE;
+  font-size: 1rem;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  transition: color 0.2s ease-in-out;
+}
+
+.nav-link:hover {
+  color: #3D2F2A;
+}
+
+.navbar-container {
+  display: flex;
+  justify-content: space-between; /* Pushes logo left, everything else right */
+  margin: 0 auto;
+  padding: 1rem 1.5rem;
+}
+
+.logo-container {
+  flex-shrink: 0; /* Prevents logo from resizing */
+  align-items: left;
+}
+
+.nav-items {
+  display: flex;
+  align-items: right;
+  gap: 1.5rem; /* Space between search and nav links */
+  padding: 2.25rem 1.5rem;
+}
+
+.search-bar {
+  width: 20rem; 
+  height: 2rem;
+  padding: 0.5rem 1rem; 
+  border-radius: 0.5rem; 
+  background-color: rgba(255, 255, 255, 0.9);
+  color: #3D2F2A;
+  font-size: 1rem;
+  border: 1px solid #ccc; 
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
 }

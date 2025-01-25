@@ -11,6 +11,7 @@ export default function RootLayout({
     <html lang="en">
       <head>
         <title>ShelfShare</title>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" />
       </head>
       <body>
         <Navbar />
