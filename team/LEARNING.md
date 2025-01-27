@@ -24,7 +24,10 @@
 * Java
 
 ### Towela Phiri:
-* 
+* React
+* Java
+* Javascript
+* HTML
 
 ### Sungchae Park:
 * React
@@ -32,4 +35,6 @@
 * Javascript
 
 ### Srinidhi Sathish:
-*
+* Javascript
+* HTML
+* CSS
