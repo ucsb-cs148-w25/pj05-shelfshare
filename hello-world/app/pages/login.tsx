@@ -1,4 +1,7 @@
+import { useAuth } from '../context/AuthContext';
+
 export default function Login() {
+  const { signIn } = useAuth();
   return (
     <div>
       <img
@@ -28,7 +31,8 @@ export default function Login() {
       }}>
         ShelfShare
       </div>
-      <button type="button"
+      <button onClick={signIn}
+      type="button"
       style={{
         position: "absolute", // Change to relative, fixed, or static as needed
         top: "46%",           // Adjust vertical location
