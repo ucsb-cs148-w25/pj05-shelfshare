@@ -1,24 +1,49 @@
-
-
 export default function Login() {
   return (
-    <div className="flex flex-col justify-center items-center h-screen background-login bg-no-repeat bg-center bg-contain">
-      <div className="mb-0 input_position_username">
-          {/* <label htmlFor="user_name" className="block mb-2 text-sm font-medium text-gray-900">Username</label> */}
-          <input type="text" id="username" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-green-800 focus:border-green-800 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white" placeholder="username"/>
+    <div>
+      <img
+        src="Book.png"
+        alt="books"
+        width="80%"
+        className="book-location1"
+      />
+      <img
+        src="Book.png"
+        alt="books"
+        width="80%"
+        className="book-location2"
+      />
+      <div id="rectangle-login1"> </div>
+      <div id="rectangle-login2"> </div>
+      <div id="rectangle-login3"> </div>
+      <img src="/logo.svg" alt="book" width="40%" className="logo-login"/> 
+      <div style={{
+        position: "absolute",
+        top: "36%",
+        left: "55%",
+        transform: "translate(-50%, -50%)",
+        color: "#DFDDCE",
+        fontSize: "3rem",
+        fontWeight: "bold"
+      }}>
+        ShelfShare
       </div>
-      <div className="mb-17 input_position_password">
-          {/* <label htmlFor="password" className="block mb-2 text-sm font-medium text-gray-900">Password</label> */}
-          <input type="password" id="password" className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-green-800 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-green-800 dark:focus:border-green-800" placeholder="•••••••••" required />   
-      </div>
-      <div>
-          <button className="mt-8 px-6 py-3 button-position opacity-75 bg-green-900 text-white text-2xl font-normal rounded-lg transform transition-all hover:scale-110">
-            LOG IN
-          </button>
-      </div>
+      <button type="button"
+      style={{
+        position: "absolute", // Change to relative, fixed, or static as needed
+        top: "46%",           // Adjust vertical location
+        left: "45%"      // Adjust horizontal location
+      //   transform: "translate(-50%, -50%)", // Center alignment
+      //   padding: "10px 25px", // Adjust button size
+      //   border: "none",       // Optional: remove border
+      //   backgroundColor: "transparent", // Optional: transparent background
+      //   cursor: "pointer",    // Optional: pointer for better UX
+      }}
+    >
+        <img src="google-logo-.png"/>
+        {/* Continue With Google */}
+        </button>
+
     </div>
-
-
   );
 }
-  
