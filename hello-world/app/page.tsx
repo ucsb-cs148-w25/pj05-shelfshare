@@ -1,3 +1,6 @@
+
+import './globals.css';
+
 "use client";
 import { useAuth } from './context/AuthContext';
 import Login from './pages/Login';
@@ -28,9 +31,6 @@ export default function Home() {
       </div>
     </main>
   );
-
-
-
 }
 
 
