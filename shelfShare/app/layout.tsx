@@ -14,7 +14,7 @@ export default function RootLayout({
         <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" />
       </head>
       <body>
-        <Navbar />
+        <Navbar /> 
         <main>{children}</main>
       </body>
     </html>
