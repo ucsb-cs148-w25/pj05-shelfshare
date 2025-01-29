@@ -4,7 +4,7 @@ export default function Home() {
       style={{ backgroundColor: '#5A7463', fontFamily: 'Outfit, sans-serif' }}>
         
         {/* Main Grid Container */}
-        /* <div className="grid grid-cols-1 md:grid-cols-2 gap-20 gap-y-8 ml-20 mr-20">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-20 gap-y-8 ml-20 mr-20">
           {/* Reading Now Section */}
           <div>
             <h2 className="font-bold items-center text-3xl mt-6"
