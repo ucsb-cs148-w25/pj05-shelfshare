@@ -1,7 +1,5 @@
-
-import './globals.css';
-
 "use client";
+import './globals.css';
 import { useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 
@@ -15,9 +13,9 @@ export default function Home() {
 
   return (
     <main className="main">
-      <div className="flex justify-center items-center h-screen bg-green-200">
+      <div className="flex justify-center items-center h-screen bg-custom-green">
         <div className="text-center flex flex-col space-y-6">
-          <h1 className="text-4xl font-bold text-green-800">Hello World</h1>
+          <h1 className="text-4xl font-bold text-custom-tan">Hello World</h1>
           <button className="px-6 py-3 bg-pink-400 text-white text-2xl font-normal rounded-full transform transition-all hover:scale-110 hover:bg-pink-500">
             <span className="mr-2">💖</span>≽^•⩊•^≼
           </button>
