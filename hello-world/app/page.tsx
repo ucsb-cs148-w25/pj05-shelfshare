@@ -9,8 +9,9 @@ export default function Home() {
   const { user, logOut } = useAuth();
 
   if (!user) {
-    return <Login />;
+    return <Login />; 
   }
+  
 
   return (
     <main className="main">
