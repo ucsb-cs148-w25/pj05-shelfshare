@@ -1,14 +1,23 @@
-"use client";
-import './globals.css';
-import { useAuth } from '../context/AuthContext';
-import Login from '../page';
+'use client';
 
+import { useAuth } from '../context/AuthContext';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import '../globals.css';
 
 export default function Home() {
   const { user, logOut } = useAuth();
+  const router = useRouter();
+
+  // Redirect to login page if user is not authenticated
+  useEffect(() => {
+    if (!user) {
+      router.push('/');
+    }
+  }, [user, router]);
 
   if (!user) {
-    return <Login />;
+    return null; // Avoid rendering anything while redirecting
   }
 
   return (
@@ -30,8 +39,3 @@ export default function Home() {
     </main>
   );
 }
-
-
-
-
-

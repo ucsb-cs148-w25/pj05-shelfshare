@@ -19,7 +19,7 @@ export default function Login() {
           Welcome to ShelfShare! 
         </h1>
         <button
-          onClick={signIn}
+          onClick={handleSignIn}
           className="px-6 py-3 bg-pink-500 text-white text-lg font-medium rounded-full transition-transform transform hover:scale-105 hover:bg-pink-600"
         >
           Sign in with Google

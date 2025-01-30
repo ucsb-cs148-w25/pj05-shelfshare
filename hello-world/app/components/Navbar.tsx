@@ -62,7 +62,7 @@ const Navbar: React.FC = () => {
     return (
         <nav className="navbar-container">
             <div className="logo-container">
-                <Link href="/">
+                <Link href="/home">
                     <img src="/logo.png" alt="ShelfShare Logo" className="h-8 w-8" />
                 </Link>
             </div>
