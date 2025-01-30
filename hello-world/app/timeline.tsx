@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 
 const ReviewsPage: React.FC = () => {
   const reviews = [
@@ -20,7 +21,7 @@ const ReviewsPage: React.FC = () => {
       text: "Educated by Tara Westover is a powerful memoir about breaking free from a life of isolation and pursuing self-discovery through education...",
       bookImage: "/Educated.png",
     },
-    // Add more reviews to test scrolling
+    // Additional reviews
     {
       id: 4,
       name: "Michael",
@@ -33,8 +34,6 @@ const ReviewsPage: React.FC = () => {
       text: "An amazing tale of perseverance and adventure...",
       bookImage: "/CityOfOrange.png",
     },
-   
-    
   ];
 
   return (
@@ -46,18 +45,22 @@ const ReviewsPage: React.FC = () => {
             key={review.id}
             className="bg-[#DFDDCE] p-4 rounded-2xl shadow-md flex items-start space-x-4"
           >
-            <img
+            <Image
               src="/dark-user-circle.svg"
               alt="User Icon"
+              width={40}
+              height={40}
               className="w-10 h-10 text-gray-500"
             />
             <div>
               <h3 className="text-lg font-semibold">{review.name}</h3>
               <p className="text-gray-700">{review.text}</p>
             </div>
-            <img
+            <Image
               src={review.bookImage}
               alt={review.name}
+              width={64}
+              height={80}
               className="w-16 h-20 object-cover rounded-lg"
             />
           </div>
@@ -67,18 +70,20 @@ const ReviewsPage: React.FC = () => {
       {/* Input Section */}
       <div className="bg-white p-4 rounded-full shadow-md mt-6 flex items-center space-x-4 w-full max-w-3xl">
         <div className="flex space-x-4">
-            <img src="/camera.svg" alt="Camera Icon" className="w-6 h-6" />
-            <img src="/paperclip.svg" alt="Paper Clip Icon" className="w-6 h-6" />
-            <img src="/bookshelf.svg" alt="Book Icon" className="w-6 h-6" />
+          <Image src="/camera.svg" alt="Camera Icon" width={24} height={24} className="w-6 h-6" />
+          <Image src="/paperclip.svg" alt="Paper Clip Icon" width={24} height={24} className="w-6 h-6" />
+          <Image src="/bookshelf.svg" alt="Book Icon" width={24} height={24} className="w-6 h-6" />
         </div>
         <input
           type="text"
           placeholder="Text..."
           className="flex-1 border-none focus:ring-0"
         />
-        <img
+        <Image
           src="/user-circle.svg"
           alt="User Icon"
+          width={24}
+          height={24}
           className="w-6 h-6"
         />
       </div>

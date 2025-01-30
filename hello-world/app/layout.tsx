@@ -1,5 +1,5 @@
 import './globals.css'; // Importing global styles
-import { ReactNode } from 'react';
+//import { ReactNode } from 'react';
 import { Inter } from "next/font/google";
 import { AuthProvider } from "./context/AuthContext";
 

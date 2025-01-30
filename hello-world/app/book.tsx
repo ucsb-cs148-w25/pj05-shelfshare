@@ -1,27 +1,33 @@
-'use client';
-import React, { useState } from 'react';
+"use client";
+import React, { useState } from "react";
+import Image from "next/image";
 
 export default function BookDetails() {
-  const [reviews, setReviews] = useState([]);
-  const [newReview, setNewReview] = useState('');
+  const [reviews, setReviews] = useState<{ text: string; date: string; username: string }[]>([]);
+  const [newReview, setNewReview] = useState<string>("");
 
-  const StarRating = ({ rating, maxStars = 5 }) => (
+  const StarRating: React.FC<{ rating: number; maxStars?: number }> = ({ rating, maxStars = 5 }) => (
     <div className="flex space-x-1">
       {[...Array(maxStars)].map((_, index) => (
-        <span key={index} className={`text-2xl ${index < rating ? "text-[#3D2F2A]" : "text-[#DFDDCE]"}`}>★</span>
+        <span key={index} className={`text-2xl ${index < rating ? "text-[#3D2F2A]" : "text-[#DFDDCE]"}`}>
+          ★
+        </span>
       ))}
     </div>
   );
 
-  const handleSubmitReview = (e) => {
+  const handleSubmitReview = (e: React.FormEvent) => {
     e.preventDefault();
     if (newReview.trim()) {
-      setReviews([...reviews, { 
-        text: newReview, 
-        date: new Date().toLocaleDateString(),
-        username: 'User123' // Replace with actual username from auth
-      }]);
-      setNewReview('');
+      setReviews([
+        ...reviews,
+        {
+          text: newReview,
+          date: new Date().toLocaleDateString(),
+          username: "User123", // Replace with actual username from auth
+        },
+      ]);
+      setNewReview("");
     }
   };
 
@@ -31,10 +37,12 @@ export default function BookDetails() {
         <div className="flex flex-col md:flex-row gap-8">
           <div className="flex-shrink-0">
             <div className="w-64 h-96 bg-[#3D2F2A] rounded-lg shadow-lg overflow-hidden flex items-center justify-center">
-              <img 
-                src="/cover.png" 
+              <Image
+                src="/cover.png"
                 alt="The Great Gatsby Book Cover"
-                className="w-56 h-80 object-cover"
+                width={224} // 64 * 3.5
+                height={320} // 96 * 3.5
+                className="object-cover"
               />
             </div>
             <button className="w-full mt-4 bg-[#3D2F2A] text-[#DFDDCE] py-3 px-6 rounded-full font-bold hover:bg-[#847266] transition-colors">
@@ -58,11 +66,11 @@ export default function BookDetails() {
 
             <div className="space-y-4">
               <p className="text-[#DFDDCE] leading-relaxed">
-                The Great Gatsby, F. Scott Fitzgerald's third book, stands as the supreme achievement
+                The Great Gatsby, F. Scott Fitzgerald&apos;s third book, stands as the supreme achievement
                 of his career. This exemplary novel of the Jazz Age has been acclaimed by generations
                 of readers. The story of the fabulously wealthy Jay Gatsby and his love for the
                 beautiful Daisy Buchanan, of lavish parties on Long Island at a time when The New York
-                Times noted "gin was the national drink and sex the national obsession," it is an
+                Times noted &quot;gin was the national drink and sex the national obsession,&quot; it is an
                 exquisitely crafted tale of America in the 1920s.
               </p>
               <p className="text-[#DFDDCE] italic">
@@ -79,7 +87,7 @@ export default function BookDetails() {
                   className="w-full h-32 p-4 bg-[#847266] text-[#DFDDCE] rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[#3D2F2A]"
                   placeholder="Write your review here..."
                 />
-                <button 
+                <button
                   type="submit"
                   className="bg-[#3D2F2A] text-[#DFDDCE] px-6 py-2 rounded-lg hover:bg-[#847266] transition-colors"
                 >
