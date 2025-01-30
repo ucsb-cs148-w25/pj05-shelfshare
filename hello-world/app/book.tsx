@@ -1,27 +1,69 @@
+
+
+
 'use client';
 import React, { useState } from 'react';
 
 export default function BookDetails() {
   const [reviews, setReviews] = useState([]);
   const [newReview, setNewReview] = useState('');
+  const [userRating, setUserRating] = useState(0);
 
-  const StarRating = ({ rating, maxStars = 5 }) => (
-    <div className="flex space-x-1">
-      {[...Array(maxStars)].map((_, index) => (
-        <span key={index} className={`text-2xl ${index < rating ? "text-[#3D2F2A]" : "text-[#DFDDCE]"}`}>★</span>
-      ))}
-    </div>
-  );
+  const formatDate = (date) => {
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+  };
+
+  const StarRating = ({ rating, maxStars = 5, isInput = false }) => {
+    return (
+      <div className="flex space-x-1">
+        {[...Array(maxStars)].map((_, index) => (
+          <div 
+            key={index}
+            className="relative"
+            onClick={() => isInput && setUserRating(index + 1)}
+            onMouseMove={(e) => {
+              if (isInput) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const halfPoint = rect.left + rect.width / 2;
+                if (e.clientX < halfPoint) {
+                  setUserRating(index + 0.5);
+                } else {
+                  setUserRating(index + 1);
+                }
+              }
+            }}
+          >
+            <span 
+              className={`text-2xl ${isInput ? 'cursor-pointer' : 'cursor-default'} ${
+                index + 1 <= rating 
+                  ? "text-[#3D2F2A]" 
+                  : index + 0.5 === rating 
+                  ? "relative overflow-hidden inline before:content-['★'] before:absolute before:text-[#3D2F2A] before:overflow-hidden before:w-[50%] text-[#DFDDCE]" 
+                  : "text-[#DFDDCE]"
+              }`}
+            >
+              ★
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   const handleSubmitReview = (e) => {
     e.preventDefault();
-    if (newReview.trim()) {
+    if (newReview.trim() && userRating > 0) {
       setReviews([...reviews, { 
         text: newReview, 
-        date: new Date().toLocaleDateString(),
-        username: 'User123' // Replace with actual username from auth
+        rating: userRating,
+        date: formatDate(new Date())
       }]);
       setNewReview('');
+      setUserRating(0);
     }
   };
 
@@ -50,10 +92,6 @@ export default function BookDetails() {
 
             <div className="space-y-4">
               <StarRating rating={4} />
-              <div className="mt-4">
-                <h2 className="text-2xl font-semibold text-[#DFDDCE] mb-4">Rate:</h2>
-                <StarRating rating={0} />
-              </div>
             </div>
 
             <div className="space-y-4">
@@ -73,6 +111,10 @@ export default function BookDetails() {
             <div className="mt-8">
               <h2 className="text-2xl font-semibold text-[#DFDDCE] mb-4">Leave A Review:</h2>
               <form onSubmit={handleSubmitReview} className="space-y-4">
+                <div className="mb-4">
+                  <p className="text-[#DFDDCE] mb-2">Your Rating:</p>
+                  <StarRating rating={userRating} isInput={true} />
+                </div>
                 <textarea
                   value={newReview}
                   onChange={(e) => setNewReview(e.target.value)}
@@ -90,9 +132,29 @@ export default function BookDetails() {
               <div className="mt-8 space-y-4">
                 <h3 className="text-xl font-semibold text-[#DFDDCE]">Reviews</h3>
                 {reviews.map((review, index) => (
-                  <div key={index} className="bg-[#847266] p-4 rounded-lg relative">
-                    <p className="text-[#DFDDCE] mb-4">{review.text}</p>
-                    <p className="absolute top-2 right-4 text-sm text-[#DFDDCE]">{review.date}</p>
+                  <div key={index} className="bg-[#847266] p-6 rounded-lg relative">
+                    <div className="flex items-start space-x-4">
+                      <img 
+                        src="/profile.png"
+                        alt="Profile"
+                        className="w-12 h-12 rounded-full flex-shrink-0"
+                      />
+                      
+                      <div className="flex-grow">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center space-x-2">
+                            <span className="font-medium text-[#DFDDCE]">Anonymous User</span>
+                          </div>
+                          <span className="text-sm text-[#DFDDCE]">{review.date}</span>
+                        </div>
+                        
+                        <div className="mb-2">
+                          <StarRating rating={review.rating} />
+                        </div>
+                        
+                        <p className="text-[#DFDDCE]">{review.text}</p>
+                      </div>
+                    </div>
                   </div>
                 ))}
               </div>
