@@ -13,9 +13,9 @@ export default function Login() {
   };
 
   return (
-    <div className="flex justify-center items-center h-screen bg-white">
+    <div className="flex justify-center items-center h-screen bg-custom-green">
       <div className="text-center">
-        <h1 className="text-2xl font-bold mb-6 text-gray-800">
+        <h1 className="text-2xl font-bold mb-6 text-custom-tan">
           Welcome to ShelfShare! 
         </h1>
         <button
