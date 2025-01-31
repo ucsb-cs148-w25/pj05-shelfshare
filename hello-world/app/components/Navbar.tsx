@@ -108,7 +108,7 @@ const Navbar: React.FC = () => {
                             <Link href="/profile" className="dropdown-item">Profile</Link>
                             <Link href="/friends" className="dropdown-item">Friends</Link>
                             <Link href="/settings" className="dropdown-item">Settings</Link>
-                            <Link href="/logout" className="dropdown-item">Logout</Link>
+                            <Link href="/" className="dropdown-item">Logout</Link>
                         </div>
                     )}
                 </div>
