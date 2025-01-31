@@ -5,13 +5,13 @@
 
 :root {
   --background: #5a7463;
-  --foreground: #171717;
+  --foreground: #DFDDCE;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #5a7463;
-    --foreground: #ededed;
+    --foreground: #DFDDCE;
   }
 }
 
@@ -23,6 +23,14 @@ body {
 
 .bg-custom-green {
   background-color: #5a7463;
+}
+
+.bg-custom-tan {
+  background-color: #DFDDCE;
+}
+
+.bg-light-brown {
+  background-color: #847266
 }
 
 .text-custom-tan {
