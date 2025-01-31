@@ -6,18 +6,46 @@ export default function Login() {
   const { signIn } = useAuth();
 
   return (
-    <div className="flex justify-center items-center h-screen bg-custom-green">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold mb-6 text-gray-800">
-          Welcome to ShelfShare! 
-        </h1>
-        <button
-          onClick={signIn}
-          className="px-6 py-3 bg-pink-500 text-white text-lg font-medium rounded-full transition-transform transform hover:scale-105 hover:bg-pink-600"
-        >
-          Sign in with Google
-        </button>
-      </div>
-    </div>
+    <div>
+     <img
+        src="/Books.png"
+        alt="books"
+        width="67%"
+        style={{top: "81%", position: "absolute"}}
+      />
+      <img
+        src="/Books.png"
+        alt="books2"
+        width="67%"
+        style={{top: "81%", position: "absolute", left: "65%"}}
+      />
+     <div style={{width: "100%", top: "24%", height: "40%",backgroundColor: "#847266", position: "absolute"}}> </div>
+     <div style={{width: "100%", top: "24%", height: "3%", backgroundColor: "#3D2F2A", position: "absolute"}}> </div>
+     <div style={{width: "100%", top: "62%", height: "3%", backgroundColor: "#3D2F2A", position: "absolute"}}> </div>
+     <img src="/login-logo.png" alt="book" width="40%" style={{top: "31%", left: "42%", width: "14%", position: "absolute"}}/>
+     {/* <div style={{
+       position: "absolute",
+       top: "36%",
+       left: "55%",
+       transform: "translate(-50%, -50%)",
+       color: "#DFDDCE",
+       fontSize: "3rem",
+       fontWeight: "bold"
+     }}>
+       ShelfShare
+     </div> */}
+     <button onClick={signIn}
+     style={{
+       position: "absolute", // Change to relative, fixed, or static as needed
+       top: "50%",           // Adjust vertical location
+       left: "43%",
+       width: "12%",
+             // Adjust horizontal location
+     }}
+   >
+       <img src="google-logo-.png"/>
+       {/* Continue With Google */}
+       </button>
+   </div>
   );
 }
