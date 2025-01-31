@@ -1,6 +1,7 @@
 // components/Navbar.tsx
 "use client"; 
 import React, { useEffect, useReducer, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from 'next/navigation';
 
@@ -63,7 +64,7 @@ const Navbar: React.FC = () => {
         <nav className="navbar-container">
             <div className="logo-container">
                 <Link href="/home">
-                    <img src="/logo.png" alt="ShelfShare Logo" className="h-8 w-8" />
+                    <Image src="/logo.png" alt="ShelfShare Logo" width={180} height={15} />
                 </Link>
             </div>
 
