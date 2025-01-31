@@ -2,7 +2,7 @@ import './globals.css'; // Importing global styles
 import { ReactNode } from 'react';
 import { Inter } from "next/font/google";
 import { AuthProvider } from "./context/AuthContext";
-import Navbar from "./components/Navbar";
+import NavbarWrapper from "./components/NavbarWrapper";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -16,7 +16,7 @@ export default function RootLayout({
   children,
 }: {
   children: React.ReactNode
-}) {
+}) {  
   return (
     <html lang="en">
       <AuthProvider>
@@ -25,7 +25,7 @@ export default function RootLayout({
         <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" />
       </head>
       <body>
-        <Navbar /> 
+        <NavbarWrapper /> 
         <main>{children}</main>
       </body>
       </AuthProvider>
