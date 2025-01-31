@@ -2,7 +2,16 @@
 import './globals.css';
 import { useAuth } from './context/AuthContext';
 import Login from './pages/Login';
+import { useRouter } from 'next/navigation';
 
+export default function Login() {
+  const { signIn } = useAuth();
+  const router = useRouter();
+
+  const handleSignIn = async () => {
+    await signIn(); // Ensure signIn resolves before navigation
+    router.push('/home'); // Redirect to home page
+  };
 
 export default function Home() {
   const { user, logOut } = useAuth();
@@ -12,26 +21,18 @@ export default function Home() {
   }
 
   return (
-    <main className="main">
-      <div className="flex justify-center items-center h-screen bg-custom-green">
-        <div className="text-center flex flex-col space-y-6">
-          <h1 className="text-4xl font-bold text-custom-tan">Hello World</h1>
-          <button className="px-6 py-3 bg-pink-400 text-white text-2xl font-normal rounded-full transform transition-all hover:scale-110 hover:bg-pink-500">
-            <span className="mr-2">💖</span>≽^•⩊•^≼
-          </button>
-          <button
-            onClick={logOut}
-            className="px-6 py-3 bg-purple-500 text-white text-xl font-normal rounded-full transform transition-all hover:scale-110 hover:bg-blue-600"
-          >
-            <span className="mr-2">🚪</span>Sign out
-          </button>
-        </div>
+    <div className="flex justify-center items-center h-screen bg-custom-green">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold mb-6 text-custom-tan">
+          Welcome to ShelfShare! 
+        </h1>
+        <button
+          onClick={handleSignIn}
+          className="px-6 py-3 bg-pink-500 text-white text-lg font-medium rounded-full transition-transform transform hover:scale-105 hover:bg-pink-600"
+        >
+          Sign in with Google
+        </button>
       </div>
     </main>
   );
 }
-
-
-
-
-
