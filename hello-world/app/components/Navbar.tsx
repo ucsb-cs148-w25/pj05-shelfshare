@@ -1,6 +1,7 @@
 // components/Navbar.tsx
 "use client"; 
 import React, { useEffect, useReducer, useState, useCallback, useRef} from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from 'next/navigation';
 import debounce from 'lodash.debounce';
@@ -142,8 +143,8 @@ const Navbar: React.FC = () => {
     return (
         <nav className="navbar-container">
             <div className="logo-container">
-                <Link href="/">
-                    <img src="/logo.png" alt="ShelfShare Logo" className="h-8 w-8" />
+                <Link href="/home">
+                    <Image src="/logo.png" alt="ShelfShare Logo" width={180} height={15} />
                 </Link>
             </div>
 
@@ -251,7 +252,7 @@ const Navbar: React.FC = () => {
                             <Link href="/profile" className="dropdown-item">Profile</Link>
                             <Link href="/friends" className="dropdown-item">Friends</Link>
                             <Link href="/settings" className="dropdown-item">Settings</Link>
-                            <Link href="/logout" className="dropdown-item">Logout</Link>
+                            <Link href="/" className="dropdown-item">Logout</Link>
                         </div>
                     )}
                 </div>
