@@ -10,6 +10,9 @@
 | 1/22/2024 | Hannah Shakouri   | Lecture 04 stand-up                       |
 | 1/24/2025 | Charlene Patenaude| Lab 03 stand-up                           |
 | 1/24/2024 | Hannah Shakouri   | Team Meeting 02                     |
+| 1/27/2024 | Hannah Shakouri   | Lecture 05 stand-up                    |
+| 1/29/2024 | Hannah Shakouri   | Lecture 06 stand-up                    |
+| 1/31/2024 | Hannah Shakouri   | Lab 04 stand-up                     |
 
 
 # Roles
