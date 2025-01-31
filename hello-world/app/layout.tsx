@@ -1,10 +1,9 @@
 import './globals.css'; // Importing global styles
-import { ReactNode } from 'react';
-import { Inter } from "next/font/google";
+//import { Inter } from "next/font/google";
 import { AuthProvider } from "./context/AuthContext";
 import NavbarWrapper from "./components/NavbarWrapper";
 
-const inter = Inter({ subsets: ["latin"] });
+//const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
   title: "ShelfShare",

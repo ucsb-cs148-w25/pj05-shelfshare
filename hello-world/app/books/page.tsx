@@ -3,13 +3,20 @@
 
 'use client';
 import React, { useState } from 'react';
-
+import Image from "next/image";
 export default function BookDetails() {
-  const [reviews, setReviews] = useState([]);
-  const [newReview, setNewReview] = useState('');
-  const [userRating, setUserRating] = useState(0);
+  interface Review {
+    text: string;
+    rating: number;
+    date: string;
+  }
 
-  const formatDate = (date) => {
+  // Explicitly type reviews to prevent "never[]" error
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [newReview, setNewReview] = useState<string>("");
+  const [userRating, setUserRating] = useState<number>(0);
+
+  const formatDate = (date:Date) => {
     return date.toLocaleDateString('en-US', { 
       month: 'short', 
       day: 'numeric', 
@@ -17,7 +24,13 @@ export default function BookDetails() {
     });
   };
 
-  const StarRating = ({ rating, maxStars = 5, isInput = false }) => {
+  interface StarRatingProps {
+    rating: number;
+    maxStars?: number;
+    isInput?: boolean;
+  }
+
+  const StarRating: React.FC<StarRatingProps> = ({ rating, maxStars = 5, isInput = false }) => {
     return (
       <div className="flex space-x-1">
         {[...Array(maxStars)].map((_, index) => (
@@ -54,7 +67,7 @@ export default function BookDetails() {
     );
   };
 
-  const handleSubmitReview = (e) => {
+  const handleSubmitReview = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (newReview.trim() && userRating > 0) {
       setReviews([...reviews, { 
@@ -73,9 +86,11 @@ export default function BookDetails() {
         <div className="flex flex-col md:flex-row gap-8">
           <div className="flex-shrink-0">
             <div className="w-64 h-96 bg-[#3D2F2A] rounded-lg shadow-lg overflow-hidden flex items-center justify-center">
-              <img 
+              <Image 
                 src="/cover.png" 
                 alt="The Great Gatsby Book Cover"
+                width = {40}
+                height = {40}
                 className="w-56 h-80 object-cover"
               />
             </div>
@@ -96,11 +111,11 @@ export default function BookDetails() {
 
             <div className="space-y-4">
               <p className="text-[#DFDDCE] leading-relaxed">
-                The Great Gatsby, F. Scott Fitzgerald's third book, stands as the supreme achievement
+                The Great Gatsby, F. Scott Fitzgerald&aposs third book, stands as the supreme achievement
                 of his career. This exemplary novel of the Jazz Age has been acclaimed by generations
                 of readers. The story of the fabulously wealthy Jay Gatsby and his love for the
                 beautiful Daisy Buchanan, of lavish parties on Long Island at a time when The New York
-                Times noted "gin was the national drink and sex the national obsession," it is an
+                Times noted &quotegin was the national drink and sex the national obsession,&quote it is an
                 exquisitely crafted tale of America in the 1920s.
               </p>
               <p className="text-[#DFDDCE] italic">
@@ -134,9 +149,11 @@ export default function BookDetails() {
                 {reviews.map((review, index) => (
                   <div key={index} className="bg-[#847266] p-6 rounded-lg relative">
                     <div className="flex items-start space-x-4">
-                      <img 
+                      <Image 
                         src="/profile.png"
                         alt="Profile"
+                        width = {24}
+                        height = {24}
                         className="w-12 h-12 rounded-full flex-shrink-0"
                       />
                       
