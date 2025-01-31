@@ -1,6 +1,7 @@
-'use client';
-
+"use client";
+import './globals.css';
 import { useAuth } from './context/AuthContext';
+import Login from './pages/Login';
 import { useRouter } from 'next/navigation';
 
 export default function Login() {
@@ -11,6 +12,13 @@ export default function Login() {
     await signIn(); // Ensure signIn resolves before navigation
     router.push('/home'); // Redirect to home page
   };
+
+export default function Home() {
+  const { user, logOut } = useAuth();
+
+  if (!user) {
+    return <Login />;
+  }
 
   return (
     <div className="flex justify-center items-center h-screen bg-custom-green">
@@ -25,6 +33,6 @@ export default function Login() {
           Sign in with Google
         </button>
       </div>
-    </div>
+    </main>
   );
 }
