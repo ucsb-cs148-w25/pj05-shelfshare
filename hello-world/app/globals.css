@@ -73,7 +73,8 @@ body {
 }
 
 .search-bar {
-  width: 20rem; 
+  width: 24rem;   /* increased width from 20 */
+  max-width: 30rem;     
   height: 2rem;
   padding: 0.5rem 1rem; 
   border-radius: 0.5rem; 
@@ -82,6 +83,7 @@ body {
   font-size: 1rem;
   border: 1px solid #ccc; 
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
+  transition: width 0.2s ease-in-out;
 }
 
 .dropdown-menu {
