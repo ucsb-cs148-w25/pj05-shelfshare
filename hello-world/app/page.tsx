@@ -1,34 +1,70 @@
+// export default function Profile() {
+//   return (
+//     <div className="bg-[#5A7463] min-h-screen flex flex-col items-center justify-start p-8">
+      
+//       {/* Profile Title (moves up using margin-bottom) */}
+//       <h1 className="text-[#DFDDCE] text-4xl font-bold space-y-6 w-4/6 h-1/6">
+//         Profile
+//       </h1>
 
-"use client";
-import './globals.css';
-import { useAuth } from './context/AuthContext';
-import Login from './pages/Login';
+//       {/* Profile Image (moves down using margin-top) */}
+//       <img
+//           src="/profile-pic.svg"
+//           className="w-56 h-56 object-cover space-y-6"
+//           alt="Profile"
+//         />
+//         <p className="text-[#DFDDCE] text-xl">UserName</p>
 
+//       {/* Preferred Genre Section (moves right with margin-left) */}
+//       <div className="mt-10 w-11/12 max-w-2xl text-center ml-10">
+//         <h2 className="text-[#DFDDCE] text-2xl font-bold">Preferred Genre:</h2>
+//         <div className="bg-[#DFDDCE] text-[#3D2F2A] mt-2 p-4 rounded-lg text-lg">
+//           #mystery #romance #fantasy
+//         </div>
+//       </div>
 
-export default function Home() {
-  const { user, logOut } = useAuth();
+//       {/* About Me Section (moves left with negative margin) */}
+//       <div className="mt-10 w-11/12 max-w-2xl text-center -ml-10">
+//         <h2 className="text-[#DFDDCE] text-2xl font-bold">About Me:</h2>
+//         <div className="bg-[#DFDDCE] text-[#3D2F2A] mt-2 p-4 rounded-lg text-lg">
+//           A blurb about the reader and whatever they want to put up.
+//         </div>
+//       </div>
 
-  if (!user) {
-    return <Login />; 
-  }
-  
+//     </div>
+//   );
+// }
 
+export default function Profile() {
   return (
-    <main className="main">
-      <div className="flex justify-center items-center h-screen bg-green-200">
-        <div className="text-center flex flex-col space-y-6">
-          <h1 className="text-4xl font-bold text-green-800">Hello World</h1>
-          <button className="px-6 py-3 bg-pink-400 text-white text-2xl font-normal rounded-full transform transition-all hover:scale-110 hover:bg-pink-500">
-            <span className="mr-2">💖</span>≽^•⩊•^≼
-          </button>
-          <button
-            onClick={logOut}
-            className="px-6 py-3 bg-purple-500 text-white text-xl font-normal rounded-full transform transition-all hover:scale-110 hover:bg-blue-600"
-          >
-            <span className="mr-2">🚪</span>Sign out
-          </button>
-        </div>
-      </div>
-    </main>
+    <div className="bg-[#5A7463] min-h-screen flex p-8">
+      
+  <div className="flex flex-col items-center ml-48 mt-40 justify-start">
+    <h1 className="text-[#DFDDCE] text-4xl font-bold mb-10">
+      Profile
+    </h1>
+
+    {/* Profile Image */}
+    <img
+      src="/profile-pic.svg"
+      className="w-56 h-56 object-cover mb-4 rounded-full"
+      alt="Profile"
+    />
+
+    {/* Username Text */}
+    <p className="text-[#DFDDCE] text-xl">UserName</p>
+  </div>
+  <div className= "flex flex-col justify-start pl-20 mr-20 mt-52 items-start transform translate-x-14 mb-10">
+         <h2 className="text-[#DFDDCE] text-2xl font-bold mb-6">Preferred Genre:</h2>
+         <div className="bg-[#DFDDCE] text-[#3D2F2A] mt-2 p-4 rounded-lg text-lg mb-4 h-1/5">
+           #mystery #romance #fantasy
+         </div>
+         <h2 className="text-[#DFDDCE] text-2xl font-bold mb-6">About Me:</h2>
+         <div className="bg-[#DFDDCE] text-[#3D2F2A] mt-2 p-4 rounded-lg text-lg mb-4 h-1/3">
+           A blurb about the reader and whatever they want to put up.
+         </div>
+       </div>
+</div>
+
   );
 }
