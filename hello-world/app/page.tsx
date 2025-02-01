@@ -42,6 +42,7 @@ export default function Login() {
        ShelfShare
      </div> */}
      <button onClick={handleSignIn}
+     className="px-6 py-3 bg-custom-green text-white text-xl font-normal rounded-full transform transition-all hover:scale-110 hover:bg-blue-600"
      style={{
        position: "absolute", // Change to relative, fixed, or static as needed
        top: "50%",           // Adjust vertical location
@@ -50,8 +51,7 @@ export default function Login() {
              // Adjust horizontal location
      }}
    >
-       <img src="google-logo-.png"/>
-       {/* Continue With Google */}
+       <span className="mr-1" ></span>Sign in with Google
        </button>
    </div>
   );
