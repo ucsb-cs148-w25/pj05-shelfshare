@@ -6,7 +6,7 @@ import { useEffect } from 'react';
 import '../globals.css';
 
 export default function Home() {
-  const { user, logOut } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
 
   // Redirect to login page if user is not authenticated
@@ -73,13 +73,6 @@ export default function Home() {
                 </div>
               </div>
           </div>
-  
-          
-  
-  
-  
-  
-  
   
           {/* Review Section */}
           <div

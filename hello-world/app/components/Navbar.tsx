@@ -167,9 +167,6 @@ const Navbar: React.FC = () => {
                     
                     {/* Search results dropdown */}
 
-
-
-
                     {searchResults.length > 0 && (
                         <div className="absolute top-full left-0 right-0 bg-white shadow-lg rounded-md mt-1 z-50 border border-gray-200">
                             {searchResults.map((result) => (
@@ -179,9 +176,10 @@ const Navbar: React.FC = () => {
                                     className="flex items-center p-4 hover:bg-gray-50 transition-colors gap-4"
                                 >
                                     {result.cover_i && (
-                                        <img
+                                        <Image
                                             src={`https://covers.openlibrary.org/b/id/${result.cover_i}-S.jpg`}
                                             alt={result.title}
+                                            width={15} height={30}
                                             className="w-10 h-14 object-cover flex-shrink-0"
                                         />
                                     )}
@@ -200,13 +198,6 @@ const Navbar: React.FC = () => {
                             ))}
                         </div>
                     )}
-
-
-
-
-
-
-
                     
                     {/* Loading indicator */}
                     {isSearching && (
@@ -263,14 +254,3 @@ const Navbar: React.FC = () => {
 
 export default Navbar;
 
-
-
-
-
-
-
-
-// CHANGES I WANT TO MAKE: 
-// - filter results to show english 
-// - more room between cover img and book title 
-// - want search dropdown to be white bg with black text
