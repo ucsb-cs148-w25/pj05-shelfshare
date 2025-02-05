@@ -10,6 +10,7 @@ interface BookData {
   description?: string | { value: string };
   covers?: number[];
   authors?: { author: { key: string } }[];
+  rating?: number; 
 }
 
 interface Review {
@@ -32,28 +33,46 @@ export default function BookDetails() {
   const [newReview, setNewReview] = useState<string>("");
   const [userRating, setUserRating] = useState<number>(0);
 
-  // Fetch book details from Open Library (works API)
+
+
+  
   useEffect(() => {
     const fetchBookDetails = async () => {
       try {
-        // Fetch from /works/BOOK_ID.json
+        // Fetch book details
         const res = await fetch(`https://openlibrary.org/works/${bookId}.json`);
-        if (!res.ok) {
-          throw new Error('Failed to fetch book details.');
-        }
+        if (!res.ok) throw new Error("Failed to fetch book details.");
         const data = await res.json();
-        setBook(data);
+  
+        // Fetch rating
+        const ratingRes = await fetch(`https://openlibrary.org/works/${bookId}/ratings.json`);
+        let rating = 0;
+        if (ratingRes.ok) {
+          const ratingData = await ratingRes.json();
+          rating = ratingData.summary?.average || 0; // Default to 0 if no rating
+        }
+  
+        // Clean description
+        const cleanDescription =
+          typeof data.description === "string"
+            ? data.description
+            : data.description?.value || "No description available.";
+  
+        setBook({ ...data, description: cleanDescription, rating });
       } catch (err: any) {
-        setError(err.message || 'An error occurred.');
+        setError(err.message || "An error occurred.");
       } finally {
         setLoading(false);
       }
     };
-
-    if (bookId) {
-      fetchBookDetails();
-    }
+  
+    if (bookId) fetchBookDetails();
   }, [bookId]);
+  
+
+
+
+
 
   // Format date for reviews
   const formatDate = (date: Date) => {
@@ -145,9 +164,12 @@ export default function BookDetails() {
 
   // Construct cover image URL using the first cover ID (if available)
   const coverId = book.covers && book.covers[0];
-  const coverImageUrl = coverId
+
+  // Ensure coverId is valid (greater than 0)
+  const coverImageUrl = coverId && coverId > 0
     ? `https://covers.openlibrary.org/b/id/${coverId}-L.jpg`
-    : '/placeholder.png'; // Fallback image if no cover exists
+    : "/placeholder.png"; // Use local placeholder
+    
 
   return (
     <div className="bg-[#5A7463] min-h-screen flex items-center justify-center p-8">
@@ -176,8 +198,10 @@ export default function BookDetails() {
               {/* You could add authors here if you want, for example using book.authors */}
             </div>
 
+            {/* Display average rating */}
             <div className="space-y-4">
-              <StarRating rating={4} />
+              <StarRating rating={book.rating || 0} />
+              <p className="text-[#DFDDCE] text-sm">Average Rating: {book.rating?.toFixed(1) || "N/A"}</p>
             </div>
 
             <div className="space-y-4">
