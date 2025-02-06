@@ -117,9 +117,9 @@ const Navbar: React.FC = () => {
     
 
 
-    // Debounced search with dependency (300ms)
+    // Debounced search with dependency (100ms)
     const debouncedSearch = useCallback(
-        debounce((query: string) => fetchSearchResults(query), 300),
+        debounce((query: string) => fetchSearchResults(query), 100),
         [fetchSearchResults]
     );
     

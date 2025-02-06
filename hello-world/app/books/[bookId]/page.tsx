@@ -57,8 +57,25 @@ export default function BookDetails() {
           typeof data.description === "string"
             ? data.description
             : data.description?.value || "No description available.";
+
+        // Add to the useEffect where you fetch book details
+        // After fetching book details, fetch author names
+        const authors = await Promise.all(
+          (data.authors || []).map(async (author: any) => {
+            const authorRes = await fetch(`https://openlibrary.org${author.author.key}.json`);
+            const authorData = await authorRes.json();
+            return authorData.name || "Unknown Author";
+          })
+        );
+
+        // Update setBook
+        setBook({ 
+          ...data, 
+          description: cleanDescription, 
+          rating,
+          authors // Add this to the BookData interface
+        });
   
-        setBook({ ...data, description: cleanDescription, rating });
       } catch (err: any) {
         setError(err.message || "An error occurred.");
       } finally {
@@ -195,7 +212,13 @@ export default function BookDetails() {
           <div className="flex-grow space-y-6">
             <div>
               <h1 className="text-4xl font-bold text-[#DFDDCE]">{book.title}</h1>
-              {/* You could add authors here if you want, for example using book.authors */}
+              {book.authors?.length ? (
+                <p className="text-[#DFDDCE] text-lg mt-2">
+                  By: {book.authors.join(', ')}
+                </p>
+              ) : (
+                <p className="text-[#DFDDCE] text-lg mt-2">Author unknown</p>
+              )}
             </div>
 
             {/* Display average rating */}
@@ -209,7 +232,7 @@ export default function BookDetails() {
                 {description}
               </p>
               <p className="text-[#DFDDCE] italic">
-                {/* Optionally add a tagline or extra info */}
+                {/* {book.authors?.length ? `Written by ${book.authors.join(', ')}` : "Author information not available."} */}
               </p>
             </div>
 
