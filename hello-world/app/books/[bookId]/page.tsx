@@ -222,9 +222,11 @@ export default function BookDetails() {
             </div>
 
             {/* Display average rating */}
-            <div className="space-y-4">
+            <div className="flex items-center space-x-4">
               <StarRating rating={book.rating || 0} />
-              <p className="text-[#DFDDCE] text-sm">Average Rating: {book.rating?.toFixed(1) || "N/A"}</p>
+              <p className="text-[#DFDDCE] text-sm">
+                Average: {book.rating?.toFixed(1)+" stars" || "N/A"}
+              </p>
             </div>
 
             <div className="space-y-4">
