@@ -1,4 +1,23 @@
+'use client';
+
+import { useAuth } from '../context/AuthContext';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+
 export default function Browse() {
+  const { user } = useAuth();
+  const router = useRouter();
+
+  // Redirect to login page if user is not authenticated
+  useEffect(() => {
+    if (!user) {
+      router.push('/');
+    }
+  }, [user, router]);
+
+  if (!user) {
+    return null; // Avoid rendering anything while redirecting
+  }
     return (
       <div
         className="min-h-screen"

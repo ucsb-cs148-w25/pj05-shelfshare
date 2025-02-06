@@ -1,3 +1,9 @@
+'use client';
+
+import { useAuth } from '../context/AuthContext';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+
 import React from "react";
 import Image from "next/image";
 const ReviewsPage: React.FC = () => {
@@ -36,6 +42,20 @@ const ReviewsPage: React.FC = () => {
    
     
   ];
+
+  const { user } = useAuth();
+  const router = useRouter();
+
+  // Redirect to login page if user is not authenticated
+  useEffect(() => {
+    if (!user) {
+      router.push('/');
+    }
+  }, [user, router]);
+
+  if (!user) {
+    return null; // Avoid rendering anything while redirecting
+  }
 
   return (
     <div className="bg-custom-green min-h-screen overflow-y-auto flex flex-col items-center p-6">
