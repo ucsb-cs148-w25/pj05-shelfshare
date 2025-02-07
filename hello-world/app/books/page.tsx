@@ -1,8 +1,9 @@
-
-
-
 'use client';
-import React, { useState } from 'react';
+
+import { useAuth } from '../context/AuthContext';
+import { useRouter } from 'next/navigation';
+
+import React, { useEffect, useState } from 'react';
 import Image from "next/image";
 export default function BookDetails() {
   interface Review {
@@ -15,6 +16,21 @@ export default function BookDetails() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [newReview, setNewReview] = useState<string>("");
   const [userRating, setUserRating] = useState<number>(0);
+
+  const { user } = useAuth();
+  const router = useRouter();
+
+  // Redirect to login page if user is not authenticated
+  useEffect(() => {
+    if (!user) {
+      router.push('/');
+    }
+  }, [user, router]);
+
+  if (!user) {
+    return null; // Avoid rendering anything while redirecting
+  }
+  
 
   const formatDate = (date:Date) => {
     return date.toLocaleDateString('en-US', { 

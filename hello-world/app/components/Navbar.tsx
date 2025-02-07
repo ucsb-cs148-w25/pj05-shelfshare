@@ -149,6 +149,24 @@ const Navbar: React.FC = () => {
             </div>
 
             <div className="nav-items">
+
+            <div className="relative">
+                    <button 
+                        className="nav-link flex items-center"
+                        onClick={() => toggleDropdown("media")}
+                    >
+                        Media <span className="material-icons-outlined ml-1">expand_more</span>
+                    </button>
+
+                    {openDropdown === "media" && (
+                        <div className="dropdown-menu">
+                            <Link href="/books" className="dropdown-item">Books</Link>
+                            <Link href="/movies" className="dropdown-item">Movies</Link>
+                            <Link href="/music" className="dropdown-item">Music</Link>
+                        </div>
+                    )}
+                </div>
+                
                 {/* Search bar section */}
                 <div className="relative">
                     <input
@@ -204,24 +222,6 @@ const Navbar: React.FC = () => {
                     <div className="absolute top-full left-0 right-0 bg-white p-3 text-gray-500">
                         Searching...
                     </div>
-                    )}
-                </div>
-
-                {/* Rest of nav items */}
-                <div className="relative">
-                    <button 
-                        className="nav-link flex items-center"
-                        onClick={() => toggleDropdown("media")}
-                    >
-                        Media <span className="material-icons-outlined ml-1">expand_more</span>
-                    </button>
-
-                    {openDropdown === "media" && (
-                        <div className="dropdown-menu">
-                            <Link href="/books" className="dropdown-item">Books</Link>
-                            <Link href="/movies" className="dropdown-item">Movies</Link>
-                            <Link href="/music" className="dropdown-item">Music</Link>
-                        </div>
                     )}
                 </div>
 
