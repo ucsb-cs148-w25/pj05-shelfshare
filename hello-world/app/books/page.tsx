@@ -2,11 +2,17 @@
 
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
-
 import React, { useEffect, useState } from 'react';
 import Image from "next/image";
+import {db} from "../../firebase"
+import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy } from "firebase/firestore";
+import { useAuth } from "../context/AuthContext";
+
 export default function BookDetails() {
   interface Review {
+    userId: string;
+    userName: string;
+    id?: string;
     text: string;
     rating: number;
     date: string;
@@ -18,27 +24,6 @@ export default function BookDetails() {
   const [userRating, setUserRating] = useState<number>(0);
 
   const { user } = useAuth();
-  const router = useRouter();
-
-  // Redirect to login page if user is not authenticated
-  useEffect(() => {
-    if (!user) {
-      router.push('/');
-    }
-  }, [user, router]);
-
-  if (!user) {
-    return null; // Avoid rendering anything while redirecting
-  }
-  
-
-  const formatDate = (date:Date) => {
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
-    });
-  };
 
   interface StarRatingProps {
     rating: number;
@@ -83,16 +68,43 @@ export default function BookDetails() {
     );
   };
 
-  const handleSubmitReview = (e: React.FormEvent<HTMLFormElement>) => {
+  useEffect(() => {
+
+    const q = query(collection(db, "books", "the-great-gatsby", "reviews"), orderBy("date", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const reviewsData = snapshot.docs.map(doc => ({
+        id:doc.id,
+        ...doc.data()
+      })) as Review[];
+      setReviews(reviewsData);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleSubmitReview = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (!user) {
+      alert("You need to be logged in to submit a review.");
+      return;
+    }
+
     if (newReview.trim() && userRating > 0) {
-      setReviews([...reviews, { 
-        text: newReview, 
+      const reviewData = {
+        userId: user.uid || "Unkown User",
+        userName: user.displayName || "No Email",
+        text: newReview,
         rating: userRating,
-        date: formatDate(new Date())
-      }]);
-      setNewReview('');
-      setUserRating(0);
+        date: serverTimestamp(),
+      };
+      try{
+        await addDoc(collection(db, "books", "the-great-gatsby", "reviews"), reviewData);
+        setNewReview("");
+        setUserRating(0);
+      } catch (error) {
+        console.error("error adding review: ", error);
+        alert("Failed to submit review.");
+      }
     }
   };
 
@@ -176,9 +188,12 @@ export default function BookDetails() {
                       <div className="flex-grow">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center space-x-2">
-                            <span className="font-medium text-[#DFDDCE]">Anonymous User</span>
+                            <span className="font-medium text-[#DFDDCE]">{review.userName || "Anonymous User"}</span>
                           </div>
-                          <span className="text-sm text-[#DFDDCE]">{review.date}</span>
+                          <span className="text-sm text-[#DFDDCE]">
+                            {review.date && typeof review.date === "object" && "seconds" in review.date 
+                            ? new Date((review.date as { seconds: number }).seconds * 1000).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) 
+                            : "Just now"}</span>
                         </div>
                         
                         <div className="mb-2">
