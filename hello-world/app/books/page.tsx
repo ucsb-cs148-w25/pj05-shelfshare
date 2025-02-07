@@ -1,7 +1,7 @@
-
-
-
 'use client';
+
+import { useAuth } from '../context/AuthContext';
+import { useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 import Image from "next/image";
 import {db} from "../../firebase"
@@ -24,14 +24,6 @@ export default function BookDetails() {
   const [userRating, setUserRating] = useState<number>(0);
 
   const { user } = useAuth();
-
-  /*const formatDate = (date:Date) => {
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
-    });
-  };*/
 
   interface StarRatingProps {
     rating: number;
