@@ -39,8 +39,44 @@
 
 ## Response Actions
 
+### Focus on Backend and Figma ONLY!
+* We will stop all frontend coding for now to be resumed later -- only doing SKELETON frontend
+* We want good backend implementation first and foremost
+* After we have a more sufficient backend we will discuss moving forward with the Frontend
+* Possibly use a template for the Frontend if it can reduce workload.
+* Improve login page background  
 
+### Implement Challenges
+* Will add to homepage
+* Yearly reading goal challenge
+* Can add more 
 
+### Add Social and Community Features 
+* Add friend actions for adding/removing
+* Add Direct Messaging
+* Add sending shelves
+* Reply to updates and reviews 
+
+### AI Driven Recommendations 
+* Add to Homepage and Browse page
 
 
 ## Next Steps
+
+Specific issues we will be working on for the next sprint, with a rough due date of Wednesday 2/12.
+
+* #### Backend for Browse page filters and tags
+
+* #### Better ordering/filtering on search bar and autocomplete
+
+* #### Backend for adding friends 
+
+* #### Figma for Friends/Community page
+
+* #### Navigation to switch between different forms of media
+
+* #### Saving replies and no multiple replies
+
+* #### Backend for Profile page 
+
+
