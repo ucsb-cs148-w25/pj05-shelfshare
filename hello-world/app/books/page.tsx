@@ -4,12 +4,14 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import Image from "next/image";
-import {db, auth} from "../../firebase"
+import {db} from "../../firebase"
 import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy } from "firebase/firestore";
 import { useAuth } from "../context/AuthContext";
 
 export default function BookDetails() {
   interface Review {
+    userId: string;
+    userName: string;
     id?: string;
     text: string;
     rating: number;
@@ -21,15 +23,15 @@ export default function BookDetails() {
   const [newReview, setNewReview] = useState<string>("");
   const [userRating, setUserRating] = useState<number>(0);
 
-  const { user, signIn, logOut } = useAuth();
+  const { user } = useAuth();
 
-  const formatDate = (date:Date) => {
+  /*const formatDate = (date:Date) => {
     return date.toLocaleDateString('en-US', { 
       month: 'short', 
       day: 'numeric', 
       year: 'numeric' 
     });
-  };
+  };*/
 
   interface StarRatingProps {
     rating: number;
@@ -89,10 +91,16 @@ export default function BookDetails() {
 
   const handleSubmitReview = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (!user) {
+      alert("You need to be logged in to submit a review.");
+      return;
+    }
+
     if (newReview.trim() && userRating > 0) {
       const reviewData = {
-        userId: user.uid,
-        userName: user.displayName || "Anonymous",
+        userId: user.uid || "Unkown User",
+        userName: user.displayName || "No Email",
         text: newReview,
         rating: userRating,
         date: serverTimestamp(),
@@ -188,7 +196,7 @@ export default function BookDetails() {
                       <div className="flex-grow">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center space-x-2">
-                            <span className="font-medium text-[#DFDDCE]">Anonymous User</span>
+                            <span className="font-medium text-[#DFDDCE]">{review.userName || "Anonymous User"}</span>
                           </div>
                           <span className="text-sm text-[#DFDDCE]">
                             {review.date && typeof review.date === "object" && "seconds" in review.date 
