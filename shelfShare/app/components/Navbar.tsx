@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from 'next/navigation';
 import debounce from 'lodash.debounce';
+//import { useNavigate } from "react-router-dom";
 
 // Interfaces for search results
 interface SearchResult {
@@ -196,6 +197,8 @@ const Navbar: React.FC = () => {
                 setSearchCategory("music");
                 break;
         }
+        //const navigate = useNavigate();
+        //navigate(`/my-shelf/${option}`); // may be an issue
     };    
 
     if (!isClient) {
