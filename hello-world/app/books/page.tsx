@@ -6,7 +6,6 @@ import React, { useEffect, useState } from 'react';
 import Image from "next/image";
 import {db} from "../../firebase"
 import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy } from "firebase/firestore";
-import { useAuth } from "../context/AuthContext";
 
 export default function BookDetails() {
   interface Review {
