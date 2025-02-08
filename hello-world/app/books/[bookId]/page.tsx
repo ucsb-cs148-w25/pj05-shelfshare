@@ -9,8 +9,8 @@ interface BookData {
   title: string;
   description?: string | { value: string };
   covers?: number[];
-  authors?: { author: { key: string } }[];
-  rating?: number; 
+  authors?: string[]; // Updated to match the fetched data
+  rating?: number;
 }
 
 interface Review {
@@ -19,48 +19,42 @@ interface Review {
   date: string;
 }
 
+interface Author {
+  author: {
+    key: string;
+  };
+}
+
 export default function BookDetails() {
-  // Get the dynamic parameter from the URL (e.g., OL12345W)
   const { bookId } = useParams<{ bookId: string }>();
 
-
-  // Book details state
   const [book, setBook] = useState<BookData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Review related state
   const [reviews, setReviews] = useState<Review[]>([]);
   const [newReview, setNewReview] = useState<string>("");
   const [userRating, setUserRating] = useState<number>(0);
 
-
-
-  
   useEffect(() => {
     const fetchBookDetails = async () => {
       try {
-        // Fetch book details
         const res = await fetch(`https://openlibrary.org/works/${bookId}.json`);
         if (!res.ok) throw new Error("Failed to fetch book details.");
         const data = await res.json();
-  
-        // Fetch rating
+
         const ratingRes = await fetch(`https://openlibrary.org/works/${bookId}/ratings.json`);
         let rating = 0;
         if (ratingRes.ok) {
           const ratingData = await ratingRes.json();
-          rating = ratingData.summary?.average || 0; // Default to 0 if no rating
+          rating = ratingData.summary?.average || 0;
         }
-  
-        // Clean description
+
         const cleanDescription =
           typeof data.description === "string"
             ? data.description
             : data.description?.value || "No description available.";
 
-        // Add to the useEffect where you fetch book details
-        // After fetching book details, fetch author names
         const authors = await Promise.all(
           (data.authors || []).map(async (author: Author) => {
             const authorRes = await fetch(`https://openlibrary.org${author.author.key}.json`);
@@ -69,26 +63,27 @@ export default function BookDetails() {
           })
         );
 
-        // Update setBook
-        setBook({ 
-          ...data, 
-          description: cleanDescription, 
+        setBook({
+          ...data,
+          description: cleanDescription,
           rating,
-          authors // Add this to the BookData interface
+          authors,
         });
-  
-      } catch (err: any) {
-        setError(err.message || "An error occurred.");
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else {
+          setError("An unexpected error occurred.");
+        }
       } finally {
         setLoading(false);
       }
     };
-  
+
     if (bookId) fetchBookDetails();
   }, [bookId]);
-  
 
-
+  /////
 
 
 
