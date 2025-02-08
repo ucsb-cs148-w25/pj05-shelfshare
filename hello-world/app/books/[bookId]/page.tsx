@@ -23,6 +23,7 @@ export default function BookDetails() {
   // Get the dynamic parameter from the URL (e.g., OL12345W)
   const { bookId } = useParams<{ bookId: string }>();
 
+
   // Book details state
   const [book, setBook] = useState<BookData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -61,7 +62,7 @@ export default function BookDetails() {
         // Add to the useEffect where you fetch book details
         // After fetching book details, fetch author names
         const authors = await Promise.all(
-          (data.authors || []).map(async (author: any) => {
+          (data.authors || []).map(async (author: Author) => {
             const authorRes = await fetch(`https://openlibrary.org${author.author.key}.json`);
             const authorData = await authorRes.json();
             return authorData.name || "Unknown Author";
@@ -146,16 +147,18 @@ export default function BookDetails() {
   // Handle review submission
   const handleSubmitReview = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (newReview.trim() && userRating > 0) {
-      setReviews([...reviews, { 
-        text: newReview, 
-        rating: userRating,
-        date: formatDate(new Date())
-      }]);
-      setNewReview('');
-      setUserRating(0);
-    }
+    if (!newReview.trim() || userRating <= 0) return;
+    
+    setReviews([...reviews, { 
+      text: newReview.trim(), 
+      rating: userRating,
+      date: formatDate(new Date())
+    }]);
+    
+    setNewReview('');
+    setUserRating(0);
   };
+  
 
   if (loading) {
     return (
