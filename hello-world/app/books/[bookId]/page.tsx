@@ -1,22 +1,32 @@
 // app/books/[bookId]/page.tsx
 'use client';
 
+import { useAuth } from '@/app/context/AuthContext';
+import { db } from '@/firebase';
+// import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy } from "firebase/firestore";
 import { useParams } from 'next/navigation';
 
 interface BookData {
   title: string;
   description?: string | { value: string };
   covers?: number[];
-  authors?: string[]; // Updated to match the fetched data
+  authors?: string[];
   rating?: number;
 }
 
 interface Review {
+  userId: string;
+  userName: string;
+  id?: string;
   text: string;
   rating: number;
-  date: string;
+  date: {
+    seconds: number;
+    nanoseconds: number;
+  } | null; // Firestore timestamp type
 }
 
 interface Author {
@@ -27,6 +37,7 @@ interface Author {
 
 export default function BookDetails() {
   const { bookId } = useParams<{ bookId: string }>();
+  const { user } = useAuth();
 
   const [book, setBook] = useState<BookData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -83,25 +94,30 @@ export default function BookDetails() {
     if (bookId) fetchBookDetails();
   }, [bookId]);
 
-  /////
+  // Firestore reviews integration
+  useEffect(() => {
+    if (!bookId) return;
 
-
-
-  // Format date for reviews
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
-      year: 'numeric' 
+    const q = query(
+      collection(db, "books", bookId, "reviews"),
+      orderBy("date", "desc")
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const reviewsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Review[];
+      setReviews(reviewsData);
     });
-  };
+    return () => unsubscribe();
+  }, [bookId]);
 
-  // Star rating component (supports both display and input)
   interface StarRatingProps {
     rating: number;
     maxStars?: number;
     isInput?: boolean;
   }
+
   const StarRating: React.FC<StarRatingProps> = ({ rating, maxStars = 5, isInput = false }) => {
     return (
       <div className="flex space-x-1">
@@ -139,21 +155,32 @@ export default function BookDetails() {
     );
   };
 
-  // Handle review submission
-  const handleSubmitReview = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmitReview = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!newReview.trim() || userRating <= 0) return;
-    
-    setReviews([...reviews, { 
-      text: newReview.trim(), 
-      rating: userRating,
-      date: formatDate(new Date())
-    }]);
-    
-    setNewReview('');
-    setUserRating(0);
+
+    if (!user) {
+      alert("You need to be logged in to submit a review.");
+      return;
+    }
+
+    if (newReview.trim() && userRating > 0) {
+      const reviewData = {
+        userId: user.uid || "Unknown User",
+        userName: user.displayName || "Anonymous",
+        text: newReview,
+        rating: userRating,
+        date: serverTimestamp(),
+      };
+      try {
+        await addDoc(collection(db, "books", bookId, "reviews"), reviewData);
+        setNewReview("");
+        setUserRating(0);
+      } catch (error) {
+        console.error("Error adding review: ", error);
+        alert("Failed to submit review.");
+      }
+    }
   };
-  
 
   if (loading) {
     return (
@@ -171,26 +198,20 @@ export default function BookDetails() {
     );
   }
 
-  // Handle description (it can be a string or an object with a 'value' property)
   const description =
     typeof book.description === 'string'
       ? book.description
       : book.description?.value || 'No description available.';
 
-  // Construct cover image URL using the first cover ID (if available)
   const coverId = book.covers && book.covers[0];
-
-  // Ensure coverId is valid (greater than 0)
   const coverImageUrl = coverId && coverId > 0
     ? `https://covers.openlibrary.org/b/id/${coverId}-L.jpg`
-    : "/placeholder.png"; // Use local placeholder
-    
+    : "/placeholder.png";
 
   return (
     <div className="bg-[#5A7463] min-h-screen flex items-center justify-center p-8">
       <div className="w-full max-w-4xl bg-[#92A48A] rounded-lg shadow-xl p-8">
         <div className="flex flex-col md:flex-row gap-8">
-          {/* Left side: Book cover and "Add To Shelf" */}
           <div className="flex-shrink-0">
             <div className="w-64 h-96 bg-[#3D2F2A] rounded-lg shadow-lg overflow-hidden flex items-center justify-center">
               <Image 
@@ -206,7 +227,6 @@ export default function BookDetails() {
             </button>
           </div>
 
-          {/* Right side: Book details, star rating, description, and reviews */}
           <div className="flex-grow space-y-6">
             <div>
               <h1 className="text-4xl font-bold text-[#DFDDCE]">{book.title}</h1>
@@ -219,7 +239,6 @@ export default function BookDetails() {
               )}
             </div>
 
-            {/* Display average rating */}
             <div className="flex items-center space-x-4">
               <StarRating rating={book.rating || 0} />
               <p className="text-[#DFDDCE] text-sm">
@@ -230,9 +249,6 @@ export default function BookDetails() {
             <div className="space-y-4">
               <p className="text-[#DFDDCE] leading-relaxed">
                 {description}
-              </p>
-              <p className="text-[#DFDDCE] italic">
-                {/* {book.authors?.length ? `Written by ${book.authors.join(', ')}` : "Author information not available."} */}
               </p>
             </div>
 
@@ -259,8 +275,8 @@ export default function BookDetails() {
 
               <div className="mt-8 space-y-4">
                 <h3 className="text-xl font-semibold text-[#DFDDCE]">Reviews</h3>
-                {reviews.map((review, index) => (
-                  <div key={index} className="bg-[#847266] p-6 rounded-lg relative">
+                {reviews.map((review) => (
+                  <div key={review.id} className="bg-[#847266] p-6 rounded-lg relative">
                     <div className="flex items-start space-x-4">
                       <Image 
                         src="/profile.png"
@@ -272,9 +288,19 @@ export default function BookDetails() {
                       <div className="flex-grow">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center space-x-2">
-                            <span className="font-medium text-[#DFDDCE]">Anonymous User</span>
+                            <span className="font-medium text-[#DFDDCE]">
+                              {review.userName || "Anonymous User"}
+                            </span>
                           </div>
-                          <span className="text-sm text-[#DFDDCE]">{review.date}</span>
+                          <span className="text-sm text-[#DFDDCE]">
+                            {review.date?.seconds 
+                              ? new Date(review.date.seconds * 1000).toLocaleDateString("en-US", { 
+                                  month: "short", 
+                                  day: "numeric", 
+                                  year: "numeric" 
+                                })
+                              : "Just now"}
+                          </span>
                         </div>
                         <div className="mb-2">
                           <StarRating rating={review.rating} />
