@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '../context/AuthContext';
-import { useRouter } from 'next/navigation';
+//import { useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
 import Image from "next/image";
 import {db} from "../../firebase"
