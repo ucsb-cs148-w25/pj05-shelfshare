@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
-export default function Browse() {
+export default function ForYou() {
   const { user } = useAuth();
   const router = useRouter();
 
