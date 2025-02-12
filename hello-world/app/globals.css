@@ -106,3 +106,58 @@ body {
 .dropdown-item:hover {
   color: #3D2F2A;
 }
+
+
+
+/* Netflix-style hover effect with page flip */
+.book-container {
+  perspective: 1000px;
+  transform-style: preserve-3d;
+  transition: transform 0.3s ease, z-index 0.3s ease;
+}
+
+.book-container:hover {
+  transform: scale(1.5) translateZ(50px);
+  z-index: 50 !important;
+  box-shadow: 0 25px 50px rgba(0,0,0,0.3);
+}
+
+.page-flip-animation {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: rgba(223, 221, 206, 0.1);
+  transform-style: preserve-3d;
+  transition: all 0.3s ease;
+  pointer-events: none;
+}
+
+.book-container:hover .page-flip-animation {
+  animation: pageFlip 0.8s ease forwards;
+  background: linear-gradient(90deg, rgba(223,221,206,0.1) 0%, rgba(223,221,206,0.8) 100%);
+}
+
+@keyframes pageFlip {
+  0% {
+    transform: rotateY(0deg) translateZ(10px);
+    opacity: 1;
+  }
+  50% {
+    transform: rotateY(-90deg) translateZ(20px);
+    opacity: 0.8;
+  }
+  100% {
+    transform: rotateY(-180deg) translateZ(30px);
+    opacity: 0;
+  }
+}
+
+/* Hide scrollbar */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
