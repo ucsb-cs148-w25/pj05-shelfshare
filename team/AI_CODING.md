@@ -16,6 +16,14 @@ List the AI tool you utilized, the outcomes you produced, and, importantly, refl
 * Deepseek was very helpful for starting the code and making adjustments when you give it feedback. It was able to make many edits and work with me. It could be useful for our coding effort going forward to give it basic UI implementation as it seems to get that correct the most. Sometimes though, after asking a few questions it stops answering your question and tells you to ask again later. I think it is pretty useful to experiment with different UI features and animations. 
 * I needed to look over the code I was given and look for anything that seemed out of place. Also I had to heavily test the code locally and ensure there were no edge cases the AI waas not covering. I was able to simply promt the AI to give understandable explanation of the output. To ensure it is fair use, I ensure the output is not far off from the code I give the AI to prevent any complete copying. 
 
+## Niyati
+* AI tool used: ChatGPT
+* Outcomes: worked on the frotend portion of the timeline page. I gave chatgpt the figma that we created and asked it to create a page like the figma. It created something similar to the page but not exactly the same as the Figma.
+
+![image](https://github.com/user-attachments/assets/3158c8e6-2ba9-4ff6-a386-3c7493b558c6)
+
+#### Reflection:
+* ChatGPT was somewhat helpful. Although it took a lot of refining to get the page to look like the Figma page. It got the colors incorrect the first time and the UI didn't look great. It got the functionality of the page correctly but in terms of UI I thought it could have done better. I had to ask ChatGPT multiple times to fix the UI and where I wanted specific boxes. At the end, the page did not exactly the same as the figma but it looked similar enough.
 
 
 
