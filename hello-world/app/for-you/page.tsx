@@ -1,40 +1,33 @@
 'use client';
 
 import { useAuth } from '../context/AuthContext';
-import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 export default function ForYou() {
   const { user } = useAuth();
-  const router = useRouter();
   const [userBooks, setUserBooks] = useState([]);
   const [recommendations, setRecommendations] = useState([]);
 
   // Redirect to login page if user is not authenticated
   useEffect(() => {
-    if (!user) {
-      router.push('/');
-    }
-  }, [user, router]);
-
-  if (!user) {
-    return null; // Avoid rendering anything while redirecting
-  }
-
-  useEffect(() => {
-    if (user) {
-      fetch('/api/books/my-shelf') // Adjust API endpoint as needed
-        .then((res) => res.json())
-        .then((data) => {
-          setUserBooks(data.books);
-          generateRecommendations(data.books);
-        })
-        .catch((err) => console.error('Error fetching shelf:', err));
-    }
+    if (!user) return; // Prevents running when user is null
+  
+    fetch('/api/books/my-shelf')
+      .then((res) => res.json())
+      .then((data) => {
+        setUserBooks(data.books);
+        generateRecommendations(data.books);
+      })
+      .catch((err) => console.error('Error fetching shelf:', err));
   }, [user]);
 
+  interface Book {
+    title: string;
+    cover:string;
+  }
+
   // Function to generate AI-based book recommendations
-  async function generateRecommendations(books) {
+  async function generateRecommendations(books: Book[]) {
     try {
       const response = await fetch('/api/recommend-books', { // Adjust endpoint as needed
         method: 'POST',
@@ -67,8 +60,13 @@ export default function ForYou() {
   );
 }
 
+interface SectionProps {
+  title: string;
+  books: { title: string; cover: string }[];
+} 
+
 // Reusable Book Display Component
-function Section({ title, books }) {
+function Section({ title, books }: SectionProps) {
   return (
     <div className="flex flex-col items-center mt-12 w-full">
       <div className="relative w-full">
