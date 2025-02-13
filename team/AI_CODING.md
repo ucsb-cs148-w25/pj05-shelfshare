@@ -25,5 +25,13 @@ List the AI tool you utilized, the outcomes you produced, and, importantly, refl
 #### Reflection:
 * ChatGPT was somewhat helpful. Although it took a lot of refining to get the page to look like the Figma page. It got the colors incorrect the first time and the UI didn't look great. It got the functionality of the page correctly but in terms of UI I thought it could have done better. I had to ask ChatGPT multiple times to fix the UI and where I wanted specific boxes. At the end, the page did not exactly the same as the figma but it looked similar enough.
 
+## Hannah
+* AI tool used: Claude
+* Outcomes: I used Claude to help implement a dynamic bookshelf feature for our reading tracking application. The feature allows users to organize their books into different shelves (Currently Reading, Want to Read, and Finished Reading) and mark books as favorites. Claude helped me set up Firebase integration for storing the data and guided me through fixing various TypeScript errors. The end result is a working shelf system where users can easily categorize their books and see them displayed in an organized way, with real time updates when books are added or moved between shelves.
 
+<img width="1217" alt="Screenshot 2025-02-13 at 1 03 31 PM" src="https://github.com/user-attachments/assets/3781c374-f7c9-43de-885d-85233b7cd3fb" />
+<img width="1216" alt="Screenshot 2025-02-13 at 1 03 55 PM" src="https://github.com/user-attachments/assets/9e701a0e-a99b-4770-a074-8f640dedbde5" />
+
+#### Reflection:
+Working with Claude on this feature was both helpful and educational. While the AI was great at suggesting solutions and fixing TypeScript errors, I learned it's important to be specific with questions and break down problems into smaller parts. Sometimes we had to go through multiple iterations to get the types right, especially with Firebase integration. The most valuable aspect was how Claude explained each solution, helping me understand not just what to do but why certain approaches were better than others. This experience showed me that AI can be a powerful tool for development, but it works best when used as a guide rather than just a solution provider.
 
