@@ -4,7 +4,14 @@ import { db } from "@/firebase";
 import { collection, addDoc, deleteDoc, query, where, getDocs } from "firebase/firestore";
 import { useAuth } from '@/app/context/AuthContext';
 
-const BookActions = ({ 
+interface BookActionsProps {
+  bookId: string;
+  title: string;
+  author: string;
+  coverUrl: string;
+}
+
+const BookActions: React.FC<BookActionsProps> = ({ 
   bookId,
   title,
   author,
@@ -61,7 +68,7 @@ const BookActions = ({
     }
   };
 
-  const addToShelf = async (shelfType) => {
+  const addToShelf = async (shelfType: 'currently-reading' | 'want-to-read' | 'finished') => {
     if (!user) {
       alert("You need to be logged in to add books to your shelf.");
       return;
