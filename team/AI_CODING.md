@@ -43,3 +43,10 @@ Working with Claude on this feature was both helpful and educational. While the 
 
 Reflection: While Gemini is good at summarising and explaining code, it struggles to comprehend bigger tasks. It fixed an issue but then created an issue on another line. In the end, I got the UI that I wanted and it worked as it should. If I had asked it for smaller components at a time, I think it would have performed better.
 
+## Charlene
+* AI tool used: ChatGPT
+* Outcomes: I used ChatGPT to help create a dropdown bar that would open and close upon clicking and be styled the same as the rest of the navigation. I prompted to specifically create a drop down and then use CSS to create styling that matched existing custom colors. This worked out well, but I needed to make sure to read through the explanations so that I understood how it would all come together.  
+![image](https://github.com/user-attachments/assets/8af597c7-c80f-4c8f-a77b-8c5ef4c66ef2)
+
+### Reflection: 
+Overall ChatGPT proved to be fairly helpful. I think that this was in part due to the description I gave in the prompt being fairly specific in order to get clean understandable results. I think that it also helped that I identified what code I had already and wanted only a certain portion to be updated. This allowed for consistency. Additionally, the explanations were clear and I felt confident that I knew what the lines meant by the time I was testing the code. In the end, this was a learning experience and I am happy it all went so smoothly. 
