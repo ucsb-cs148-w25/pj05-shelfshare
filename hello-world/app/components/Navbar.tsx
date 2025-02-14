@@ -3,7 +3,7 @@
 import React, { useEffect, useReducer, useState, useCallback, useRef} from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import debounce from 'lodash.debounce';
 
 // Interfaces for search results
@@ -86,6 +86,8 @@ const Navbar: React.FC = () => {
     const { openDropdown, selectedMedia } = state;
 
     const searchCache = useRef(new Map<string, SearchResult[]>());
+
+    const router = useRouter(); // Use Next.js router
 
     // Fetch function with language filtering and author limitation
     
@@ -183,6 +185,31 @@ const Navbar: React.FC = () => {
 
     const handleSelectMedia = (option: "Books" | "Movies" | "Music") => {
         dispatch({ type: "SET_SELECTED_MEDIA", option });
+
+        // Map the media selection to lowercase route names
+        const mediaRoute = option.toLowerCase();
+
+        // Ensure that if we are on the timeline page, we do not change the route
+        if (pathname === "/timeline") {
+            return; // Do nothing if the user is on the Timeline page
+        }
+
+        if (pathname === "/home") {
+            return;
+        }
+
+        if (pathname === "/for-you") {
+            return;
+        }
+
+        // Extract the current route and update media type
+        const segments = pathname.split("/").filter(Boolean); // Remove empty segments
+        if (segments.length > 0) {
+            segments[0] = mediaRoute; // Replace media type
+            router.push(`/${segments.join("/")}`); // Navigate to updated URL
+        } else {
+            router.push(`/${mediaRoute}/browse`); // Default fallback
+        }
         
         // Set the search category based on selected media
         switch (option) {
@@ -291,6 +318,7 @@ const Navbar: React.FC = () => {
                 <Link href={`/${selectedMedia.toLowerCase()}/browse`} className="nav-link">Browse</Link>
                 <Link href="/timeline" className="nav-link">Timeline</Link>
                 <Link href={`/${selectedMedia.toLowerCase()}/my-shelf`} className="nav-link">My Shelf</Link>
+                <Link href="/for-you" className="nav-link">For You</Link>
 
 
                 <div className="relative">
