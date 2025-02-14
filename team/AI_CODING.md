@@ -50,3 +50,11 @@ Reflection: While Gemini is good at summarising and explaining code, it struggle
 
 #### Reflection: 
 Overall ChatGPT proved to be fairly helpful. I think that this was in part due to the description I gave in the prompt being fairly specific in order to get clean understandable results. I think that it also helped that I identified what code I had already and wanted only a certain portion to be updated. This allowed for consistency. Additionally, the explanations were clear and I felt confident that I knew what the lines meant by the time I was testing the code. In the end, this was a learning experience and I am happy it all went so smoothly. 
+
+## Srin
+* AI tool used: ChatGPT
+* Outcomes: I used ChatGPT to assist me in writing a testing script for the unit testing requirement for this weeks lab. I prompted the tool to create a script to test a button push on my navigation bar by including how to find the button, the name of the specific component, and the expected outcome of the button push, which was to redirect the user to home. The first response did not show me the reponse I was looking for, so I had to adjust it to be specific that the libraries I wanted to use were Jest and the React Testing Library
+
+#### Reflection:
+I think ChatGPT is a very useful tool when it comes to writing test scripts. It saves the programmer a lot of time and sometimes includes tests for aspects that humans can forget to consider. I think it is not 100% accurate though, so its more useful to use as a starting point and then tweak it while going forward. It also was clear in explaining each chunk of code so I was able to understand what each portion was doing, which also helped me when a certain part wouldn't work as expected. Overall, it was a helpful tool but I also think it is important to be specific in prompting and also knowledgable about the overall idea of what you are doing, so it is easier to debug.
+
