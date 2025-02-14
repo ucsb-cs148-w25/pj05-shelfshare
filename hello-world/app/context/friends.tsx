@@ -1,5 +1,5 @@
 import { db } from "../../firebase";
-import { collection, updateDoc, doc, setDoc, deleteDoc, getDoc, arrayUnion, arrayRemove } from "firebase/firestore";
+import { doc, setDoc, deleteDoc, getDoc } from "firebase/firestore";
 import { writeBatch } from 'firebase/firestore';
 
 export const sendFriendRequest = async (userId: string, friendId: string) => {

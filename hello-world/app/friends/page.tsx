@@ -57,16 +57,16 @@ const Friends = () => {
       setFriendRequests(updatedRequests);
     });
 
-    const handleSendRequest = async (friendId: string) => {
-        if (!user) return;
-        try {
-          await sendFriendRequest(user.uid, friendId);
-        } catch (error) {
-          console.error("Failed to send friend request:", error);
-          // Optionally show an error message to the user
-          alert("Failed to send friend request. Please try again.");
-        }
-      };
+    // const handleSendRequest = async (friendId: string) => {
+    //     if (!user) return;
+    //     try {
+    //       await sendFriendRequest(user.uid, friendId);
+    //     } catch (error) {
+    //       console.error("Failed to send friend request:", error);
+    //       // Optionally show an error message to the user
+    //       alert("Failed to send friend request. Please try again.");
+    //     }
+    //   };
 
     // Fetch friends
     const friendsQuery = query(collection(db, "users", user.uid, "friends"));
