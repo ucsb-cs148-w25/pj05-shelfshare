@@ -3,7 +3,7 @@
 ## Testing Libraries
 * **Jest** – framework used for unit testing
 * **React Testing Library** – to render React components
-* **Next.js Mock** – to mock button push
+* **Next.js Mock** – to mock Next.js specific modules
 
 ## Approach
 
@@ -14,28 +14,33 @@ Tests that clicking on the ShelfShare logo in the Navbar correctly reroutes the 
 Install necessary dependencies
 
 ```sh
-npm install --save @testing-library/react jest jest-mock next
+npm install --save-dev @types/jest ts-jest @testing-library/jest-dom @testing-library/react
 ```
-Installs jest and React Testing Library.
+Installs Jest and React Testing Library.
 
 ```sh
-import { render, fireEvent, screen } from '@testing-library/react';
-import Navbar from '../Navbar';
-import { useRouter } from 'next/router';
+import { render, fireEvent } from "@testing-library/react";
+import Navbar from "../Navbar";
+import { useRouter, usePathname } from "next/navigation";
 ```
 The test file imports the required libraries and components.
 * **@testing-library/react** provides what is necessary to render/interact with components
   * fireEvent – simulates clicks
-  * screen – queries elements
 * **useRouter** – handles navigation
+* Navbar component is imported for testing
 
 ## Steps
-* A mock router is created with a push function to simulate a user's navigation to the logo
-* Image is queried by its alt text ('ShelfShare Logo')
-   * The closest anchor (<a> element) wrapping the image is found
-* Navbar is rendered
-* Click is simulated
-* Ensures that mockRouter.push was called with '/home', confirming that clicking the logo triggers navigation
+* Mock router is created with a push function to simulate navigation
+* Current pathname is set using usePathname
+* Navbar component is rendered
+* Logo is queried using its alt text ("ShelfShare Logo")
+* Closest element wrapping the logo is found
+* Simulated a user's click
+
+```sh
+cd hello-world
+```
+Test file is located in the tests folder within the components folder of the app folder.
 
 ### Run test
 ```sh
