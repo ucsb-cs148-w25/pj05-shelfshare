@@ -35,3 +35,11 @@ List the AI tool you utilized, the outcomes you produced, and, importantly, refl
 #### Reflection:
 Working with Claude on this feature was both helpful and educational. While the AI was great at suggesting solutions and fixing TypeScript errors, I learned it's important to be specific with questions and break down problems into smaller parts. Sometimes we had to go through multiple iterations to get the types right, especially with Firebase integration. The most valuable aspect was how Claude explained each solution, helping me understand not just what to do but why certain approaches were better than others. This experience showed me that AI can be a powerful tool for development, but it works best when used as a guide rather than just a solution provider.
 
+## Towela
+* AI tool used: Gemini
+* Outcomes: I used Gemini to write styling code for the front end of the Friend's page so that I could test the backend. I prompted the model to specifically use Tailwind CSS. The first iteration was not close to what I asked of the model. I had to adjust my prompt in order to get a better result. After the third time, the UI looked more like I expected.
+
+![image](https://github.com/user-attachments/assets/b950aeb8-4450-4547-8a3e-963fc6a3cb43)
+
+Reflection: While Gemini is good at summarising and explaining code, it struggles to comprehend bigger tasks. It fixed an issue but then created an issue on another line. In the end, I got the UI that I wanted and it worked as it should. If I had asked it for smaller components at a time, I think it would have performed better.
+
