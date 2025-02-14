@@ -8,6 +8,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy } from "firebase/firestore";
 import { useParams } from 'next/navigation';
+import BookActions from '@/app/components/BookActions';
 
 interface BookData {
   title: string;
@@ -222,11 +223,16 @@ export default function BookDetails() {
                 className="object-cover"
               />
             </div>
-            <button className="w-full mt-4 bg-[#3D2F2A] text-[#DFDDCE] py-3 px-6 rounded-full font-bold hover:bg-[#847266] transition-colors">
-              Add To Shelf
-            </button>
+            <div className="mt-4">
+              <BookActions 
+                bookId={bookId}
+                title={book.title}
+                author={book.authors?.[0] || "Unknown Author"}
+                coverUrl={coverImageUrl}
+              />
+            </div>
           </div>
-
+          
           <div className="flex-grow space-y-6">
             <div>
               <h1 className="text-4xl font-bold text-[#DFDDCE]">{book.title}</h1>
