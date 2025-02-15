@@ -58,3 +58,13 @@ Overall ChatGPT proved to be fairly helpful. I think that this was in part due t
 #### Reflection:
 I think ChatGPT is a very useful tool when it comes to writing test scripts. It saves the programmer a lot of time and sometimes includes tests for aspects that humans can forget to consider. I think it is not 100% accurate though, so its more useful to use as a starting point and then tweak it while going forward. It also was clear in explaining each chunk of code so I was able to understand what each portion was doing, which also helped me when a certain part wouldn't work as expected. Overall, it was a helpful tool but I also think it is important to be specific in prompting and also knowledgable about the overall idea of what you are doing, so it is easier to debug.
 
+## Sungchae 
+* AI tool used: ChatGPT
+* Outcomes: I used ChatGPT to generate the firebase rules that give access to the users to save their profile information in their database. I prompted to specifically give access to the authenthicated users who used google oath to sign into the webpage. In the first time, it did not produced the expected result. Instead, it gave me a code for .json file which is completely different from what I was expecting. Then, after reprompting the question with the detail of the firebase perspective, it correctly generate the code that I needed.
+
+<img width="1243" alt="Screenshot 2025-02-14 at 5 08 27 PM" src="https://github.com/user-attachments/assets/03467ca9-cc59-4b3e-98d3-7098e0cebbae" />
+
+#### Reflection:
+In summary, ChatGPT increased efficiency by providing the desired result in the end with a reasonable amount of time. It definitely reduced the necessary reading and searching time required for finding information about the firebase online. I do not think that AI is a tool that produces the correct output in the first setting but rather a vehicle that helps users to climb up step by step heading towards their desired results. It is an interactive process where users provide the responsive context and additional detail to AI in each step. After getting the potential end result, I tested the rule by checking the communication between my local host and firebase using firebase API. I think it is necessary to verify the results that AI produced in the end.  
+
+
