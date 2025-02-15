@@ -3,67 +3,108 @@
 
 import { useAuth } from '../context/AuthContext';
 import { useEffect, useState } from 'react';
+import { db } from "@/firebase";
+import { collection, query, where, onSnapshot, DocumentData } from "firebase/firestore";
+
+interface Book {
+  title: string;
+  author: string;
+  coverUrl: string;
+}
 
 export default function ForYou() {
   const { user } = useAuth();
-  const [userBooks, setUserBooks] = useState([]);
-  const [recommendations, setRecommendations] = useState([]);
+  const [recommendations, setRecommendations] = useState<{
+    readNext: Book[];
+    youMayLike: Book[];
+    topBooks: Book[];
+  }>({
+    readNext: [],
+    youMayLike: [],
+    topBooks: [],
+  });
 
   // Redirect to login page if user is not authenticated
   useEffect(() => {
     if (!user) return;
   
-    fetch(`/api/my-shelf?userId=${user.uid}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setUserBooks(data.books);
-        generateRecommendations(data.books.map((book) => book.title)); // Send only titles
-      })
-      .catch((err) => console.error("Error fetching shelf:", err));
-  }, [user]);  
+    // Fetch user's finished books directly from Firebase
+    const shelvesQuery = query(
+      collection(db, "users", user.uid, "shelves"),
+      where("shelfType", "==", "finished") // Only fetch finished books
+    );
 
-  interface Book {
-    title: string;
-    cover:string;
-  }
+    const unsubscribe = onSnapshot(shelvesQuery, (snapshot) => {
+      const books = snapshot.docs.map((doc) => {
+        const data = doc.data() as DocumentData;
+        return {
+          title: data.title || "Unknown Title",
+          author: data.author || "Unknown Author",
+          coverUrl: data.coverUrl || "",
+        };
+      });
+      if (books.length > 0) {
+        generateRecommendations(books);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [user]); 
 
   // Function to generate AI-based book recommendations
   async function generateRecommendations(books: Book[]) {
     try {
-      const response = await fetch('/api/ai-recommend.ts', { // Adjust endpoint as needed
+      const response = await fetch('/api/ai-recommend', { 
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ books }),
+        body: JSON.stringify({ books }), // Send only titles to AI -- books: books.map(book => book.title)
       });
+
       const data = await response.json();
-      setRecommendations(data.recommendations);
-    } catch (error) {
-      console.error('Error generating recommendations:', error);
-    }
+      
+      console.log("AI Recommendations Response:", data); // Debugging log
+
+      const fetchCovers = async (books: { title: string, author: string }[]) => {
+        return books.map(book => ({
+          ...book,
+          coverUrl: `https://covers.openlibrary.org/b/olid/${encodeURIComponent(book.title)}-M.jpg`, 
+        }));
+      };
+
+      // Fetch covers for each recommendation list
+      const recommendationsWithCovers = await fetchCovers(data.recommendations || []);
+      const newGenresWithCovers = await fetchCovers(data.newGenres || []);
+      const topBooksWithCovers = await fetchCovers(data.topBooks || []);
+
+      setRecommendations({
+      readNext: recommendationsWithCovers,
+      youMayLike: newGenresWithCovers,
+      topBooks: topBooksWithCovers,
+    });
+  } catch (error) {
+    console.error('Error generating recommendations:', error);
   }
+}
 
   if (!user) return null; // Avoid rendering while redirecting
 
   return (
-    <div
-      className="min-h-screen"
-      style={{ backgroundColor: '#5A7463', fontFamily: 'Outfit, sans-serif' }}
-    >
+    <div className="min-h-screen bg-[#5A7463] font-['Outfit', sans-serif]">
       {/* Read Next Section */}
-      <Section title="Read Next" books={userBooks.slice(0, 4)} />
-      
+      <Section title="Read Next" books={recommendations.readNext.slice(0, 4)} />
+  
       {/* AI-Recommended Section */}
-      <Section title="You may also like..." books={recommendations.slice(0, 4)} />
-
+      <Section title="You may also like..." books={recommendations.youMayLike.slice(0, 4)} />
+  
       {/* Top 10 Books of the Year */}
-      <Section title="Top 10 books of the Year" books={recommendations.slice(4, 8)} />
+      <Section title="Top 10 books of the Year" books={recommendations.topBooks.slice(0, 4)} />
     </div>
-  );
+  );  
 }
 
 interface SectionProps {
   title: string;
-  books: { title: string; cover: string }[];
+  books: { title: string; coverUrl: string }[];
 } 
 
 // Reusable Book Display Component
@@ -91,7 +132,7 @@ function Section({ title, books }: SectionProps) {
                 <div
                   key={index}
                   className="bg-[#3D2F2A] w-[150px] h-[250px] rounded-lg flex items-center justify-center text-white text-sm p-2"
-                  style={{ backgroundImage: `url(${book.cover})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+                  style={{ backgroundImage: `url(${book.coverUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
                 >
                   {book.title}
                 </div>

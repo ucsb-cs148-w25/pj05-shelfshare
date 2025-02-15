@@ -1,7 +1,14 @@
-// api/ai-recommend.ts
+// api/ai-recommend.tsx
 
 import { NextApiRequest, NextApiResponse } from "next";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, GenerateContentResult } from "@google/generative-ai";
+
+// Define a proper type for book recommendations
+interface BookRecommendation {
+  title: string;
+  author: string;
+  genre?: string; // Optional for top books list
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") {
@@ -19,21 +26,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     // Prompt AI for different shelves
     const prompts = {
-      recommendations: `Based on these books: ${books.join(", ")}, what other books would the reader enjoy? Provide 5 recommendations with title, author, and genre.`,
-      newGenres: `The reader has read ${books.join(", ")}. Suggest 5 books from different genres they haven’t explored yet.`,
-      topBooks: `What are the top 10 books of the year? Provide a list of titles and authors.`,
+      recommendations: `Based on these books: ${books.join(", ")}, what other books would the reader enjoy? Provide 5 recommendations in this JSON format: [{"title": "Book Title", "author": "Author Name", "genre": "Genre"}].`,
+      newGenres: `The reader has read ${books.join(", ")}. Suggest 5 books from different genres they haven’t explored yet in this JSON format: [{"title": "Book Title", "author": "Author Name", "genre": "Genre"}].`,
+      topBooks: `What are the top 10 books of the year? Provide them in this JSON format: [{"title": "Book Title", "author": "Author Name"}].`,
     };
 
     // Fetch AI-generated results
-    const responses: { response: { text: () => string } }[] = await Promise.all([
+    const responses = await Promise.all([
       model.generateContent(prompts.recommendations),
       model.generateContent(prompts.newGenres),
       model.generateContent(prompts.topBooks),
-    ]);    
+    ]);
     
-    const parseResponse = async (response: any) => {
+    const parseResponse = async (response: GenerateContentResult): Promise<BookRecommendation[]> => {
       const text = await response.response.text();
-      return text.split("\n").filter((line) => line.trim() !== "");
+      try {
+        return JSON.parse(text) as BookRecommendation[]; // Properly typed response
+      } catch {
+        console.error("Failed to parse AI response:", text);
+        return [];
+      }
     };
     
     res.status(200).json({
