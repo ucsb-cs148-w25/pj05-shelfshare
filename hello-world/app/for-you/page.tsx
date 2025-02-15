@@ -1,4 +1,5 @@
 'use client';
+// for-you/page.tsx
 
 import { useAuth } from '../context/AuthContext';
 import { useEffect, useState } from 'react';
@@ -10,16 +11,16 @@ export default function ForYou() {
 
   // Redirect to login page if user is not authenticated
   useEffect(() => {
-    if (!user) return; // Prevents running when user is null
+    if (!user) return;
   
-    fetch('/api/books/my-shelf')
+    fetch(`/api/my-shelf?userId=${user.uid}`)
       .then((res) => res.json())
       .then((data) => {
         setUserBooks(data.books);
-        generateRecommendations(data.books);
+        generateRecommendations(data.books.map((book) => book.title)); // Send only titles
       })
-      .catch((err) => console.error('Error fetching shelf:', err));
-  }, [user]);
+      .catch((err) => console.error("Error fetching shelf:", err));
+  }, [user]);  
 
   interface Book {
     title: string;
@@ -29,7 +30,7 @@ export default function ForYou() {
   // Function to generate AI-based book recommendations
   async function generateRecommendations(books: Book[]) {
     try {
-      const response = await fetch('/api/recommend-books', { // Adjust endpoint as needed
+      const response = await fetch('/api/ai-recommend.ts', { // Adjust endpoint as needed
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ books }),
