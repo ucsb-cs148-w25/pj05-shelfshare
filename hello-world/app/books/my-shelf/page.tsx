@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { db } from "@/firebase";
-import { collection, query, onSnapshot, DocumentData, Timestamp, deleteDoc, doc } from "firebase/firestore";
+import { collection, query, onSnapshot, Timestamp, deleteDoc, doc, updateDoc } from "firebase/firestore";
 import { Trash2 } from 'lucide-react';
 
 interface BookItem {
@@ -38,6 +38,7 @@ export default function UserLists() {
     'want-to-read': false,
     'finished': false
   });
+  const [draggedBook, setDraggedBook] = useState<BookItem | null>(null);
 
   useEffect(() => {
     if (!user) {
@@ -49,7 +50,7 @@ export default function UserLists() {
     const favoritesQuery = query(collection(db, "users", user.uid, "favorites"));
     const unsubscribeFavorites = onSnapshot(favoritesQuery, (snapshot) => {
       const favoritesData = snapshot.docs.map((doc) => {
-        const data = doc.data() as DocumentData;
+        const data = doc.data();
         return {
           id: doc.id,
           bookId: data.bookId || '',
@@ -66,7 +67,7 @@ export default function UserLists() {
     const shelvesQuery = query(collection(db, "users", user.uid, "shelves"));
     const unsubscribeShelves = onSnapshot(shelvesQuery, (snapshot) => {
       const shelvesData = snapshot.docs.map((doc) => {
-        const data = doc.data() as DocumentData;
+        const data = doc.data();
         return {
           id: doc.id,
           bookId: data.bookId || '',
@@ -94,6 +95,55 @@ export default function UserLists() {
       ...prev,
       [sectionType]: !prev[sectionType]
     }));
+  };
+
+  const handleDragStart = (book: BookItem, e: React.DragEvent) => {
+    setDraggedBook(book);
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '0.5';
+    }
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+    }
+  };
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '1';
+    }
+    setDraggedBook(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.backgroundColor = 'rgba(61, 47, 42, 0.2)';
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.backgroundColor = '';
+    }
+  };
+
+  const handleDrop = async (targetShelfType: 'currently-reading' | 'want-to-read' | 'finished', e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.backgroundColor = '';
+    }
+
+    if (!draggedBook || !user || draggedBook.shelfType === targetShelfType) return;
+
+    try {
+      const bookRef = doc(db, "users", user.uid, "shelves", draggedBook.id);
+      await updateDoc(bookRef, {
+        shelfType: targetShelfType
+      });
+    } catch (error) {
+      console.error("Error moving book:", error);
+    }
   };
 
   const deleteBook = async (bookId: string, sectionType: string) => {
@@ -144,13 +194,21 @@ export default function UserLists() {
                 {editModes[section.type] ? 'Done' : 'Edit'}
               </button>
             </div>
-            <div className="relative bg-[#847266] border-t-8 border-b-8 border-[#3D2F2A] h-44 flex items-center">
+            <div 
+              className="relative bg-[#847266] border-t-8 border-b-8 border-[#3D2F2A] h-44 flex items-center transition-colors"
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => section.type !== 'favorites' && handleDrop(section.type as 'currently-reading' | 'want-to-read' | 'finished', e)}
+            >
               <div className="flex space-x-4 overflow-x-auto px-4">
                 {section.books.length > 0 ? (
                   section.books.map((book) => (
                     <div
                       key={book.id}
                       className="flex-shrink-0 cursor-pointer relative group"
+                      draggable={section.type !== 'favorites'}
+                      onDragStart={(e) => handleDragStart(book, e)}
+                      onDragEnd={handleDragEnd}
                       onClick={() => !editModes[section.type] && router.push(`/books/${book.bookId}`)}
                     >
                       <Image
@@ -166,7 +224,7 @@ export default function UserLists() {
                             e.stopPropagation();
                             deleteBook(book.id, section.type);
                           }}
-                          className="absolute top-2 right-2 p-2 rounded-full bg-[#3D2F2A] text-[#DFDDCE] hover:bg-[#847266] transition-colors"
+                          className="absolute top-2 right-2 p-2 rounded-full bg-[#3D2F2A] text-[#DFDDCE] hover:bg-[#847266] transition-colors opacity-100"
                           aria-label="Delete book"
                         >
                           <Trash2 className="w-4 h-4" />
