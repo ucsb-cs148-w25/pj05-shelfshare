@@ -13,7 +13,9 @@
 | 1/27/2024 | Hannah Shakouri   | Lecture 05 stand-up                    |
 | 1/29/2024 | Hannah Shakouri   | Lecture 06 stand-up                    |
 | 1/31/2024 | Hannah Shakouri   | Lab 04 stand-up                     |
-
+| 2/3/2024 | Hannah Shakouri   | Lecture 07 stand-up                    |
+| 2/7/2024 | Sungchae Park   | Lab 05 stand-up                    |
+| 2/10/2024 | Hannah Shakouri   | Lecture 09 stand-up                    |
 
 # Roles
 
