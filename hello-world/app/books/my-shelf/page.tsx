@@ -23,21 +23,40 @@ interface ShelfSection {
   books: BookItem[];
   icon?: string;
   type: 'favorites' | 'currently-reading' | 'want-to-read' | 'finished';
+  emptyMessage: string;
 }
 
 export default function UserLists() {
   const { user } = useAuth();
   const router = useRouter();
-  const [favorites, setFavorites] = useState<BookItem[]>([]);
-  const [currentlyReading, setCurrentlyReading] = useState<BookItem[]>([]);
-  const [wantToRead, setWantToRead] = useState<BookItem[]>([]);
-  const [finishedReading, setFinishedReading] = useState<BookItem[]>([]);
-  const [editModes, setEditModes] = useState<{ [key: string]: boolean }>({
-    favorites: false,
-    'currently-reading': false,
-    'want-to-read': false,
-    'finished': false
-  });
+  const [shelves, setShelves] = useState<ShelfSection[]>([
+    { 
+      title: 'Favorites', 
+      books: [], 
+      icon: '❤️', 
+      type: 'favorites',
+      emptyMessage: "Mark your favorite books with the heart icon"
+    },
+    { 
+      title: 'Currently Reading', 
+      books: [], 
+      type: 'currently-reading',
+      emptyMessage: "Start tracking what you're reading"
+    },
+    { 
+      title: 'Want to Read', 
+      books: [], 
+      type: 'want-to-read',
+      emptyMessage: "Build your reading wishlist"
+    },
+    { 
+      title: 'Finished Reading', 
+      books: [], 
+      type: 'finished',
+      emptyMessage: "Your completed books will appear here"
+    }
+  ]);
+  const [editModes, setEditModes] = useState<{ [key: string]: boolean }>({});
   const [draggedBook, setDraggedBook] = useState<BookItem | null>(null);
 
   useEffect(() => {
@@ -46,49 +65,50 @@ export default function UserLists() {
       return;
     }
 
-    // Fetch favorites
-    const favoritesQuery = query(collection(db, "users", user.uid, "favorites"));
-    const unsubscribeFavorites = onSnapshot(favoritesQuery, (snapshot) => {
-      const favoritesData = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
+    const fetchBooks = async () => {
+      // Fetch favorites
+      const favoritesQuery = query(collection(db, "users", user.uid, "favorites"));
+      const unsubscribeFavorites = onSnapshot(favoritesQuery, (snapshot) => {
+        const favoritesData = snapshot.docs.map((doc) => ({
           id: doc.id,
-          bookId: data.bookId || '',
-          title: data.title || 'Unknown Title',
-          author: data.author || 'Unknown Author',
-          coverUrl: data.coverUrl || '',
-          dateAdded: data.dateAdded instanceof Timestamp ? data.dateAdded : new Date()
-        };
-      });
-      setFavorites(favoritesData);
-    });
+          ...doc.data(),
+          dateAdded: doc.data().dateAdded instanceof Timestamp ? doc.data().dateAdded : new Date()
+        })) as BookItem[];
 
-    // Fetch shelves
-    const shelvesQuery = query(collection(db, "users", user.uid, "shelves"));
-    const unsubscribeShelves = onSnapshot(shelvesQuery, (snapshot) => {
-      const shelvesData = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          bookId: data.bookId || '',
-          title: data.title || 'Unknown Title',
-          author: data.author || 'Unknown Author',
-          coverUrl: data.coverUrl || '',
-          dateAdded: data.dateAdded instanceof Timestamp ? data.dateAdded : new Date(),
-          shelfType: data.shelfType as ('currently-reading' | 'want-to-read' | 'finished')
-        };
+        updateShelfBooks('favorites', favoritesData);
       });
 
-      setCurrentlyReading(shelvesData.filter(book => book.shelfType === 'currently-reading'));
-      setWantToRead(shelvesData.filter(book => book.shelfType === 'want-to-read'));
-      setFinishedReading(shelvesData.filter(book => book.shelfType === 'finished'));
-    });
+      // Fetch shelves
+      const shelvesQuery = query(collection(db, "users", user.uid, "shelves"));
+      const unsubscribeShelves = onSnapshot(shelvesQuery, (snapshot) => {
+        const shelvesData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          dateAdded: doc.data().dateAdded instanceof Timestamp ? doc.data().dateAdded : new Date()
+        })) as BookItem[];
 
-    return () => {
-      unsubscribeFavorites();
-      unsubscribeShelves();
+        // Update each shelf type
+        updateShelfBooks('currently-reading', shelvesData.filter(book => book.shelfType === 'currently-reading'));
+        updateShelfBooks('want-to-read', shelvesData.filter(book => book.shelfType === 'want-to-read'));
+        updateShelfBooks('finished', shelvesData.filter(book => book.shelfType === 'finished'));
+      });
+
+      return () => {
+        unsubscribeFavorites();
+        unsubscribeShelves();
+      };
     };
+
+    fetchBooks();
   }, [user, router]);
+
+  const updateShelfBooks = (shelfType: string, books: BookItem[]) => {
+    setShelves(currentShelves => 
+      currentShelves.map(shelf => 
+        shelf.type === shelfType ? { ...shelf, books } : shelf
+      )
+    );
+  };
 
   const toggleEditMode = (sectionType: string) => {
     setEditModes(prev => ({
@@ -97,13 +117,15 @@ export default function UserLists() {
     }));
   };
 
+  // Drag and Drop Handlers
   const handleDragStart = (book: BookItem, e: React.DragEvent) => {
+    if (!book.shelfType) {
+      e.preventDefault();
+      return;
+    }
     setDraggedBook(book);
     if (e.currentTarget instanceof HTMLElement) {
       e.currentTarget.style.opacity = '0.5';
-    }
-    if (e.dataTransfer) {
-      e.dataTransfer.effectAllowed = 'move';
     }
   };
 
@@ -114,7 +136,10 @@ export default function UserLists() {
     setDraggedBook(null);
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: React.DragEvent, sectionType: string) => {
+    if (sectionType === 'favorites') {
+      return;
+    }
     e.preventDefault();
     if (e.currentTarget instanceof HTMLElement) {
       e.currentTarget.style.backgroundColor = 'rgba(61, 47, 42, 0.2)';
@@ -122,7 +147,6 @@ export default function UserLists() {
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
     if (e.currentTarget instanceof HTMLElement) {
       e.currentTarget.style.backgroundColor = '';
     }
@@ -150,38 +174,19 @@ export default function UserLists() {
     if (!user) return;
     
     try {
-      if (sectionType === 'favorites') {
-        const bookToDelete = favorites.find(book => book.id === bookId);
-        if (bookToDelete) {
-          await deleteDoc(doc(db, "users", user.uid, "favorites", bookId));
-        }
-      } else {
-        const bookToDelete = [...currentlyReading, ...wantToRead, ...finishedReading]
-          .find(book => book.id === bookId);
-        if (bookToDelete) {
-          await deleteDoc(doc(db, "users", user.uid, "shelves", bookId));
-        }
-      }
+      const collectionName = sectionType === 'favorites' ? 'favorites' : 'shelves';
+      await deleteDoc(doc(db, "users", user.uid, collectionName, bookId));
     } catch (error) {
       console.error("Error deleting book:", error);
     }
   };
 
-  if (!user) {
-    return null;
-  }
-
-  const sections: ShelfSection[] = [
-    { title: 'Favorites', books: favorites, icon: '❤️', type: 'favorites' },
-    { title: 'Currently Reading', books: currentlyReading, type: 'currently-reading' },
-    { title: 'Want to Read', books: wantToRead, type: 'want-to-read' },
-    { title: 'Finished Reading', books: finishedReading, type: 'finished' }
-  ];
+  if (!user) return null;
 
   return (
     <div className="bg-[#5A7463] min-h-screen p-8">
       <div className="max-w-6xl mx-auto space-y-8">
-        {sections.map((section) => (
+        {shelves.map((section) => (
           <div key={section.type}>
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-[#DFDDCE] text-3xl font-bold">
@@ -195,12 +200,14 @@ export default function UserLists() {
               </button>
             </div>
             <div 
-              className="relative bg-[#847266] border-t-8 border-b-8 border-[#3D2F2A] h-44 flex items-center transition-colors"
-              onDragOver={handleDragOver}
+              className={`relative bg-[#847266] border-t-8 border-b-8 border-[#3D2F2A] h-44 flex items-center transition-colors
+                ${section.type !== 'favorites' ? 'droppable' : ''}`}
+              onDragOver={(e) => handleDragOver(e, section.type)}
               onDragLeave={handleDragLeave}
-              onDrop={(e) => section.type !== 'favorites' && handleDrop(section.type as 'currently-reading' | 'want-to-read' | 'finished', e)}
+              onDrop={(e) => section.type !== 'favorites' && 
+                handleDrop(section.type as 'currently-reading' | 'want-to-read' | 'finished', e)}
             >
-              <div className="flex space-x-4 overflow-x-auto px-4">
+              <div className="flex space-x-4 overflow-x-auto px-4 w-full">
                 {section.books.length > 0 ? (
                   section.books.map((book) => (
                     <div
@@ -233,7 +240,9 @@ export default function UserLists() {
                     </div>
                   ))
                 ) : (
-                  <div className="bg-[#3D2F2A] w-32 h-36 rounded-lg" />
+                  <div className="flex items-center justify-center w-full h-full text-[#DFDDCE] text-lg italic">
+                    {section.emptyMessage}
+                  </div>
                 )}
               </div>
             </div>
