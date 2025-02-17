@@ -22,8 +22,8 @@ export async function POST(req: Request) {
   const bookTitles = books.map((book: { title: string }) => book.title).join(", ");
 
   const prompts = {
-    recommendations: `Based on these books: ${bookTitles}, what other books would the reader enjoy? Provide 5 recommendations in this JSON format: [{"title": "Book Title", "author": "Author Name", "genre": "Genre"}].`,
-    newGenres: `The reader has read ${bookTitles}. Suggest 5 books from different genres they haven’t explored yet in this JSON format: [{"title": "Book Title", "author": "Author Name", "genre": "Genre"}].`,
+    recommendations: `Based on these books: ${bookTitles}, what other books would the reader enjoy? Provide 10 recommendations in this JSON format: [{"title": "Book Title", "author": "Author Name", "genre": "Genre"}].`,
+    newGenres: `The reader has read ${bookTitles}. Suggest 10 books from different genres they haven’t explored yet in this JSON format: [{"title": "Book Title", "author": "Author Name", "genre": "Genre"}].`,
     //topBooks: `What are the top 10 books of the year according to the New York Times? Provide them in this JSON format: [{"title": "Book Title", "author": "Author Name"}].`,
   };
 
