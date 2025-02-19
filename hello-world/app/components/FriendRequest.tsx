@@ -24,7 +24,7 @@ const FriendRequests = ({ userId }: { userId: string }) => {
       setRequests(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
     });
 
-    return () => unsubscribe(); // Clean up the listener when the component unmounts
+    return () => unsubscribe(); 
   }, [userId]);
 
   return (
