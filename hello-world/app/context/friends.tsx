@@ -3,7 +3,6 @@ import { doc, setDoc, deleteDoc, getDoc } from "firebase/firestore";
 import { writeBatch } from 'firebase/firestore';
 
 export const sendFriendRequest = async (userId: string, friendId: string) => {
-  try {
     const timestamp = new Date().toISOString();
     
     // Create batch to ensure both operations succeed or fail together
@@ -27,18 +26,9 @@ export const sendFriendRequest = async (userId: string, friendId: string) => {
     await batch.commit();
     
     console.log("Friend request sent successfully!");
-  } catch (error) {
-    console.error("Error sending friend request:", error);
-    // if (error instanceof Error) {
-    //   throw new Error(`Unable to send friend request: ${error.message}`);
-    // } else {
-    //   throw new Error("Unable to send friend request");
-    // }
-  }
 };
 // Accept a Friend Request
 export const acceptFriendRequest = async (userId: string, friendId: string) => {
-  try {
     // Add to user's friends collection
     const userFriendRef = doc(db, "users", userId, "friends", friendId);
     const userDoc = await getDoc(doc(db, "users", friendId));
@@ -58,41 +48,22 @@ export const acceptFriendRequest = async (userId: string, friendId: string) => {
     // Clean up requests
     await deleteDoc(doc(db, "users", userId, "friendRequests", friendId));
     await deleteDoc(doc(db, "users", friendId, "sentFriendRequests", userId));
-  } catch (error) {
-    // console.error("Error accepting friend request:", error);
-    // throw new Error("Unable to accept friend request.");
-  }
 };
 
 // Decline a Friend Request
 export const declineFriendRequest = async (userId: string, friendId: string) => {
-  try {
     await deleteDoc(doc(db, "users", userId, "friendRequests", friendId));
     await deleteDoc(doc(db, "users", friendId, "sentFriendRequests", userId));
-  } catch (error) {
-    console.error("Error declining friend request:", error);
-    throw new Error("Unable to decline friend request.");
-  }
 };
 
 // Unsend a Friend Request
 export const unsendFriendRequest = async (userId: string, friendId: string) => {
-  try {
     await deleteDoc(doc(db, "users", userId, "sentFriendRequests", friendId));
     await deleteDoc(doc(db, "users", friendId, "friendRequests", userId));
-  } catch (error) {
-    console.error("Error unsending friend request:", error);
-    throw new Error("Unable to unsend friend request.");
-  }
 };
 
 // Remove a Friend
 export const removeFriend = async (userId: string, friendId: string) => {
-  try {
     await deleteDoc(doc(db, "users", userId, "friends", friendId));
     await deleteDoc(doc(db, "users", friendId, "friends", userId));
-  } catch (error) {
-    console.error("Error removing friend:", error);
-    throw new Error("Unable to remove friend.");
-  }
 };

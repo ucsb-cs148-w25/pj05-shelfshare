@@ -13,11 +13,6 @@ import {
   removeFriend
 } from "../context/friends";
 
-// interface UserWithStatus extends DocumentData {
-//   id: string;
-//   name?: string;
-//   friendStatus?: 'friend' | 'pending' | 'none';
-// }
 
 const Friends = () => {
   const { user } = useAuth();
@@ -101,26 +96,18 @@ const Friends = () => {
 
   const handleAcceptRequest = async (requestId: string) => {
     if (!user) return;
-    try {
       await acceptFriendRequest(user.uid, requestId);
       setAcceptedRequestIds(prev => [...prev, requestId]);
       // Remove from friend requests list
       setFriendRequests(prev => prev.filter(req => req.id !== requestId));
-    } catch (error) {
-      console.error("Error accepting request:", error);
-    }
   };
 
   const handleDeclineRequest = async (requestId: string) => {
     if (!user) return;
-    try {
       await declineFriendRequest(user.uid, requestId);
       setDeclinedRequestIds(prev => [...prev, requestId]);
       // Remove from friend requests list
       setFriendRequests(prev => prev.filter(req => req.id !== requestId));
-    } catch (error) {
-      console.error("Error declining request:", error);
-    }
   };
 
   const handleUnsendRequest = async (friendId: string) => {
@@ -130,14 +117,10 @@ const Friends = () => {
 
   const handleRemoveFriend = async (friendId: string) => {
     if (!user) return;
-    try {
       await removeFriend(user.uid, friendId);
       // Update local state to reflect friend removal
       setFriends(prev => prev.filter(friend => friend.id !== friendId));
       setAcceptedRequestIds(prev => prev.filter(id => id !== friendId));
-    } catch (error) {
-      console.error("Error removing friend:", error);
-    }
   };
 
   const getFriendRequestButton = (request: DocumentData) => {
