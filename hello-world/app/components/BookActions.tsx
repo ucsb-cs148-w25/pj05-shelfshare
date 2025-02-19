@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Heart } from 'lucide-react';
+import { Heart, Trash2 } from 'lucide-react';
 import { db } from "@/firebase";
 import { collection, addDoc, deleteDoc, query, where, getDocs } from "firebase/firestore";
 import { useAuth } from '@/app/context/AuthContext';
@@ -9,13 +9,17 @@ interface BookActionsProps {
   title: string;
   author: string;
   coverUrl: string;
+  onDelete?: () => void; // Optional callback for delete operation
+  showDeleteOnly?: boolean; // Optional prop to show only delete button
 }
 
 const BookActions: React.FC<BookActionsProps> = ({ 
   bookId,
   title,
   author,
-  coverUrl
+  coverUrl,
+  onDelete,
+  showDeleteOnly = false
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
@@ -68,6 +72,27 @@ const BookActions: React.FC<BookActionsProps> = ({
     }
   };
 
+  const deleteFromShelf = async () => {
+    if (!user) {
+      alert("You need to be logged in to remove books.");
+      return;
+    }
+
+    try {
+      const shelvesRef = collection(db, "users", user.uid, "shelves");
+      const q = query(shelvesRef, where("bookId", "==", bookId));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        await deleteDoc(querySnapshot.docs[0].ref);
+        if (onDelete) onDelete(); // Call the callback if provided
+      }
+    } catch (error) {
+      console.error("Error removing from shelf:", error);
+      alert("Failed to remove from shelf.");
+    }
+  };
+
   const addToShelf = async (shelfType: 'currently-reading' | 'want-to-read' | 'finished') => {
     if (!user) {
       alert("You need to be logged in to add books to your shelf.");
@@ -100,6 +125,21 @@ const BookActions: React.FC<BookActionsProps> = ({
     }
   };
 
+  if (showDeleteOnly) {
+    return (
+      <button
+        onClick={(e) => {
+          e.stopPropagation(); // Prevent triggering the parent's onClick
+          deleteFromShelf();
+        }}
+        className="absolute top-2 right-2 p-2 rounded-full bg-[#3D2F2A] text-[#DFDDCE] hover:bg-[#847266] transition-colors opacity-0 group-hover:opacity-100"
+        aria-label="Remove from shelf"
+      >
+        <Trash2 className="w-4 h-4" />
+      </button>
+    );
+  }
+
   return (
     <div className="flex gap-2">
       <button
@@ -107,9 +147,7 @@ const BookActions: React.FC<BookActionsProps> = ({
         className="bg-[#3D2F2A] text-[#DFDDCE] p-3 rounded-full hover:bg-[#847266] transition-colors flex items-center justify-center"
         aria-label="Toggle favorite"
       >
-        <Heart 
-          className={`w-6 h-6 ${isFavorite ? 'fill-current' : ''}`} 
-        />
+        <Heart className={`w-6 h-6 ${isFavorite ? 'fill-current' : ''}`} />
       </button>
 
       <div className="relative inline-block flex-grow">
