@@ -38,7 +38,9 @@ Measurement: If the number of unmerged PRs is low, it indicates progress toward 
 
 
 ## Retro Assessment
-- 
+- Our team discussed about the start, stop continue features that focused mainly on pr management and deployment features.
+- A brief assessment went well. It allowed whole groups to knowledge the importance of deployment, which could decrease merge conflict. 
+- I would encourage the next retro leader to make everyone feel more involved. 
 
 
 ## Retro Records
