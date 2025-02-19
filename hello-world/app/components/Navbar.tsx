@@ -7,7 +7,6 @@ import { useRouter, usePathname } from 'next/navigation';
 import debounce from 'lodash.debounce';
 import { useSearchBooks } from '@/app/hooks/useSearchBooks'; // Assume you have a custom hook for book search
 
-
 // Interfaces for search results
 interface SearchResult {
     key: string;
@@ -92,8 +91,6 @@ const Navbar: React.FC = () => {
     const router = useRouter(); // Use Next.js router
 
     // Fetch function with language filtering and author limitation
-
-    
     const fetchSearchResults = useCallback(async (query: string) => {
         const trimmedQuery = query.trim().toLowerCase();
         if (!trimmedQuery) {
@@ -159,13 +156,6 @@ const Navbar: React.FC = () => {
             setIsSearching(false);
         }
     }, []);
-    
-
-
-
-
-
-
 
     // Debounced search with dependency (300ms)
     const debouncedSearch = useCallback(
@@ -181,11 +171,16 @@ const Navbar: React.FC = () => {
         dispatch({ type: "CLOSE_DROPDOWNS" }); // Close dropdowns on route change
     }, [pathname]);
 
+    const handleSelectBook = () => {
+        setSearchResults([]); // Clear search results after selection
+        setSearchQuery("");    // Optionally clear the search query too
+    };
+
     if (!isClient) {
         // Avoid rendering on the server to prevent hydration errors
         return null;
     }
-    
+
     const toggleDropdown = (dropdown: string) => {
         dispatch({ type: "TOGGLE_DROPDOWN", dropdown });
     };
@@ -289,6 +284,7 @@ const Navbar: React.FC = () => {
                                     key={`/${selectedMedia.toLowerCase()}/${result.key.split('/').pop()}`}
                                     href={`/books/${result.key.split('/').pop()}`}
                                     className="flex items-center p-4 hover:bg-gray-50 transition-colors gap-4"
+                                    onClick={handleSelectBook} // Clear search results on selection
                                 >
                                     {result.cover_i && (
                                         <Image
@@ -314,8 +310,8 @@ const Navbar: React.FC = () => {
                         </div>
                     )}
                     
-                    {/* Loading indicator */}
-                    {isSearching && (
+                    {/* Only show "Searching..." if there's an active query and results are still loading */}
+                    {isSearching && searchQuery.trim() && (
                     <div className="absolute top-full left-0 right-0 bg-white p-3 text-gray-500">
                         Searching...
                     </div>
