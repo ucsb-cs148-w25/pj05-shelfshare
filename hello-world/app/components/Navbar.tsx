@@ -5,6 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname } from 'next/navigation';
 import debounce from 'lodash.debounce';
+import { useSearchBooks } from '@/app/hooks/useSearchBooks'; // Assume you have a custom hook for book search
+
 
 // Interfaces for search results
 interface SearchResult {
@@ -90,9 +92,10 @@ const Navbar: React.FC = () => {
     const router = useRouter(); // Use Next.js router
 
     // Fetch function with language filtering and author limitation
+
     
     const fetchSearchResults = useCallback(async (query: string) => {
-        const trimmedQuery = query.trim();
+        const trimmedQuery = query.trim().toLowerCase();
         if (!trimmedQuery) {
             setSearchResults([]);
             return;
@@ -107,62 +110,66 @@ const Navbar: React.FC = () => {
     
         setIsSearching(true);
         try {
-            let apiUrl = ""; 
-            if (searchCategory === "books") {
-                apiUrl = `https://openlibrary.org/search.json?title=${trimmedQuery}&language=eng&fields=key,title,author_name,cover_i,language&limit=10`;
-            } else if (searchCategory === "movies") {
-                apiUrl = `https://api.themoviedb.org/3/search/movie?query=${trimmedQuery}&api_key=YOUR_TMDB_API_KEY`;
-            } else if (searchCategory === "music") {
-                apiUrl = `https://api.musicdatabase.com/search?track=${trimmedQuery}&api_key=YOUR_MUSIC_API_KEY`;
-            }
-
+            const apiUrl = `https://openlibrary.org/search.json?title=${encodeURIComponent(trimmedQuery)}&language=eng&fields=key,title,author_name,cover_i,language,edition_count&limit=20`;
+    
             const response = await fetch(apiUrl);
             const data = await response.json();
-
-            let filteredResults: SearchResult[] = [];
-            if (searchCategory === "books") {
-                filteredResults = data.docs
+    
+            let results: SearchResult[] = data.docs
                 .filter((doc: BookResult) => doc.language?.includes("eng"))
                 .map((result: BookResult) => ({
-                    ...result,
+                    key: result.key,
+                    title: result.title,
                     author_name: result.author_name?.slice(0, 1),
+                    cover_i: result.cover_i,
+                    edition_count: result.edition_count || 1, // Use edition count as a rough popularity metric
                 }));
-
-            } else if (searchCategory === "movies") {
-                filteredResults = data.results.map((movie: MovieResult) => ({
-                    key: `movie-${movie.id}`,
-                    title: movie.title,
-                    author_name: movie.release_date ? [movie.release_date.split("-")[0]] : [],
-                    cover_i: movie.poster_path ? `https://image.tmdb.org/t/p/w200${movie.poster_path}` : undefined,
-                }));
-            } else if (searchCategory === "music") {
-                filteredResults = data.tracks.map((track: MusicResult) => ({
-                    key: `music-${track.id}`,
-                    title: track.name,
-                    author_name: track.artists.map((artist) => artist.name),
-                    cover_i: track.album.cover_url,
-                }));
-            }
-            // Sort: exact matches appear first
-            filteredResults.sort((a, b) => {
-                if (a.title.toLowerCase() === trimmedQuery.toLowerCase()) return -1;
-                if (b.title.toLowerCase() === trimmedQuery.toLowerCase()) return 1;
+    
+            // Deduplicate results by title + author
+            const seen = new Set();
+            results = results.filter((book) => {
+                const identifier = `${book.title.toLowerCase()}|${book.author_name?.[0]?.toLowerCase()}`;
+                if (seen.has(identifier)) {
+                    return false;
+                }
+                seen.add(identifier);
+                return true;
+            });
+    
+            // Sort results for better relevancy
+            results.sort((a, b) => {
+                const exactMatchA = a.title.toLowerCase() === trimmedQuery;
+                const exactMatchB = b.title.toLowerCase() === trimmedQuery;
+    
+                if (exactMatchA && !exactMatchB) return -1;
+                if (exactMatchB && !exactMatchA) return 1;
+    
+                if (a.edition_count > b.edition_count) return -1;
+                if (a.edition_count < b.edition_count) return 1;
+    
                 return 0;
             });
     
-            // Update cache
-            searchCache.current.set(trimmedQuery, filteredResults);
-            setSearchResults(filteredResults);
+            // Update cache and state
+            searchCache.current.set(trimmedQuery, results);
+            setSearchResults(results);
         } catch (error) {
             console.error("Search error:", error);
         } finally {
             setIsSearching(false);
         }
-    }, [searchCategory]);
+    }, []);
+    
+
+
+
+
+
+
 
     // Debounced search with dependency (300ms)
     const debouncedSearch = useCallback(
-        debounce((query: string) => fetchSearchResults(query), 300),
+        debounce((query: string) => fetchSearchResults(query), 200),
         [fetchSearchResults]
     );
     
