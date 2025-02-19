@@ -29,11 +29,11 @@ export const sendFriendRequest = async (userId: string, friendId: string) => {
     console.log("Friend request sent successfully!");
   } catch (error) {
     console.error("Error sending friend request:", error);
-    if (error instanceof Error) {
-      throw new Error(`Unable to send friend request: ${error.message}`);
-    } else {
-      throw new Error("Unable to send friend request");
-    }
+    // if (error instanceof Error) {
+    //   throw new Error(`Unable to send friend request: ${error.message}`);
+    // } else {
+    //   throw new Error("Unable to send friend request");
+    // }
   }
 };
 // Accept a Friend Request
@@ -59,8 +59,8 @@ export const acceptFriendRequest = async (userId: string, friendId: string) => {
     await deleteDoc(doc(db, "users", userId, "friendRequests", friendId));
     await deleteDoc(doc(db, "users", friendId, "sentFriendRequests", userId));
   } catch (error) {
-    console.error("Error accepting friend request:", error);
-    throw new Error("Unable to accept friend request.");
+    // console.error("Error accepting friend request:", error);
+    // throw new Error("Unable to accept friend request.");
   }
 };
 

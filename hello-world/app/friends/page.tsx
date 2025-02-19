@@ -9,8 +9,15 @@ import {
   sendFriendRequest, 
   acceptFriendRequest, 
   declineFriendRequest, 
-  unsendFriendRequest 
-}  from "../context/friends";
+  unsendFriendRequest,
+  removeFriend
+} from "../context/friends";
+
+// interface UserWithStatus extends DocumentData {
+//   id: string;
+//   name?: string;
+//   friendStatus?: 'friend' | 'pending' | 'none';
+// }
 
 const Friends = () => {
   const { user } = useAuth();
@@ -20,6 +27,8 @@ const Friends = () => {
   const [friends, setFriends] = useState<DocumentData[]>([]);
   const [search, setSearch] = useState("");
   const [sentRequests, setSentRequests] = useState<string[]>([]);
+  const [acceptedRequestIds, setAcceptedRequestIds] = useState<string[]>([]);
+  const [declinedRequestIds, setDeclinedRequestIds] = useState<string[]>([]);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -57,17 +66,6 @@ const Friends = () => {
       setFriendRequests(updatedRequests);
     });
 
-    // const handleSendRequest = async (friendId: string) => {
-    //     if (!user) return;
-    //     try {
-    //       await sendFriendRequest(user.uid, friendId);
-    //     } catch (error) {
-    //       console.error("Failed to send friend request:", error);
-    //       // Optionally show an error message to the user
-    //       alert("Failed to send friend request. Please try again.");
-    //     }
-    //   };
-
     // Fetch friends
     const friendsQuery = query(collection(db, "users", user.uid, "friends"));
     
@@ -101,22 +99,92 @@ const Friends = () => {
     .filter((u) => u.id !== user?.uid)
     .filter((u) => u.name?.toLowerCase().includes(search.toLowerCase()));
 
-  if (!user) return null;
-
   const handleAcceptRequest = async (requestId: string) => {
     if (!user) return;
-    await acceptFriendRequest(user.uid, requestId);
+    try {
+      await acceptFriendRequest(user.uid, requestId);
+      setAcceptedRequestIds(prev => [...prev, requestId]);
+      // Remove from friend requests list
+      setFriendRequests(prev => prev.filter(req => req.id !== requestId));
+    } catch (error) {
+      console.error("Error accepting request:", error);
+    }
   };
 
   const handleDeclineRequest = async (requestId: string) => {
     if (!user) return;
-    await declineFriendRequest(user.uid, requestId);
+    try {
+      await declineFriendRequest(user.uid, requestId);
+      setDeclinedRequestIds(prev => [...prev, requestId]);
+      // Remove from friend requests list
+      setFriendRequests(prev => prev.filter(req => req.id !== requestId));
+    } catch (error) {
+      console.error("Error declining request:", error);
+    }
   };
 
   const handleUnsendRequest = async (friendId: string) => {
     if (!user) return;
     await unsendFriendRequest(user.uid, friendId);
   };
+
+  const handleRemoveFriend = async (friendId: string) => {
+    if (!user) return;
+    try {
+      await removeFriend(user.uid, friendId);
+      // Update local state to reflect friend removal
+      setFriends(prev => prev.filter(friend => friend.id !== friendId));
+      setAcceptedRequestIds(prev => prev.filter(id => id !== friendId));
+    } catch (error) {
+      console.error("Error removing friend:", error);
+    }
+  };
+
+  const getFriendRequestButton = (request: DocumentData) => {
+    if (acceptedRequestIds.includes(request.id)) {
+      return (
+        <div className="flex gap-2 items-center">
+          <span className="text-gray-600">Friend</span>
+          <button
+            onClick={() => handleRemoveFriend(request.id)}
+            className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition text-sm"
+          >
+            Unfriend
+          </button>
+        </div>
+      );
+    }
+
+    if (!declinedRequestIds.includes(request.id)) {
+      return (
+        <div className="flex gap-2">
+          <button
+            onClick={() => handleAcceptRequest(request.id)}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
+          >
+            Accept
+          </button>
+          <button
+            onClick={() => handleDeclineRequest(request.id)}
+            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
+          >
+            Decline
+          </button>
+        </div>
+      );
+    }
+
+    return (
+      <button
+        onClick={() => sendFriendRequest(user!.uid, request.id)}
+        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+      >
+        Add Friend
+      </button>
+    );
+  };
+
+  if (!user) return null;
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white shadow-lg rounded-lg">
@@ -139,20 +207,7 @@ const Friends = () => {
             {friendRequests.map((request) => (
               <li key={request.id} className="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
                 <span className="text-gray-800">{request.name || "Unknown User"}</span>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleAcceptRequest(request.id)}
-                    className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
-                  >
-                    Accept
-                  </button>
-                  <button
-                    onClick={() => handleDeclineRequest(request.id)}
-                    className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
-                  >
-                    Decline
-                  </button>
-                </div>
+                {getFriendRequestButton(request)}
               </li>
             ))}
           </ul>
@@ -167,6 +222,15 @@ const Friends = () => {
             {friends.map((friend) => (
               <li key={friend.id} className="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
                 <span className="text-gray-800">{friend.name}</span>
+                <div className="flex gap-2 items-center">
+                  <span className="text-gray-600">Friend</span>
+                  <button
+                    onClick={() => handleRemoveFriend(friend.id)}
+                    className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition text-sm"
+                  >
+                    Unfriend
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
@@ -176,36 +240,44 @@ const Friends = () => {
       {/* Users List */}
       {search && (
         <section>
-            {filteredUsers.length === 0 ? (
+          {filteredUsers.length === 0 ? (
             <p className="text-gray-500">No users found.</p>
-            ) : (
+          ) : (
             <ul className="grid gap-4">
-                {filteredUsers.map((u) => (
+              {filteredUsers.map((u) => (
                 <li key={u.id} className="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
-                    <span className="text-gray-800 ml-4">{u.name || "Unknown User"}</span>
-                    {sentRequests.includes(u.id) ? (
-                    // Show Cancel Request button if request is pending
+                  <span className="text-gray-800 ml-4">{u.name || "Unknown User"}</span>
+                  {friends.some(f => f.id === u.id) ? (
+                    <div className="flex gap-2 items-center">
+                      <span className="text-gray-600">Friend</span>
+                      <button
+                        onClick={() => handleRemoveFriend(u.id)}
+                        className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition text-sm"
+                      >
+                        Unfriend
+                      </button>
+                    </div>
+                  ) : sentRequests.includes(u.id) ? (
                     <button
-                        onClick={() => handleUnsendRequest(u.id)}
-                        className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition"
+                      onClick={() => handleUnsendRequest(u.id)}
+                      className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition"
                     >
-                        Cancel Request
+                      Cancel Request
                     </button>
-                    ) : (
-                    // Show Add Friend button if no request is pending
+                  ) : (
                     <button
-                        onClick={() => sendFriendRequest(user.uid, u.id)}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                      onClick={() => sendFriendRequest(user.uid, u.id)}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
                     >
-                        Add Friend
+                      Add Friend
                     </button>
-                    )}
+                  )}
                 </li>
-                ))}
+              ))}
             </ul>
-            )}
+          )}
         </section>
-        )}
+      )}
     </div>
   );
 };
