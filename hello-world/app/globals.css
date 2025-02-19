@@ -29,6 +29,10 @@ body {
   background-color: #DFDDCE;
 }
 
+.bg-custom-brown {
+  background-color: #3D2F2A;
+}
+
 .bg-light-brown {
   background-color: #847266
 }
@@ -105,4 +109,12 @@ body {
 
 .dropdown-item:hover {
   color: #3D2F2A;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Hide scrollbar for Chrome, Safari, and Opera */
+}
+.no-scrollbar {
+  -ms-overflow-style: none; /* Hide scrollbar for IE and Edge */
+  scrollbar-width: none; /* Hide scrollbar for Firefox */
 }
