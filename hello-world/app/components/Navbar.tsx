@@ -1,11 +1,13 @@
 // components/Navbar.tsx
 "use client"; 
+
+/* eslint-disable @typescript-eslint/no-unused-vars */     // comment out when using music and movies!
+
 import React, { useEffect, useReducer, useState, useCallback, useRef} from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, usePathname } from 'next/navigation';
 import debounce from 'lodash.debounce';
-import { useSearchBooks } from '@/app/hooks/useSearchBooks'; // Assume you have a custom hook for book search
 
 // Interfaces for search results
 interface SearchResult {
@@ -14,28 +16,31 @@ interface SearchResult {
     author_name?: string[];
     cover_i?: number;
     language?: string[];
+    edition_count?: number;
 }
 
 interface BookResult {
+    key: string;
     title: string;
     author_name?: string[];
     language?: string[];
     cover_i?: number;
+    edition_count?: number;
 }
 
-interface MovieResult {
-    id: number;
-    title: string;
-    release_date?: string;
-    poster_path?: string;
-}
+// interface MovieResult {                      // comment out when not using music and moveis!
+//     id: number;
+//     title: string;
+//     release_date?: string;
+//     poster_path?: string;
+// }
 
-interface MusicResult {
-    id: string;
-    name: string;
-    artists: { name: string }[];
-    album: { cover_url: string };
-}
+// interface MusicResult {
+//     id: string;
+//     name: string;
+//     artists: { name: string }[];
+//     album: { cover_url: string };
+// }
 
 // Define action types
 type Action =
@@ -82,7 +87,7 @@ const Navbar: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [isSearching, setIsSearching] = useState(false);
-    const [searchCategory, setSearchCategory] = useState<"books" | "movies" | "music">("books");
+    const [searchCategory, setSearchCategory] = useState<"books" | "movies" | "music">("books"); // comment out when not using music and moveis!
 
     const { openDropdown, selectedMedia } = state;
 
@@ -137,15 +142,20 @@ const Navbar: React.FC = () => {
             results.sort((a, b) => {
                 const exactMatchA = a.title.toLowerCase() === trimmedQuery;
                 const exactMatchB = b.title.toLowerCase() === trimmedQuery;
-    
+            
                 if (exactMatchA && !exactMatchB) return -1;
                 if (exactMatchB && !exactMatchA) return 1;
-    
-                if (a.edition_count > b.edition_count) return -1;
-                if (a.edition_count < b.edition_count) return 1;
-    
+            
+                // Provide default value 0 for edition_count if undefined
+                const editionCountA = a.edition_count ?? 0;
+                const editionCountB = b.edition_count ?? 0;
+            
+                if (editionCountA > editionCountB) return -1;
+                if (editionCountA < editionCountB) return 1;
+            
                 return 0;
             });
+            
     
             // Update cache and state
             searchCache.current.set(trimmedQuery, results);
@@ -187,23 +197,23 @@ const Navbar: React.FC = () => {
 
     const handleSelectMedia = (option: "Books" | "Movies" | "Music") => {
         dispatch({ type: "SET_SELECTED_MEDIA", option });
-
+    
         // Map the media selection to lowercase route names
         const mediaRoute = option.toLowerCase();
-
+    
         // Ensure that if we are on the timeline page, we do not change the route
         if (pathname === "/timeline") {
             return; // Do nothing if the user is on the Timeline page
         }
-
+    
         if (pathname === "/home") {
             return;
         }
-
+    
         if (pathname === "/for-you") {
             return;
         }
-
+    
         // Extract the current route and update media type
         const segments = pathname.split("/").filter(Boolean); // Remove empty segments
         if (segments.length > 0) {
@@ -212,20 +222,17 @@ const Navbar: React.FC = () => {
         } else {
             router.push(`/${mediaRoute}/browse`); // Default fallback
         }
-        
+    
         // Set the search category based on selected media
-        switch (option) {
-            case "Books":
-                setSearchCategory("books");
-                break;
-            case "Movies":
-                setSearchCategory("movies");
-                break;
-            case "Music":
-                setSearchCategory("music");
-                break;
+        const validCategories: ("books" | "movies" | "music")[] = ["books", "movies", "music"];
+    
+        if (validCategories.includes(option.toLowerCase() as "books" | "movies" | "music")) {
+            setSearchCategory(option.toLowerCase() as "books" | "movies" | "music");
         }
-    };    
+    };
+    
+    
+     
 
     if (!isClient) {
         // Avoid rendering on the server to prevent hydration errors
