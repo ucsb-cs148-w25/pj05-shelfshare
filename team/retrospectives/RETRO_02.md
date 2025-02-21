@@ -47,11 +47,3 @@ Measurement: If the number of unmerged PRs is low, it indicates progress toward 
 This retro marks the beginning of our focus on improving PR approvals and timely merges. Future retrospectives will assess progress, refine our approach, and identify additional areas for improvement.
 
 ## Experiment/Change
-We will implement new PR review and merging standards immediately. To ensure timely approvals and efficient merging, we will:
-* Require at least two team members to review each PR before merging to distribute knowledge and improve code quality.
-* Track the number of open PRs that have two reviews but are not merged to identify bottlenecks.
-* Review active PRs each sprint to ensure they adhere to the new standards and provide constructive feedback.
-* Draft a PR checklist to maintain consistency, including:
-    * A clear and concise issue description.
-    * A detailed explanation of specific changes made.
-    * Clear instructions on how the changes were tested, including edge cases.
