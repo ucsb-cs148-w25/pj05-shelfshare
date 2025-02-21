@@ -48,6 +48,17 @@ npm test
 ```
 Button functionality works. A click on the logo reroutes to the home page.
 
+## Component Testing (2/21)
+For the component testing aspect of Lab 06, we test our whole navigation bar, ensuring that the buttons go to the appropriate page. Before running, install the following dependencies:
+```sh
+npm install --save-dev @types/jest
+npm install --save-dev jest @testing-library/react @testing-library/jest-dom @testing-library/user-event
+```
+Then run test.
+```sh
+npm test
+```
+
 ### Plans For Unit Testing Going Forward
 * For unit testing going forward, we plan to test the functionality of all the buttons necessary in the process of searching for a book, viewing the current reviews, favoriting the book, adding it to a specific shelf, and leaving a review, as that is the core action of our website. This would include all the buttons in that process, which would test that the backend functionality for adding a book to a shelf is successful.
 
