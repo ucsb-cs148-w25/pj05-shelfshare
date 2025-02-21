@@ -9,6 +9,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from 'next/navigation';
 import debounce from 'lodash.debounce';
 
+
 // Interfaces for search results
 interface SearchResult {
     key: string;
@@ -18,6 +19,7 @@ interface SearchResult {
     language?: string[];
     edition_count?: number;
 }
+
 
 interface BookResult {
     key: string;
@@ -42,11 +44,14 @@ interface BookResult {
 //     album: { cover_url: string };
 // }
 
+
+
 // Define action types
 type Action =
     | { type: "TOGGLE_DROPDOWN"; dropdown: string }
     | { type: "CLOSE_DROPDOWNS" }
     | { type: "SET_SELECTED_MEDIA"; option: string };
+
 
 // Define the state type
 type State = {
@@ -54,11 +59,13 @@ type State = {
     selectedMedia: string;
 };
 
+
 // Initial state
 const initialState: State = {
     openDropdown: null,
     selectedMedia: "Books",
 };
+
 
 // Reducer function
 const reducer = (state: State, action: Action): State => {
@@ -72,13 +79,14 @@ const reducer = (state: State, action: Action): State => {
                 ...state, openDropdown: null,
             };
         case "SET_SELECTED_MEDIA":
-            return { 
-                ...state, selectedMedia: action.option, openDropdown: null 
+            return {
+                ...state, selectedMedia: action.option, openDropdown: null
             };
         default:
             return state;
     }
 };
+
 
 const Navbar: React.FC = () => {
     const [state, dispatch] = useReducer(reducer, initialState);
@@ -89,11 +97,15 @@ const Navbar: React.FC = () => {
     const [isSearching, setIsSearching] = useState(false);
     const [searchCategory, setSearchCategory] = useState<"books" | "movies" | "music">("books"); // comment out when not using music and moveis!
 
+
     const { openDropdown, selectedMedia } = state;
+
 
     const searchCache = useRef(new Map<string, SearchResult[]>());
 
+
     const router = useRouter(); // Use Next.js router
+
 
     // Fetch function with language filtering and author limitation
     const fetchSearchResults = useCallback(async (query: string) => {
@@ -102,22 +114,34 @@ const Navbar: React.FC = () => {
             setSearchResults([]);
             return;
         }
-    
+   
         // Check cache first
         const cachedResults = searchCache.current.get(trimmedQuery);
         if (cachedResults) {
             setSearchResults(cachedResults);
             return;
         }
-    
+   
         setIsSearching(true);
         try {
-            const apiUrl = `https://openlibrary.org/search.json?title=${encodeURIComponent(trimmedQuery)}&language=eng&fields=key,title,author_name,cover_i,language,edition_count&limit=20`;
-    
+
+            let apiUrl = "";
+            if (searchCategory === "books") {
+                apiUrl = `https://openlibrary.org/search.json?title=${encodeURIComponent(trimmedQuery)}&language=eng&fields=key,title,author_name,cover_i,language,edition_count&limit=10`;
+            } else if (searchCategory === "movies") {
+                apiUrl = `https://api.themoviedb.org/3/search/movie?query=${trimmedQuery}&api_key=YOUR_TMDB_API_KEY`;
+            } else if (searchCategory === "music") {
+                apiUrl = `https://api.musicdatabase.com/search?track=${trimmedQuery}&api_key=YOUR_MUSIC_API_KEY`;
+            }
+
+
             const response = await fetch(apiUrl);
             const data = await response.json();
-    
-            let results: SearchResult[] = data.docs
+
+
+            let filteredResults: SearchResult[] = [];
+            if (searchCategory === "books") {
+                filteredResults = data.docs
                 .filter((doc: BookResult) => doc.language?.includes("eng"))
                 .map((result: BookResult) => ({
                     key: result.key,
@@ -126,40 +150,62 @@ const Navbar: React.FC = () => {
                     cover_i: result.cover_i,
                     edition_count: result.edition_count || 1, // Use edition count as a rough popularity metric
                 }));
-    
-            // Deduplicate results by title + author
-            const seen = new Set();
-            results = results.filter((book) => {
-                const identifier = `${book.title.toLowerCase()}|${book.author_name?.[0]?.toLowerCase()}`;
-                if (seen.has(identifier)) {
-                    return false;
-                }
-                seen.add(identifier);
-                return true;
-            });
-    
-            // Sort results for better relevancy
-            results.sort((a, b) => {
-                const exactMatchA = a.title.toLowerCase() === trimmedQuery;
-                const exactMatchB = b.title.toLowerCase() === trimmedQuery;
+            if (searchCategory === "books") {
+              // Deduplicate results by title + author
+              const seen = new Set();
+              results = results.filter((book) => {
+                  const identifier = `${book.title.toLowerCase()}|${book.author_name?.[0]?.toLowerCase()}`;
+                  if (seen.has(identifier)) {
+                      return false;
+                  }
+                  seen.add(identifier);
+                  return true;
+              });
+
+              // Sort results for better relevancy
+              results.sort((a, b) => {
+                  const exactMatchA = a.title.toLowerCase() === trimmedQuery;
+                  const exactMatchB = b.title.toLowerCase() === trimmedQuery;
+
+                  if (exactMatchA && !exactMatchB) return -1;
+                  if (exactMatchB && !exactMatchA) return 1;
+
+                  // Provide default value 0 for edition_count if undefined
+                  const editionCountA = a.edition_count ?? 0;
+                  const editionCountB = b.edition_count ?? 0;
+
+                  if (editionCountA > editionCountB) return -1;
+                  if (editionCountA < editionCountB) return 1;
+
+                  return 0;
+              });
             
-                if (exactMatchA && !exactMatchB) return -1;
-                if (exactMatchB && !exactMatchA) return 1;
-            
-                // Provide default value 0 for edition_count if undefined
-                const editionCountA = a.edition_count ?? 0;
-                const editionCountB = b.edition_count ?? 0;
-            
-                if (editionCountA > editionCountB) return -1;
-                if (editionCountA < editionCountB) return 1;
-            
+
+            } else if (searchCategory === "movies") {
+                filteredResults = data.results.map((movie: MovieResult) => ({
+                    key: `movie-${movie.id}`,
+                    title: movie.title,
+                    author_name: movie.release_date ? [movie.release_date.split("-")[0]] : [],
+                    cover_i: movie.poster_path ? `https://image.tmdb.org/t/p/w200${movie.poster_path}` : undefined,
+                }));
+            } else if (searchCategory === "music") {
+                filteredResults = data.tracks.map((track: MusicResult) => ({
+                    key: `music-${track.id}`,
+                    title: track.name,
+                    author_name: track.artists.map((artist) => artist.name),
+                    cover_i: track.album.cover_url,
+                }));
+            }
+            // Sort: exact matches appear first
+            filteredResults.sort((a, b) => {
+                if (a.title.toLowerCase() === trimmedQuery.toLowerCase()) return -1;
+                if (b.title.toLowerCase() === trimmedQuery.toLowerCase()) return 1;
                 return 0;
             });
-            
-    
-            // Update cache and state
-            searchCache.current.set(trimmedQuery, results);
-            setSearchResults(results);
+   
+            // Update cache
+            searchCache.current.set(trimmedQuery, filteredResults);
+            setSearchResults(filteredResults);
         } catch (error) {
             console.error("Search error:", error);
         } finally {
@@ -173,9 +219,11 @@ const Navbar: React.FC = () => {
         [fetchSearchResults]
     );
     
+
     useEffect(() => {
         setIsClient(true);
     }, []);
+
 
     useEffect(() => {
         dispatch({ type: "CLOSE_DROPDOWNS" }); // Close dropdowns on route change
@@ -186,6 +234,7 @@ const Navbar: React.FC = () => {
         setSearchQuery("");    // Optionally clear the search query too
     };
 
+
     if (!isClient) {
         // Avoid rendering on the server to prevent hydration errors
         return null;
@@ -195,25 +244,29 @@ const Navbar: React.FC = () => {
         dispatch({ type: "TOGGLE_DROPDOWN", dropdown });
     };
 
+
     const handleSelectMedia = (option: "Books" | "Movies" | "Music") => {
         dispatch({ type: "SET_SELECTED_MEDIA", option });
-    
+
         // Map the media selection to lowercase route names
         const mediaRoute = option.toLowerCase();
-    
+
         // Ensure that if we are on the timeline page, we do not change the route
         if (pathname === "/timeline") {
             return; // Do nothing if the user is on the Timeline page
         }
     
+
         if (pathname === "/home") {
             return;
         }
-    
+
+
         if (pathname === "/for-you") {
             return;
         }
-    
+
+
         // Extract the current route and update media type
         const segments = pathname.split("/").filter(Boolean); // Remove empty segments
         if (segments.length > 0) {
@@ -222,7 +275,7 @@ const Navbar: React.FC = () => {
         } else {
             router.push(`/${mediaRoute}/browse`); // Default fallback
         }
-    
+
         // Set the search category based on selected media
         const validCategories: ("books" | "movies" | "music")[] = ["books", "movies", "music"];
     
@@ -234,10 +287,12 @@ const Navbar: React.FC = () => {
     
      
 
+
     if (!isClient) {
         // Avoid rendering on the server to prevent hydration errors
         return null;
     }
+
 
     return (
         <nav className="navbar-container">
@@ -247,15 +302,18 @@ const Navbar: React.FC = () => {
                 </Link>
             </div>
 
+
             <div className="nav-items">
 
+
             <div className="relative">
-                <button 
+                <button
                     className="nav-link flex items-center"
                     onClick={() => toggleDropdown("media")}
                 >
                     {selectedMedia} <span className="material-icons-outlined ml-1">expand_more</span>
                 </button>
+
 
                 {openDropdown === "media" && (
                     <div className="dropdown-menu">
@@ -265,7 +323,7 @@ const Navbar: React.FC = () => {
                     </div>
                 )}
             </div>
-                
+               
                 {/* Search bar section */}
                 <div className="relative">
                     <input
@@ -277,12 +335,14 @@ const Navbar: React.FC = () => {
                         setSearchQuery(e.target.value);
                         if (e.target.value.trim()) setIsSearching(true); // Immediate loading state
 
+
                         debouncedSearch(e.target.value);
                     }}
                     onBlur={() => setTimeout(() => setSearchResults([]), 200)}
                     />
-                    
+                   
                     {/* Search results dropdown */}
+
 
                     {searchResults.length > 0 && (
                         <div className="absolute top-full left-0 right-0 bg-white shadow-lg rounded-md mt-1 z-50 border border-gray-200">
@@ -306,6 +366,7 @@ const Navbar: React.FC = () => {
                                             {result.title}
                                         </div>
 
+
                                         {Array.isArray(result.author_name) && result.author_name.length > 0 && (
                                             <div className="text-sm text-gray-600 truncate mt-1">
                                                 by {result.author_name[0]}
@@ -319,11 +380,13 @@ const Navbar: React.FC = () => {
                     
                     {/* Only show "Searching..." if there's an active query and results are still loading */}
                     {isSearching && searchQuery.trim() && (
+
                     <div className="absolute top-full left-0 right-0 bg-white p-3 text-gray-500">
                         Searching...
                     </div>
                     )}
                 </div>
+
 
                 <Link href={`/${selectedMedia.toLowerCase()}/browse`} className="nav-link">Browse</Link>
                 <Link href="/timeline" className="nav-link">Timeline</Link>
@@ -331,14 +394,17 @@ const Navbar: React.FC = () => {
                 <Link href="/for-you" className="nav-link">For You</Link>
 
 
+
+
                 <div className="relative">
-                    <button 
+                    <button
                         className="nav-link flex items-center"
                         onClick={() => toggleDropdown("profile")}
                     >
                         <span className="material-icons-outlined text-3xl">account_circle</span>
                         <span className="material-icons-outlined">expand_more</span>
                     </button>
+
 
                     {openDropdown === "profile" && (
                         <div className="dropdown-menu">
@@ -353,5 +419,6 @@ const Navbar: React.FC = () => {
         </nav>
     );
 };
+
 
 export default Navbar;
