@@ -49,7 +49,11 @@ npm test
 Button functionality works. A click on the logo reroutes to the home page.
 
 ## Component Testing (2/21)
-For the component testing aspect of Lab 06, we test our whole navigation bar, ensuring that the buttons go to the appropriate page. Before running, install the following dependencies:
+For the component testing aspect of Lab 06, we test our whole navigation bar, ensuring that the buttons go to the appropriate page. It tests that the media option dropdown is functional, whether the profile dropdown is successful, and that the default navigation state is correct.
+
+Testing file: hello-world/app/components/__tests__/Navbar.test.tsx
+
+Before running, install the following dependencies:
 ```sh
 npm install --save-dev @types/jest
 npm install --save-dev jest @testing-library/react @testing-library/jest-dom @testing-library/user-event
