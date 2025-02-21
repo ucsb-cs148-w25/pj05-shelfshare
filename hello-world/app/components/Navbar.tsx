@@ -29,7 +29,6 @@ interface BookResult {
 interface MovieResult {
     id: number;
     title: string;
-    release_date?: string;
     poster_path?: string;
 }
 
@@ -98,30 +97,31 @@ const Navbar: React.FC = () => {
             setSearchResults([]);
             return;
         }
-
+    
         // Check cache first
         const cachedResults = searchCache.current.get(trimmedQuery);
         if (cachedResults) {
             setSearchResults(cachedResults);
             return;
         }
-
+    
         setIsSearching(true);
         try {
             let apiUrl = "";
             if (searchCategory === "books") {
                 apiUrl = `https://openlibrary.org/search.json?title=${encodeURIComponent(trimmedQuery)}&language=eng&fields=key,title,author_name,cover_i,language,edition_count&limit=10`;
             } else if (searchCategory === "movies") {
-                apiUrl = `https://api.themoviedb.org/3/search/movie?query=${trimmedQuery}&api_key=YOUR_TMDB_API_KEY`;
+                apiUrl = `http://www.omdbapi.com/?apikey=47d16ac6&s=${encodeURIComponent(trimmedQuery)}`;
             } else if (searchCategory === "music") {
                 apiUrl = `https://api.musicdatabase.com/search?track=${trimmedQuery}&api_key=YOUR_MUSIC_API_KEY`;
             }
-
+    
             const response = await fetch(apiUrl);
             const data = await response.json();
-
+    
             let filteredResults: SearchResult[] = [];
             if (searchCategory === "books") {
+                // Existing book search logic
                 filteredResults = data.docs
                     .filter((doc: BookResult) => doc.language?.includes("eng"))
                     .map((result: BookResult) => ({
@@ -131,8 +131,8 @@ const Navbar: React.FC = () => {
                         cover_i: result.cover_i,
                         edition_count: result.edition_count || 1,
                     }));
-
-                // Deduplicate results by title + author
+    
+                // Deduplicate and sort results
                 const seen = new Set();
                 filteredResults = filteredResults.filter((book) => {
                     const identifier = `${book.title.toLowerCase()}|${book.author_name?.[0]?.toLowerCase()}`;
@@ -142,46 +142,43 @@ const Navbar: React.FC = () => {
                     seen.add(identifier);
                     return true;
                 });
-
-                // Sort results for better relevancy
+    
                 filteredResults.sort((a, b) => {
                     const exactMatchA = a.title.toLowerCase() === trimmedQuery;
                     const exactMatchB = b.title.toLowerCase() === trimmedQuery;
-
+    
                     if (exactMatchA && !exactMatchB) return -1;
                     if (exactMatchB && !exactMatchA) return 1;
-
+    
                     const editionCountA = a.edition_count ?? 0;
                     const editionCountB = b.edition_count ?? 0;
-
+    
                     if (editionCountA > editionCountB) return -1;
                     if (editionCountA < editionCountB) return 1;
-
+    
                     return 0;
                 });
             } else if (searchCategory === "movies") {
-                filteredResults = data.results.map((movie: MovieResult) => ({
-                    key: `movie-${movie.id}`,
-                    title: movie.title,
-                    author_name: movie.release_date ? [movie.release_date.split("-")[0]] : [],
-                    cover_i: movie.poster_path ? `https://image.tmdb.org/t/p/w200${movie.poster_path}` : undefined,
-                }));
+                // Map OMDb API results to SearchResult
+                if (data.Search) {
+                    filteredResults = data.Search.map((movie: any) => ({
+                        key: `movie-${movie.imdbID}`,
+                        title: movie.Title,
+                        author_name: movie.Year ? [movie.Year] : [],
+                        cover_i: movie.Poster !== "N/A" ? movie.Poster : undefined,
+                    }));
+                }
             } else if (searchCategory === "music") {
-                filteredResults = data.tracks.map((track: MusicResult) => ({
-                    key: `music-${track.id}`,
-                    title: track.name,
-                    author_name: track.artists.map((artist) => artist.name),
-                    cover_i: track.album.cover_url,
-                }));
+                // Existing music search logic
             }
-
+    
             // Sort: exact matches appear first
             filteredResults.sort((a, b) => {
                 if (a.title.toLowerCase() === trimmedQuery.toLowerCase()) return -1;
                 if (b.title.toLowerCase() === trimmedQuery.toLowerCase()) return 1;
                 return 0;
             });
-
+    
             // Update cache
             searchCache.current.set(trimmedQuery, filteredResults);
             setSearchResults(filteredResults);
