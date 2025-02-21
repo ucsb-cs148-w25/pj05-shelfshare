@@ -16,10 +16,10 @@ interface ProfileItem {
   username: string;
 }
 
+
 const Profile = () => {
   const { user } = useAuth();
   const router = useRouter();
-
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingGenre, setIsEditingGenre] = useState(false);
   const [isEditingAbout, setIsEditingAbout] = useState(false);
@@ -29,6 +29,7 @@ const Profile = () => {
   const [preferredGenre, setPreferredGenre] = useState("#fantasy#romance#mystery");
   const [aboutMe, setAboutMe] = useState("Write about yourself!");
 
+  // Redirect to login page if user is not authenticated
   useEffect(() => {
     if (!user) {
       router.push('/');
