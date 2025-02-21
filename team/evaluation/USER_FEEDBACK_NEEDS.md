@@ -19,7 +19,7 @@ Deployment link: ***ADD DEPLOYMENT LINK HERE***
 
 
 ### 3. User Satisfaction with For you page
-> User must have at least one book added to Finished Reading shelf for the Read Next suggestions to populate.
+> User must have at least one book added to Finished Reading (FR) shelf for the Read Next suggestions to populate.
 Can test with the following: 
 * Adding one book to FR should suggest books
 * Adding more books to FR should suggest more tailored books
