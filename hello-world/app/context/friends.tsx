@@ -58,8 +58,11 @@ export const declineFriendRequest = async (userId: string, friendId: string) => 
 
 // Unsend a Friend Request
 export const unsendFriendRequest = async (userId: string, friendId: string) => {
-    await deleteDoc(doc(db, "users", userId, "sentFriendRequests", friendId));
-    await deleteDoc(doc(db, "users", friendId, "friendRequests", userId));
+    const sentRequestRef = doc(db, "users", userId, "sentFriendRequests", friendId);
+    await deleteDoc(sentRequestRef);
+    const friendRequestRef = doc(db, "users", friendId, "friendRequests", userId);
+    await deleteDoc(friendRequestRef);
+    return true;
 };
 
 // Remove a Friend
