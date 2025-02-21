@@ -47,3 +47,10 @@ Test file is located in the tests folder within the components folder of the app
 npm test
 ```
 Button functionality works. A click on the logo reroutes to the home page.
+
+### Plans For Unit Testing Going Forward
+* For unit testing going forward, we plan to test the functionality of all the buttons necessary in the process of searching for a book, viewing the current reviews, favoriting the book, adding it to a specific shelf, and leaving a review, as that is the core action of our website. This would include all the buttons in that process, which would test that the backend functionality for adding a book to a shelf is successful.
+
+### Plans For Higher Level Testing Going Forward
+* For higher level testing going forward, since it is not feasible to test at a high-level (since our site is a social media site), we will be focusing on unit testing for the functionality of smaller components.
+
