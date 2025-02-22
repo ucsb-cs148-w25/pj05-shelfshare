@@ -24,6 +24,7 @@ const Friends = () => {
   const [sentRequests, setSentRequests] = useState<string[]>([]);
   const [acceptedRequestIds, setAcceptedRequestIds] = useState<string[]>([]);
   const [declinedRequestIds, setDeclinedRequestIds] = useState<string[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -89,6 +90,11 @@ const Friends = () => {
     };
   }, [user]);
 
+  // Update search results visibility when search changes
+  useEffect(() => {
+    setShowSearchResults(search.length > 0);
+  }, [search]);
+
   // Filter users based on search input
   const filteredUsers = users
     .filter((u) => u.id !== user?.uid)
@@ -112,7 +118,10 @@ const Friends = () => {
 
   const handleUnsendRequest = async (friendId: string) => {
     if (!user) return;
-    await unsendFriendRequest(user.uid, friendId);
+    const success = await unsendFriendRequest(user.uid, friendId);
+    if (success) {
+      setSentRequests(prev => prev.filter(id => id !== friendId));
+    }
   };
 
   const handleRemoveFriend = async (friendId: string) => {
@@ -173,63 +182,39 @@ const Friends = () => {
     <div className="max-w-2xl mx-auto p-6 bg-white shadow-lg rounded-lg">
       <h1 className="text-2xl font-bold mb-6 text-gray-800">Friends</h1>
 
-      {/* Search Bar */}
-      <input
-        type="text"
-        placeholder="Search users..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-        className="w-full p-3 mb-4 border rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
-      />
+      {/* Search Bar with Toggle Button */}
+      <div className="relative mb-6">
+        <div className="flex items-center">
+          <input
+            type="text"
+            placeholder="Search users..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full p-3 border rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch("")}
+              className="absolute right-3 bg-gray-200 text-gray-600 p-1 rounded-full"
+            >
+              <span className="sr-only">Clear</span>
+              ✕
+            </button>
+          )}
+        </div>
+      </div>
 
-      {/* Friend Requests */}
-      {friendRequests.length > 0 && (
-        <section className="mt-6">
-          <h2 className="text-lg font-semibold text-gray-700 mb-3">Friend Requests</h2>
-          <ul className="grid gap-4">
-            {friendRequests.map((request) => (
-              <li key={request.id} className="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
-                <span className="text-gray-800">{request.name || "Unknown User"}</span>
-                {getFriendRequestButton(request)}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {/* Current Friends */}
-      {friends.length > 0 && (
-        <section className="mt-6">
-          <h2 className="text-lg font-semibold text-gray-700 mb-3">My Friends</h2>
-          <ul className="grid gap-4">
-            {friends.map((friend) => (
-              <li key={friend.id} className="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
-                <span className="text-gray-800">{friend.name}</span>
-                <div className="flex gap-2 items-center">
-                  <span className="text-gray-600">Friend</span>
-                  <button
-                    onClick={() => handleRemoveFriend(friend.id)}
-                    className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition text-sm"
-                  >
-                    Unfriend
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {/* Users List */}
-      {search && (
-        <section>
+      {/* Search Results */}
+      {showSearchResults && (
+        <section className="mb-6 border-2 border-blue-200 p-4 rounded-lg bg-white-50">
+          <h2 className="text-lg font-semibold text-blue-800 mb-3">Search Results</h2>
           {filteredUsers.length === 0 ? (
             <p className="text-gray-500">No users found.</p>
           ) : (
             <ul className="grid gap-4">
               {filteredUsers.map((u) => (
-                <li key={u.id} className="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
-                  <span className="text-gray-800 ml-4">{u.name || "Unknown User"}</span>
+                <li key={u.id} className="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm">
+                  <span className="text-gray-800">{u.name || "Unknown User"}</span>
                   {friends.some(f => f.id === u.id) ? (
                     <div className="flex gap-2 items-center">
                       <span className="text-gray-600">Friend</span>
@@ -259,6 +244,44 @@ const Friends = () => {
               ))}
             </ul>
           )}
+        </section>
+      )}
+
+      {/* Friend Requests */}
+      {!showSearchResults && friendRequests.length > 0 && (
+        <section className="mb-6">
+          <h2 className="text-lg font-semibold text-gray-700 mb-3">Friend Requests</h2>
+          <ul className="grid gap-4">
+            {friendRequests.map((request) => (
+              <li key={request.id} className="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
+                <span className="text-gray-800">{request.name || "Unknown User"}</span>
+                {getFriendRequestButton(request)}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Current Friends */}
+      {!showSearchResults && friends.length > 0 && (
+        <section>
+          <h2 className="text-lg font-semibold text-gray-700 mb-3">My Friends</h2>
+          <ul className="grid gap-4">
+            {friends.map((friend) => (
+              <li key={friend.id} className="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
+                <span className="text-gray-800">{friend.name}</span>
+                <div className="flex gap-2 items-center">
+                  <span className="text-gray-600">Friend</span>
+                  <button
+                    onClick={() => handleRemoveFriend(friend.id)}
+                    className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition text-sm"
+                  >
+                    Unfriend
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
     </div>
