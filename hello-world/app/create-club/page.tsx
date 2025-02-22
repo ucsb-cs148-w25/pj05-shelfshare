@@ -25,17 +25,17 @@ export default function CreateClub() {
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setLoading(true);
-
+  
     try {
       let imageUrl = '/bookclub.png'; // Default image URL
-
+  
       // Upload custom image to Firebase Storage if provided
       if (clubImage) {
         const storageRef = ref(storage, `club-images/${clubImage.name}`);
         await uploadBytes(storageRef, clubImage);
         imageUrl = await getDownloadURL(storageRef);
       }
-
+  
       // Save club data to Firestore
       const clubData = {
         name: clubName,
@@ -43,12 +43,12 @@ export default function CreateClub() {
         memberCount: 1, // Default member count
         imageUrl: imageUrl, // Use uploaded image or default
       };
-
+  
       const docRef = await addDoc(collection(db, 'clubs'), clubData);
       console.log('Club created with ID:', docRef.id);
-
-      // Redirect to the book clubs page
-      router.push('/bookclubs');
+  
+      // Redirect to the specific club's page
+      router.push(`/clubs/${docRef.id}`);
     } catch (error) {
       console.error('Error creating club:', error);
     } finally {
