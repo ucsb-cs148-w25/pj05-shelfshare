@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
@@ -30,7 +30,7 @@ export default function UserLists() {
       <div className="space-y-8 w-5/6"> {/* Adjusted container width */}
         {/* Reading Now */}
         <div>
-          <h2 className="text-custom-tan text-3xl font-bold mb-4">Reading Now</h2>
+          <h2 className="text-custom-tan text-3xl font-bold mb-4">Favorites</h2>
           {/* Shelf Background */}
           <div
             className="relative bg-light-brown border-t-8 border-b-8 border-[#3D2F2A] h-44 flex items-center"
@@ -51,7 +51,7 @@ export default function UserLists() {
 
         {/* To Be Read */}
         <div>
-          <h2 className="text-custom-tan text-3xl font-bold mb-4">To Be Read...</h2>
+          <h2 className="text-custom-tan text-3xl font-bold mb-4">To Be Watched...</h2>
           {/* Shelf Background */}
           <div
             className="relative bg-light-brown border-t-8 border-b-8 border-[#3D2F2A] h-44 flex items-center"
@@ -72,7 +72,7 @@ export default function UserLists() {
 
         {/* Previously Read */}
         <div>
-          <h2 className="text-custom-tan text-3xl font-bold mb-4">Previously Read</h2>
+          <h2 className="text-custom-tan text-3xl font-bold mb-4">Previously Watched</h2>
           {/* Shelf Background */}
           <div
             className="relative bg-light-brown border-t-8 border-b-8 border-[#3D2F2A] h-44 flex items-center"
