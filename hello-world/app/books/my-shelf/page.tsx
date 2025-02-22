@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { db } from "@/firebase";
-import { collection, query, onSnapshot, Timestamp, deleteDoc, doc, updateDoc } from "firebase/firestore";
+import { collection, query, onSnapshot, Timestamp, deleteDoc, doc, updateDoc, increment } from "firebase/firestore";
 import { Trash2 } from 'lucide-react';
 
 interface BookItem {
@@ -166,6 +166,14 @@ export default function UserLists() {
       await updateDoc(bookRef, {
         shelfType: targetShelfType
       });
+
+      // Increment the booksRead count if the book is moved to the "finished" shelf
+      if (targetShelfType === 'finished') {
+        const userRef = doc(db, "users", user.uid);
+        await updateDoc(userRef, {
+          booksRead: increment(1)
+        });
+      }
     } catch (error) {
       console.error("Error moving book:", error);
     }

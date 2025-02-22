@@ -3,12 +3,14 @@
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { db } from '@/firebase';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import '../globals.css';
 
 export default function Home() {
   const { user } = useAuth();
   const router = useRouter();
-  const [readingGoal, setReadingGoal] = useState(null);
+  const [readingGoal, setReadingGoal] = useState<number | null>(null);
   const [booksRead, setBooksRead] = useState(0);
   const [inputGoal, setInputGoal] = useState('');
 
@@ -19,17 +21,39 @@ export default function Home() {
     }
   }, [user, router]);
 
-  if (!user) {
-    return null; // Avoid rendering anything while redirecting
-  }
+  useEffect(() => {
+    const fetchReadingGoal = async () => {
+      if (user) {
+        const userRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userRef);
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          setReadingGoal(data.readingGoal || null);
+          setBooksRead(data.booksRead || 0);
+        }
+      }
+    };
 
-  const handleSetGoal = () => {
+    fetchReadingGoal();
+  }, [user]);
+
+  const handleSetGoal = async () => {
     const goal = parseInt(inputGoal, 10);
     if (!isNaN(goal) && goal > 0) {
       setReadingGoal(goal);
       setInputGoal('');
+
+      // Save the goal to Firestore
+      if (user) {
+        const userRef = doc(db, "users", user.uid);
+        await setDoc(userRef, { readingGoal: goal }, { merge: true });
+      }
     }
   };
+
+  if (!user) {
+    return null; // Avoid rendering anything while redirecting
+  }
 
   return (
     <div className="min-h-screen" 

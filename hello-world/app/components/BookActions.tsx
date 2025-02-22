@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Heart, Trash2 } from 'lucide-react';
 import { db } from "@/firebase";
-import { collection, addDoc, deleteDoc, query, where, getDocs } from "firebase/firestore";
+import { collection, addDoc, deleteDoc, query, where, getDocs, updateDoc, doc, increment } from "firebase/firestore";
 import { useAuth } from '@/app/context/AuthContext';
 
 interface BookActionsProps {
@@ -116,6 +116,15 @@ const BookActions: React.FC<BookActionsProps> = ({
         shelfType,
         dateAdded: new Date()
       });
+
+      // If the book is added to the "Finished" shelf, increment the booksRead count
+      if (shelfType === 'finished') {
+        const userRef = doc(db, "users", user.uid);
+        await updateDoc(userRef, {
+          booksRead: increment(1),
+        });
+      }
+
 
       setIsDropdownOpen(false);
       alert(`Added to ${shelfType}`);
