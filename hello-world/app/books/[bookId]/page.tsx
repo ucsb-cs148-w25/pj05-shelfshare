@@ -3,12 +3,22 @@
 
 import { useAuth } from '@/app/context/AuthContext';
 import { db } from '@/firebase';
+
 // import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, doc } from "firebase/firestore";
 import { useParams } from 'next/navigation';
 import BookActions from '@/app/components/BookActions';
+
+interface ProfileItem {
+  email: string;
+  aboutMe: string;
+  pgenre: string;
+  profilePicUrl: string;
+  uid: string;
+  username: string;
+}
 
 interface BookData {
   title: string;
@@ -47,6 +57,10 @@ export default function BookDetails() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [newReview, setNewReview] = useState<string>("");
   const [userRating, setUserRating] = useState<number>(0);
+
+  const [profilePicture, setProfilePicture] = useState("upload-pic.png");
+  const [username, setUsername] = useState("username");
+
 
   useEffect(() => {
     const fetchBookDetails = async () => {
@@ -98,11 +112,31 @@ export default function BookDetails() {
   // Firestore reviews integration
   useEffect(() => {
     if (!bookId) return;
+    if (!user) return;
 
     const q = query(
       collection(db, "books", bookId, "reviews"),
       orderBy("date", "desc")
     );
+
+    const userDocRef = doc(db, "profile", user.uid);
+    const unsubscribe1 = onSnapshot(userDocRef, (snapshot) => {
+      if (snapshot.exists()) {
+        const data = snapshot.data();
+        const profileItem: ProfileItem = {
+          email: data.email || "email@shelfshare.com",
+          aboutMe: data.aboutMe || "Write about yourself!",
+          pgenre: data.pgenre || "#fantasy#romance#mystery",
+          profilePicUrl: data.profilePicUrl || "",
+          uid: data.uid,
+          username: data.username || "username",
+        };
+
+        setProfilePicture(profileItem.profilePicUrl);
+        setUsername(profileItem.username);
+      }
+    });
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const reviewsData = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -110,8 +144,10 @@ export default function BookDetails() {
       })) as Review[];
       setReviews(reviewsData);
     });
-    return () => unsubscribe();
-  }, [bookId]);
+    return () => {unsubscribe();
+                  unsubscribe1(); };
+  }, [bookId, user]);
+
 
   interface StarRatingProps {
     rating: number;
@@ -191,6 +227,7 @@ export default function BookDetails() {
     );
   }
 
+
   if (error || !book) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -220,6 +257,7 @@ export default function BookDetails() {
                 alt={book.title}
                 width={300}
                 height={400}
+                quality={100}
                 className="object-cover"
               />
             </div>
@@ -285,7 +323,7 @@ export default function BookDetails() {
                   <div key={review.id} className="bg-[#847266] p-6 rounded-lg relative">
                     <div className="flex items-start space-x-4">
                       <Image 
-                        src="/profile.png"
+                        src={profilePicture}
                         alt="Profile"
                         width={24}
                         height={24}
@@ -295,7 +333,7 @@ export default function BookDetails() {
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center space-x-2">
                             <span className="font-medium text-[#DFDDCE]">
-                              {review.userName || "Anonymous User"}
+                              {username}
                             </span>
                           </div>
                           <span className="text-sm text-[#DFDDCE]">

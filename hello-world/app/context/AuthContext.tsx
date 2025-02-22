@@ -37,6 +37,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           });
         }
 
+        const profileRef = doc(db, 'profile', user.uid)
+        const profileSnap = await getDoc(profileRef);
+        if (!profileSnap.exists()) {
+          await setDoc(profileRef, {
+            aboutMe: "Write about yourself!",
+            email: user.email,
+            pgenre: "#fantascy#romance#mystery",
+            profilePicUrl: user.photoURL,
+            uid: user.uid,
+            username: user.email?.split("@")[0] || "username",
+          })
+        }
+
       } else {
         setUser(null);
       }
