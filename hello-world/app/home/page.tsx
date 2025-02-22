@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { db } from '@/firebase';
-import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, getDoc, doc, setDoc } from 'firebase/firestore';
 import '../globals.css';
 
 export default function Home() {
@@ -22,20 +22,33 @@ export default function Home() {
     }
   }, [user, router]);
 
+  // Fetch the reading goal and books read count
   useEffect(() => {
-    const fetchReadingGoal = async () => {
-      if (user) {
-        const userRef = doc(db, "users", user.uid);
-        const userDoc = await getDoc(userRef);
-        if (userDoc.exists()) {
-          const data = userDoc.data();
-          setReadingGoal(data.readingGoal || null);
-          setBooksRead(data.booksRead || 0);
-        }
+    const fetchReadingGoalAndBooksRead = async () => {
+      if (!user) return;
+
+      // Fetch the reading goal
+      const userRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userRef);
+      if (userDoc.exists()) {
+        const data = userDoc.data();
+        setReadingGoal(data.readingGoal || null);
       }
+
+      // Fetch the number of books in the "Finished" shelf for 2025
+      const shelvesRef = collection(db, "users", user.uid, "shelves");
+      const q = query(
+        shelvesRef,
+        where("shelfType", "==", "finished"),
+        where("dateFinished", ">=", new Date("2025-01-01")), // Start of 2025
+        where("dateFinished", "<=", new Date("2025-12-31")) // End of 2025
+      );
+
+      const querySnapshot = await getDocs(q);
+      setBooksRead(querySnapshot.size); // Set booksRead to the number of books in the "Finished" shelf for 2025
     };
 
-    fetchReadingGoal();
+    fetchReadingGoalAndBooksRead();
   }, [user]);
 
   const handleSetGoal = async () => {
@@ -119,7 +132,7 @@ export default function Home() {
               </div>
             ) : (
               <div>
-                <p className="text-lg font-bold text-[#3D2F2A]">Books Read: {booksRead}<span className="mx-0.5">/</span>{readingGoal}</p>
+                <p className="text-lg font-bold text-[#3D2F2A]">Books Read: {booksRead} / {readingGoal}</p>
                 {booksRead >= readingGoal && (
                   <p className="text-lg font-bold text-[#3D2F2A] mt-2">
                     🎉 Congratulations on reaching your yearly goal! 🎉

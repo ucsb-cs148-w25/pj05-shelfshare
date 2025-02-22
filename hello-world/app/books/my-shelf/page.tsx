@@ -1,12 +1,10 @@
 'use client';
-// my-shelf/page.tsx
-
 import { useAuth } from '@/app/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { db } from "@/firebase";
-import { collection, query, onSnapshot, Timestamp, deleteDoc, doc, updateDoc, increment } from "firebase/firestore";
+import { collection, query, onSnapshot, Timestamp, deleteDoc, doc, updateDoc } from "firebase/firestore";
 import { Trash2 } from 'lucide-react';
 
 interface BookItem {
@@ -17,6 +15,7 @@ interface BookItem {
   coverUrl: string;
   dateAdded: Timestamp | Date;
   shelfType?: 'currently-reading' | 'want-to-read' | 'finished';
+  dateFinished?: Date | null; // Add this field
 }
 
 interface ShelfSection {
@@ -85,7 +84,8 @@ export default function UserLists() {
         const shelvesData = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
-          dateAdded: doc.data().dateAdded instanceof Timestamp ? doc.data().dateAdded : new Date()
+          dateAdded: doc.data().dateAdded instanceof Timestamp ? doc.data().dateAdded : new Date(),
+          dateFinished: doc.data().dateFinished || null, // Add this field
         })) as BookItem[];
 
         // Update each shelf type
@@ -163,17 +163,12 @@ export default function UserLists() {
 
     try {
       const bookRef = doc(db, "users", user.uid, "shelves", draggedBook.id);
-      await updateDoc(bookRef, {
-        shelfType: targetShelfType
-      });
 
-      // Increment the booksRead count if the book is moved to the "finished" shelf
-      if (targetShelfType === 'finished') {
-        const userRef = doc(db, "users", user.uid);
-        await updateDoc(userRef, {
-          booksRead: increment(1)
-        });
-      }
+      // Update the book's shelf type and set the finish date if applicable
+      await updateDoc(bookRef, {
+        shelfType: targetShelfType,
+        dateFinished: targetShelfType === 'finished' ? new Date() : null,
+      });
     } catch (error) {
       console.error("Error moving book:", error);
     }
