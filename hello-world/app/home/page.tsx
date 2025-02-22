@@ -13,6 +13,7 @@ export default function Home() {
   const [readingGoal, setReadingGoal] = useState<number | null>(null);
   const [booksRead, setBooksRead] = useState(0);
   const [inputGoal, setInputGoal] = useState('');
+  const [isEditingGoal, setIsEditingGoal] = useState(false);
 
   // Redirect to login page if user is not authenticated
   useEffect(() => {
@@ -42,6 +43,7 @@ export default function Home() {
     if (!isNaN(goal) && goal > 0) {
       setReadingGoal(goal);
       setInputGoal('');
+      setIsEditingGoal(false);
 
       // Save the goal to Firestore
       if (user) {
@@ -51,9 +53,16 @@ export default function Home() {
     }
   };
 
+  const handleEditGoal = () => {
+    setIsEditingGoal(true);
+    setInputGoal(readingGoal?.toString() || '');
+  };
+
   if (!user) {
     return null; // Avoid rendering anything while redirecting
   }
+
+  const progressPercentage = Math.min((booksRead / (readingGoal || 1)) * 100, 100); // Cap progress at 100%
 
   return (
     <div className="min-h-screen" 
@@ -91,12 +100,12 @@ export default function Home() {
           style={{ color: '#DFDDCE', fontFamily: 'Outfit, sans-serif' }}>
             2025 Reading Challenge</h2>
           <div className="bg-[#DFDDCE] p-4 rounded-lg shadow-lg mt-2">
-            {readingGoal === null ? (
+            {readingGoal === null || isEditingGoal ? (
               <div>
                 <p className="text-lg font-bold text-[#3D2F2A]">Set your reading goal for the year:</p>
                 <input
                   type="number"
-                  className="p-2 border rounded-lg w-full mt-2"
+                  className="p-2 border rounded-lg w-full mt-2 font-bold text-[#3D2F2A] placeholder-[#847266]"
                   placeholder="Enter goal"
                   value={inputGoal}
                   onChange={(e) => setInputGoal(e.target.value)}
@@ -110,13 +119,24 @@ export default function Home() {
               </div>
             ) : (
               <div>
-                <p className="text-lg font-bold text-[#3D2F2A]">Books Read: {booksRead}/{readingGoal}</p>
+                <p className="text-lg font-bold text-[#3D2F2A]">Books Read: {booksRead}<span className="mx-0.5">/</span>{readingGoal}</p>
+                {booksRead >= readingGoal && (
+                  <p className="text-lg font-bold text-[#3D2F2A] mt-2">
+                    🎉 Congratulations on reaching your yearly goal! 🎉
+                  </p>
+                )}
                 <div className="w-full bg-gray-300 rounded-full h-4 mt-2">
                   <div
                     className="bg-[#3D2F2A] h-4 rounded-full"
-                    style={{ width: `${(booksRead / readingGoal) * 100}%` }}
+                    style={{ width: `${progressPercentage}%` }}
                   ></div>
                 </div>
+                <button
+                  className="mt-2 px-4 py-2 bg-[#847266] text-[#DFDDCE] rounded-lg font-bold"
+                  onClick={handleEditGoal}
+                >
+                  Edit Goal
+                </button>
               </div>
             )}
           </div>

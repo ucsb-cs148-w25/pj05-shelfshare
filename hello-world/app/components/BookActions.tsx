@@ -72,6 +72,10 @@ const BookActions: React.FC<BookActionsProps> = ({
     }
   };
 
+
+
+  
+
   const deleteFromShelf = async () => {
     if (!user) {
       alert("You need to be logged in to remove books.");
@@ -84,7 +88,18 @@ const BookActions: React.FC<BookActionsProps> = ({
       const querySnapshot = await getDocs(q);
       
       if (!querySnapshot.empty) {
-        await deleteDoc(querySnapshot.docs[0].ref);
+        const bookDoc = querySnapshot.docs[0];
+        const bookData = bookDoc.data();
+
+        // If the book is on the "Finished" shelf, decrement the booksRead count
+        if (bookData.shelfType === 'finished') {
+          const userRef = doc(db, "users", user.uid);
+          await updateDoc(userRef, {
+            booksRead: increment(-1), // Decrement by 1
+          });
+        }
+
+        await deleteDoc(bookDoc.ref); // Delete the book from the shelf
         if (onDelete) onDelete(); // Call the callback if provided
       }
     } catch (error) {
@@ -92,6 +107,12 @@ const BookActions: React.FC<BookActionsProps> = ({
       alert("Failed to remove from shelf.");
     }
   };
+
+
+
+
+
+
 
   const addToShelf = async (shelfType: 'currently-reading' | 'want-to-read' | 'finished') => {
     if (!user) {
@@ -104,10 +125,12 @@ const BookActions: React.FC<BookActionsProps> = ({
       const q = query(shelvesRef, where("bookId", "==", bookId));
       const querySnapshot = await getDocs(q);
       
+      // If the book is already on a shelf, remove it first
       if (!querySnapshot.empty) {
         await deleteDoc(querySnapshot.docs[0].ref);
       }
 
+      // Add the book to the selected shelf
       await addDoc(shelvesRef, {
         bookId,
         title,
@@ -124,7 +147,6 @@ const BookActions: React.FC<BookActionsProps> = ({
           booksRead: increment(1),
         });
       }
-
 
       setIsDropdownOpen(false);
       alert(`Added to ${shelfType}`);
