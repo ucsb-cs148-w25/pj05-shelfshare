@@ -1,6 +1,6 @@
 'use client';
 
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 
@@ -31,7 +31,7 @@ export default function Browse() {
               className="font-bold items-center text-3xl mt-6"
               style={{ color: '#DFDDCE', fontFamily: 'Outfit, sans-serif', marginLeft: 'calc((100% - 1030px) / 2)' }}
             >
-              Read Next
+              You may also like... 
             </div>
   
             {/* Shelf Background */}
@@ -190,7 +190,7 @@ export default function Browse() {
                   Title
                 </h3>
                 <p className="text-xl" style={{ color: '#3D2F2A' }}>
-                  Author
+                  Artist(s)
                 </p>
                 <p className="text-xl" style={{ color: '#3D2F2A' }}>★★★★★</p>
                 <div className="flex space-x-4 font-bold mt-1">
@@ -220,7 +220,7 @@ export default function Browse() {
                   Title
                 </h3>
                 <p className="text-xl" style={{ color: '#3D2F2A' }}>
-                  Author
+                  Artist(s)
                 </p>
                 <p className="text-xl" style={{ color: '#3D2F2A' }}>★★★★★</p>
                 <div className="flex space-x-4 font-bold mt-1">
