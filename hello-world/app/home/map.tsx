@@ -36,7 +36,7 @@ const LibraryMap = ({ libraries, mapCenterCoord }: { libraries: Library[], mapCe
   if (!mapCenterCoord) return <p>Loading...</p>;
 
   return (
-    <MapContainer center={mapCenterE ?? [34.4140, -119.8489]} zoom={13} style={{ height: "500px", width: "100%" }}>
+    <MapContainer center={mapCenterE ?? [34.4140, -119.8489]} zoom={14} style={{ height: "500px", width: "100%" }}>
       <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
       {libraries.map((library, index) => (
         <Marker key={index} position={[library.lat, library.lng]} icon={customMarker}>

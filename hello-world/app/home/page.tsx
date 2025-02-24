@@ -17,10 +17,10 @@ interface Library {
   distance?: number;
 }
 interface dataLibrary {
-  type: "node",
-  id: 123456789,
-  lat: 34.263,
-  lon: -119.844,
+  type: string,
+  id: number,
+  lat: number,
+  lon: number,
   tags: {
     name: string,
     operator: string,
@@ -35,6 +35,7 @@ export default function Home() {
   const [libraries, setLibraries] = useState<Library[]>([]);
   const [mapCenter, setMapCenter] = useState<[number, number]>([38.8887, -77.0047]);
   const [isLoaded, setIsLoaded] = useState(false); // Track when data is ready
+  const [close, setClose] = useState(false);
   // Redirect to login page if user is not authenticated
   useEffect(() => {
     if (!user) {
@@ -175,7 +176,7 @@ export default function Home() {
   
           {/* Review Section */}
           <div
-              className="p-4 rounded-lg w-full h-[300px]"
+              className="p-4 rounded-lg w-full h-auto overflow-hidden"
               style={{ backgroundColor: '#DFDDCE'}}>
   
             <div>
@@ -193,7 +194,7 @@ export default function Home() {
                 }}
                 onChange={(e) => setZipCode(e.target.value)}
               />
-              <button className="px-4 py-2 rounded-[15px] shadow-md font-bold ml-2"
+              <button className="px-4 py-2 rounded-[15px] shadow-md font-bold mb-6 ml-2"
                 style={{
                   backgroundColor: '#3D2F2A',
                   color: '#DFDDCE',
@@ -201,31 +202,34 @@ export default function Home() {
                 }} 
                 onClick={() => {
                   findTop5LibrariesByZip();
+                  setClose(true);
                 }}>
                 Search
               </button>
+              <button className="ml-2 mt-1" hidden={!(isLoaded && close)} onClick={() => {setIsLoaded(false); setClose(true)}}
+              style={{width: "25px", height: "25px"}}> <img src="close.png"/> </button>
                    <div style={{
                   backgroundColor: '#3D2F2A',
                   color: '#DFDDCE',
                   fontFamily: 'Outfit, sans-serif',
                 }} >
-                  
+                {(isLoaded && close) && (
+                 <div className="ml-2" style={{backgroundColor: '#3D2F2A'}}> 
                  <h3>Nearby Libraries:</h3>
                    <ul>
                        {libraries.map((lib, index) => (
                         <li key={index}>{lib.name}</li>
                       ))}
                     </ul>
+                  </div>)}
                   </div>
             </div>
             <div style={{
                   backgroundColor: '#847266', // Tan background for search bar
                   color: '#3D2F2A', // Brown text color
                 }}>
-              {isLoaded ? (
+              {isLoaded && close && (
                   <LibraryMap libraries={libraries} mapCenterCoord={mapCenter} />
-                ) : (
-                  <p>Loading map and libraries...</p>
                 )}
                 </div>
           </div>
@@ -250,7 +254,7 @@ export default function Home() {
             <div className="flex space-x-2 mb-4 w-full"> {/* Added w-full for full width */}
               <input
                 type="text"
-                placeholder="zip code"
+                placeholder="Add Friend!"
                 className="flex-grow p-2 border rounded-lg"
                 style={{
                   backgroundColor: '#DFDDCE', // Tan background for search bar
@@ -275,4 +279,5 @@ export default function Home() {
     </div>
     );
   }
+  
   
