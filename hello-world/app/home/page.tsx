@@ -3,8 +3,12 @@
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import LibraryMap from './map';
+// import LibraryMap from './map';
 import '../globals.css';
+
+import dynamic from "next/dynamic";
+
+const LibraryMap = dynamic(() => import("./map"), { ssr: false });
 
 interface Library {
   name: string;
@@ -12,13 +16,24 @@ interface Library {
   lng: number;
   distance?: number;
 }
+interface dataLibrary {
+  type: "node",
+  id: 123456789,
+  lat: 34.263,
+  lon: -119.844,
+  tags: {
+    name: string,
+    operator: string,
+    opening_hours: string
+  }
+}
 
 export default function Home() {
   const { user } = useAuth();
   const router = useRouter();
   const [zipCode, setZipCode] = useState("");
   const [libraries, setLibraries] = useState<Library[]>([]);
-  const [mapCenter, setMapCenter] = useState<[number, number] | null>(null);
+  const [mapCenter, setMapCenter] = useState<[number, number]>([38.8887, -77.0047]);
   const [isLoaded, setIsLoaded] = useState(false); // Track when data is ready
   // Redirect to login page if user is not authenticated
   useEffect(() => {
@@ -31,7 +46,7 @@ export default function Home() {
     return null; // Avoid rendering anything while redirecting
   }
 
-  const fetchCoordinates = async (zipCode) => {
+  const fetchCoordinates = async (zipCode: string) => {
     setIsLoaded(false);
     const API_KEY = "a9436ef768c04080b4b181b0249f816a";
     const url = `https://api.opencagedata.com/geocode/v1/json?q=${zipCode}&countrycode=US&key=${API_KEY}`;
@@ -74,10 +89,10 @@ export default function Home() {
     );
     const data = await response.json();
 
-    return data.elements.map(library => {
+    return data.elements.map((library: dataLibrary) => {
       console.log("Library Data:", library); // Debug log
       return {
-        name: library.tags?.name || library.tags?.["name:en"] || "Unnamed Library",
+        name: library.tags?.name || "Unnamed Library",
         lat: library.lat,
         lng: library.lon
       };
@@ -97,7 +112,7 @@ export default function Home() {
 
     // Sort by closest distance & select top 5
     const topFive = librariesList
-      .sort((a, b) => (a.distance ?? 0) - (b.distance ?? 0))
+      .sort((a: Library, b : Library) => (a.distance ?? 0) - (b.distance ?? 0))
       .slice(0, 5);
 
     setLibraries(topFive);
@@ -202,7 +217,6 @@ export default function Home() {
                       ))}
                     </ul>
                   </div>
-                // {/* )} */}
             </div>
             <div style={{
                   backgroundColor: '#847266', // Tan background for search bar
