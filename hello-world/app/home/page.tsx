@@ -7,6 +7,8 @@ import { useEffect, useState } from 'react';
 import '../globals.css';
 
 import dynamic from "next/dynamic";
+import dotenv from "dotenv";
+dotenv.config();
 
 const LibraryMap = dynamic(() => import("./map"), { ssr: false });
 
@@ -49,33 +51,23 @@ export default function Home() {
 
   const fetchCoordinates = async (zipCode: string) => {
     setIsLoaded(false);
-    const API_KEY = "a9436ef768c04080b4b181b0249f816a";
+    const API_KEY = process.env.NEXT_PUBLIC_MAP_API_KEY;
     const url = `https://api.opencagedata.com/geocode/v1/json?q=${zipCode}&countrycode=US&key=${API_KEY}`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
 
-    try {
-        const response = await fetch(url);
-        if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
+      const data = await response.json();
+      console.log("API Response:", data); // Debugging response
 
-        const data = await response.json();
-        console.log("API Response:", data); // Debugging response
-
-        if (data.results.length > 0) {
-            const coordinates = {
-                lat: data.results[0].geometry.lat,
-                lng: data.results[0].geometry.lng
-            };
-            console.log(mapCenter);
-            console.log(`ZIP Code ${zipCode} → Coordinates:`, coordinates);
-            return coordinates;
-        } else {
-            console.error("Invalid ZIP Code or no results found");
-            return null;
-        }
-
-    } catch (error) {
-        console.error("Error fetching coordinates:", error);
-        return null;
-    }
+      if (data.results.length > 0) {
+          const coordinates = {
+              lat: data.results[0].geometry.lat,
+              lng: data.results[0].geometry.lng
+          };
+          console.log(mapCenter);
+          console.log(`ZIP Code ${zipCode} → Coordinates:`, coordinates);
+          return coordinates;
+      } 
 };
 
   const fetchLibraries = async (lat: number, lng: number) => {
@@ -91,7 +83,6 @@ export default function Home() {
     const data = await response.json();
 
     return data.elements.map((library: dataLibrary) => {
-      console.log("Library Data:", library); // Debug log
       return {
         name: library.tags?.name || "Unnamed Library",
         lat: library.lat,

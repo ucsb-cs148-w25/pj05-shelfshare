@@ -6,6 +6,11 @@ import { useAuth } from '@/app/context/AuthContext';
 import { db } from "@/firebase";
 import { onSnapshot, updateDoc, doc } from "firebase/firestore";
 import { Upload, Pencil } from "lucide-react";
+import dotenv from "dotenv";
+import path from 'path';
+
+dotenv.config();
+
 
 interface ProfileItem {
   email: string;
@@ -15,6 +20,8 @@ interface ProfileItem {
   uid: string;
   username: string;
 }
+
+
 
 
 const Profile = () => {
@@ -67,8 +74,9 @@ const Profile = () => {
 
   const uploadToCloudinary = async (file: File) => {
     if (!user) return;
-    const CLOUD_NAME = "dwsk8lhiy";
-    const UPLOAD_PRESET = "shelfshare";
+    const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUD_NAME;
+    const UPLOAD_PRESET = process.env.NEXT_PUBLIC_APP_NAME;
+    
 
     const formData = new FormData();
     formData.append("file", file);
