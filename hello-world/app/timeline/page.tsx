@@ -2,49 +2,82 @@
 
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import React from "react";
 import Image from "next/image";
+
+import { db } from '@/firebase';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc } from "firebase/firestore";
+
+interface Notification {
+  id: string;
+  type: string;
+  senderId: string;
+  senderName: string;
+  senderProfilePic: string;
+  bookId: string;
+  bookTitle: string;
+  bookCover: string;
+  reviewText: string;
+  rating: number;
+  date: {
+    seconds: number;
+    nanoseconds: number;
+  };
+  read: boolean;
+}
+
+interface Review {
+  id: number;
+  name: string;
+  text: string;
+  bookImage: string;
+}
+
+
 const ReviewsPage: React.FC = () => {
-  const reviews = [
-    {
-      id: 1,
-      name: "Jessica",
-      text: "The Great Gatsby by F. Scott Fitzgerald is a poignant exploration of ambition, love, and the illusion of the American Dream...",
-      bookImage: "/GreatGatsby.png",
-    },
-    {
-      id: 2,
-      name: "Charlene",
-      text: "City of Orange by David Yoon is a gripping post-apocalyptic tale that delves into memory, survival, and the raw resilience of the human spirit...",
-      bookImage: "/CityOfOrange.png",
-    },
-    {
-      id: 3,
-      name: "Isabella",
-      text: "Educated by Tara Westover is a powerful memoir about breaking free from a life of isolation and pursuing self-discovery through education...",
-      bookImage: "/Educated.png",
-    },
-    // Add more reviews to test scrolling
-    {
-      id: 4,
-      name: "Michael",
-      text: "Another great book about self-discovery and life challenges...",
-      bookImage: "/Educated.png",
-    },
-    {
-      id: 5,
-      name: "Laura",
-      text: "An amazing tale of perseverance and adventure...",
-      bookImage: "/CityOfOrange.png",
-    },
-   
+  const staticReviews: any[] | (() => Review[]) = [
+    
     
   ];
 
+  const [reviews, setReviews] = useState<Review[]>(staticReviews);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [newPost, setNewPost] = useState<string>("");
   const { user } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    if (!user) return;
+
+    const q = query(
+      collection(db, "users", user.uid, "notifications"),
+      orderBy("date", "desc")
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const notificationsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Notification[];
+      
+      // Filter to only show review notifications
+      const reviewNotifications = notificationsData.filter(notif => notif.type === 'review');
+      setNotifications(reviewNotifications);
+      
+      // Mark notifications as read
+      reviewNotifications.forEach(async (notification) => {
+        if (!notification.read) {
+          await updateDoc(doc(db, "users", user.uid, "notifications", notification.id), {
+            read: true
+          });
+        }
+      });
+    });
+
+    return () => unsubscribe();
+  }, [user]);
 
   // Redirect to login page if user is not authenticated
   useEffect(() => {
@@ -53,61 +86,78 @@ const ReviewsPage: React.FC = () => {
     }
   }, [user, router]);
 
+  const handleSubmitPost = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (newPost.trim()) {
+      // Here you could implement posting functionality
+      setNewPost("");
+    }
+  };
+
+  // Navigate to book page when clicking on a notification
+  const handleNotificationClick = (bookId: string) => {
+    router.push(`/books/${bookId}`);
+  };
+
   if (!user) {
     return null; // Avoid rendering anything while redirecting
   }
 
   return (
     <div className="bg-custom-green min-h-screen overflow-y-auto flex flex-col items-center p-6">
-      {/* Review Cards */}
-      <div className="space-y-4 w-full max-w-2xl">
-        {reviews.map((review) => (
-          <div
-            key={review.id}
-            className="text-custom-brown bg-custom-tan p-4 rounded-2xl shadow-md flex items-start space-x-4"
-          >
-            <Image
-              src="/dark-user-circle.svg"
-              alt="User Icon"
-              width = {40}
-              height = {40}
-              className="w-10 h-10 text-gray-500"
-            />
-            <div>
-              <h3 className="text-lg font-semibold">{review.name}</h3>
-              <p className="text-custom-brown">{review.text}</p>
-            </div>
-            <Image
-              src={review.bookImage}
-              alt={review.name}
-              width={64}
-              height={80}
-              className="w-16 h-20 object-cover rounded-lg"
-            />
+      {/* Friend Review Notifications */}
+      {notifications.length > 0 && (
+        <div className="w-full max-w-2xl mb-6">
+          <h2 className="text-xl font-semibold text-custom-brown mb-3">Friend Activity</h2>
+          <div className="space-y-4">
+            {notifications.map((notification) => (
+              <div
+                key={notification.id}
+                className="text-custom-brown bg-custom-tan p-4 rounded-2xl shadow-md flex items-start space-x-4 cursor-pointer hover:bg-opacity-90 transition-colors"
+                onClick={() => handleNotificationClick(notification.bookId)}
+              >
+                <Image
+                  src={notification.senderProfilePic || "/dark-user-circle.svg"}
+                  alt="User Icon"
+                  width={40}
+                  height={40}
+                  className="w-10 h-10 rounded-full"
+                />
+                <div className="flex-grow">
+                  <h3 className="text-lg font-semibold">{notification.senderName}</h3>
+                  <p className="text-custom-brown font-medium">
+                    Reviewed <span className="italic">{notification.bookTitle}</span> {" "}
+                    and rated it {notification.rating} stars
+                  </p>
+                  <p className="text-custom-brown mt-1">{notification.reviewText}</p>
+                  <p className="text-xs text-custom-brown opacity-70 mt-2">
+                    {notification.date?.seconds 
+                      ? new Date(notification.date.seconds * 1000).toLocaleDateString("en-US", { 
+                          month: "short", 
+                          day: "numeric", 
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit"
+                        })
+                      : "Just now"}
+                  </p>
+                </div>
+                <Image
+                  src={notification.bookCover || "/placeholder.png"}
+                  alt={notification.bookTitle}
+                  width={64}
+                  height={80}
+                  className="w-16 h-20 object-cover rounded-lg"
+                />
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-
-      {/* Input Section */}
-      <div className="bg-white p-4 rounded-full shadow-md mt-6 flex items-center space-x-4 w-full max-w-3xl">
-        <div className="flex space-x-4">
-            <Image src="/camera.svg" alt="Camera Icon" width={24} height={24} className="w-6 h-6" />
-            <Image src="/paperclip.svg" alt="Paper Clip Icon" width={24} height={24} className="w-6 h-6" />
-            <Image src="/bookshelf.svg" alt="Book Icon" width={24} height={24} className="w-6 h-6" />
         </div>
-        <input
-          type="text"
-          placeholder="Text..."
-          className="flex-1 border-none focus:ring-0 text-custom-brown"
-        />
-        <Image
-          src="/user-circle.svg"
-          alt="User Icon"
-          width = {24}
-          height = {24}
-          className="w-6 h-6"
-        />
-      </div>
+      )}
+
+      
+
+      
     </div>
   );
 };
