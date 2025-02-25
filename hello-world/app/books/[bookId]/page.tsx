@@ -7,7 +7,7 @@ import { db } from '@/firebase';
 // import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, doc, getDocs, writeBatch } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, doc, getDocs, writeBatch, FieldValue } from "firebase/firestore";
 import { useParams } from 'next/navigation';
 import BookActions from '@/app/components/BookActions';
 
@@ -38,6 +38,21 @@ interface Review {
     seconds: number;
     nanoseconds: number;
   } | null; // Firestore timestamp type
+}
+
+interface ReviewData {
+  userId: string;
+  userName: string;
+  text: string;
+  rating: number;
+  date: 
+    FieldValue | null; // This could be more specific based on what serverTimestamp returns
+}
+
+interface BookDetailsForNotification {
+  title: string;
+  author: string;
+  coverUrl: string;
 }
 
 interface Author {
@@ -216,7 +231,9 @@ export default function BookDetails() {
     );
   };
 
-  const sendNotificationsToFriends = async (reviewData: any, bookDetails: any) => {
+  const sendNotificationsToFriends = async (
+    reviewData: ReviewData, 
+    bookDetails: BookDetailsForNotification) => {
     if (!user || userFriends.length === 0) return;
     
     const timestamp = serverTimestamp();

@@ -3,10 +3,8 @@
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-
 import React from "react";
 import Image from "next/image";
-
 import { db } from '@/firebase';
 import { collection, query, orderBy, onSnapshot, doc, updateDoc } from "firebase/firestore";
 
@@ -28,23 +26,8 @@ interface Notification {
   read: boolean;
 }
 
-interface Review {
-  id: number;
-  name: string;
-  text: string;
-  bookImage: string;
-}
-
-
-const ReviewsPage: React.FC = () => {
-  const staticReviews: any[] | (() => Review[]) = [
-    
-    
-  ];
-
-  const [reviews, setReviews] = useState<Review[]>(staticReviews);
+const FriendActivityPage: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [newPost, setNewPost] = useState<string>("");
   const { user } = useAuth();
   const router = useRouter();
 
@@ -86,14 +69,6 @@ const ReviewsPage: React.FC = () => {
     }
   }, [user, router]);
 
-  const handleSubmitPost = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    if (newPost.trim()) {
-      // Here you could implement posting functionality
-      setNewPost("");
-    }
-  };
-
   // Navigate to book page when clicking on a notification
   const handleNotificationClick = (bookId: string) => {
     router.push(`/books/${bookId}`);
@@ -105,10 +80,10 @@ const ReviewsPage: React.FC = () => {
 
   return (
     <div className="bg-custom-green min-h-screen overflow-y-auto flex flex-col items-center p-6">
-      {/* Friend Review Notifications */}
-      {notifications.length > 0 && (
-        <div className="w-full max-w-2xl mb-6">
-          <h2 className="text-xl font-semibold text-custom-brown mb-3">Friend Activity</h2>
+      <h1 className="text-2xl font-bold text-custom-brown mb-6">Friend Activity</h1>
+      
+      {notifications.length > 0 ? (
+        <div className="w-full max-w-2xl">
           <div className="space-y-4">
             {notifications.map((notification) => (
               <div
@@ -153,13 +128,14 @@ const ReviewsPage: React.FC = () => {
             ))}
           </div>
         </div>
+      ) : (
+        <div className="text-center text-custom-brown mt-8 p-6 bg-custom-tan rounded-lg">
+          <h2 className="text-xl font-medium mb-2">No friend activity yet</h2>
+          <p>When your friends review books, their activity will appear here.</p>
+        </div>
       )}
-
-      
-
-      
     </div>
   );
 };
 
-export default ReviewsPage;
+export default FriendActivityPage;
