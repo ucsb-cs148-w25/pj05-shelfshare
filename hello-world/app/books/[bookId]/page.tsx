@@ -7,7 +7,7 @@ import { db } from '@/firebase';
 // import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, doc } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, doc, getDocs, writeBatch, FieldValue } from "firebase/firestore";
 import { useParams } from 'next/navigation';
 import BookActions from '@/app/components/BookActions';
 
@@ -40,10 +40,30 @@ interface Review {
   } | null; // Firestore timestamp type
 }
 
+interface ReviewData {
+  userId: string;
+  userName: string;
+  text: string;
+  rating: number;
+  date: 
+    FieldValue | null; // This could be more specific based on what serverTimestamp returns
+}
+
+interface BookDetailsForNotification {
+  title: string;
+  author: string;
+  coverUrl: string;
+}
+
 interface Author {
   author: {
     key: string;
   };
+}
+
+interface Friend {
+  id: string;
+  username?: string;
 }
 
 export default function BookDetails() {
@@ -60,7 +80,26 @@ export default function BookDetails() {
 
   const [profilePicture, setProfilePicture] = useState("upload-pic.png");
   const [username, setUsername] = useState("username");
+  const [userFriends, setUserFriends] = useState<Friend[]>([]);
 
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchFriends = async () => {
+      try {
+        const friendsSnapshot = await getDocs(collection(db, "users", user.uid, "friends"));
+        const friendsData = friendsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Friend[];
+        setUserFriends(friendsData);
+      } catch (error) {
+        console.error("Error fetching friends:", error);
+      }
+    };
+
+    fetchFriends();
+  }, [user]);
 
   useEffect(() => {
     const fetchBookDetails = async () => {
@@ -192,6 +231,44 @@ export default function BookDetails() {
     );
   };
 
+  const sendNotificationsToFriends = async (
+    reviewData: ReviewData, 
+    bookDetails: BookDetailsForNotification) => {
+    if (!user || userFriends.length === 0) return;
+    
+    const timestamp = serverTimestamp();
+    const batch = writeBatch(db);
+    
+    // Prepare notification data
+    const notificationData = {
+      type: 'review',
+      senderId: user.uid,
+      senderName: username,
+      senderProfilePic: profilePicture,
+      bookId: bookId,
+      bookTitle: bookDetails.title,
+      bookCover: bookDetails.coverUrl,
+      reviewText: reviewData.text.substring(0, 100) + (reviewData.text.length > 100 ? '...' : ''),
+      rating: reviewData.rating,
+      date: timestamp,
+      read: false
+    };
+    
+    // Add a notification for each friend
+    userFriends.forEach(friend => {
+      const notificationRef = doc(collection(db, "users", friend.id, "notifications"));
+      batch.set(notificationRef, notificationData);
+    });
+    
+    // Commit the batch
+    try {
+      await batch.commit();
+      console.log("Notifications sent to all friends");
+    } catch (error) {
+      console.error("Error sending notifications:", error);
+    }
+  };
+
   const handleSubmitReview = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
@@ -210,6 +287,22 @@ export default function BookDetails() {
       };
       try {
         await addDoc(collection(db, "books", bookId, "reviews"), reviewData);
+        if (!book) return;
+
+        const coverId = book.covers && book.covers[0];
+        const coverImageUrl = coverId && coverId > 0
+          ? `https://covers.openlibrary.org/b/id/${coverId}-L.jpg`
+          : "/placeholder.png";
+        
+        // Prepare book details for notification
+        const bookDetails = {
+          title: book.title,
+          author: book.authors?.[0] || "Unknown Author",
+          coverUrl: coverImageUrl
+        };
+
+        await sendNotificationsToFriends(reviewData, bookDetails);
+
         setNewReview("");
         setUserRating(0);
       } catch (error) {
@@ -362,3 +455,5 @@ export default function BookDetails() {
     </div>
   );
 }
+
+
