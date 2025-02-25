@@ -108,13 +108,15 @@ const BookActions: React.FC<BookActionsProps> = ({
         await deleteDoc(querySnapshot.docs[0].ref);
       }
 
+      // Add the book to the new shelf
       await addDoc(shelvesRef, {
         bookId,
         title,
         author,
         coverUrl,
         shelfType,
-        dateAdded: new Date()
+        dateAdded: new Date(),
+        dateFinished: shelfType === 'finished' ? new Date() : null, // Store the finish date if applicable
       });
 
       setIsDropdownOpen(false);
