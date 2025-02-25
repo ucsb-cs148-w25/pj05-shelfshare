@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/app/context/AuthContext';
 import { useRouter } from 'next/navigation';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Image from 'next/image';
 import { db } from "@/firebase";
 import { collection, query, onSnapshot, Timestamp, deleteDoc, doc, updateDoc, addDoc, getDocs, where } from "firebase/firestore";
@@ -84,103 +84,148 @@ export default function UserLists() {
   const [editingShelfName, setEditingShelfName] = useState('');
   const newShelfInputRef = useRef<HTMLInputElement>(null);
   const editShelfInputRef = useRef<HTMLInputElement>(null);
+  const [customShelvesMap, setCustomShelvesMap] = useState<Map<string, { name: string, books: BookItem[] }>>(new Map());
+  const [reloadTrigger, setReloadTrigger] = useState(0);
 
+  // Use this function to trigger a reload when needed
+  const triggerReload = useCallback(() => {
+    setReloadTrigger(prev => prev + 1);
+  }, []);
+
+  // Set up listeners for default shelves
   useEffect(() => {
     if (!user) {
       router.push('/');
       return;
     }
 
-    // Fetch default shelves
-    const fetchDefaultBooks = async () => {
-      // Fetch favorites
-      const favoritesQuery = query(collection(db, "users", user.uid, "favorites"));
-      const unsubscribeFavorites = onSnapshot(favoritesQuery, (snapshot) => {
-        const favoritesData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          dateAdded: doc.data().dateAdded instanceof Timestamp ? doc.data().dateAdded : new Date()
-        })) as BookItem[];
+    const unsubscribers: (() => void)[] = [];
 
-        updateDefaultShelfBooks('favorites', favoritesData);
-      });
+    // Fetch favorites
+    const favoritesQuery = query(collection(db, "users", user.uid, "favorites"));
+    const unsubscribeFavorites = onSnapshot(favoritesQuery, (snapshot) => {
+      const favoritesData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        dateAdded: doc.data().dateAdded instanceof Timestamp ? doc.data().dateAdded : new Date()
+      })) as BookItem[];
 
-      // Fetch default shelves
-      const shelvesQuery = query(collection(db, "users", user.uid, "shelves"));
-      const unsubscribeShelves = onSnapshot(shelvesQuery, (snapshot) => {
-        const shelvesData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          dateAdded: doc.data().dateAdded instanceof Timestamp ? doc.data().dateAdded : new Date(),
-          dateFinished: doc.data().dateFinished || null,
-        })) as BookItem[];
-
-        // Update each default shelf type
-        updateDefaultShelfBooks('currently-reading', shelvesData.filter(book => book.shelfType === 'currently-reading'));
-        updateDefaultShelfBooks('want-to-read', shelvesData.filter(book => book.shelfType === 'want-to-read'));
-        updateDefaultShelfBooks('finished', shelvesData.filter(book => book.shelfType === 'finished'));
-        updateDefaultShelfBooks('stopped-reading', shelvesData.filter(book => book.shelfType === 'stopped-reading'));
-      });
-
-      return () => {
-        unsubscribeFavorites();
-        unsubscribeShelves();
-      };
-    };
-
-    // Fetch custom shelves
-    const fetchCustomShelves = async () => {
-      const customShelvesQuery = query(
-        collection(db, "users", user.uid, "customShelves")
+      setDefaultShelves(prev => 
+        prev.map(shelf => 
+          shelf.type === 'favorites' ? { ...shelf, books: favoritesData } : shelf
+        )
       );
-      
-      const unsubscribeCustomShelves = onSnapshot(customShelvesQuery, async (snapshot) => {
-        const customShelvesData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          dateCreated: doc.data().dateCreated instanceof Timestamp ? doc.data().dateCreated : new Date()
-        })) as CustomShelf[];
+    });
+    unsubscribers.push(unsubscribeFavorites);
 
-        // Create array of shelf sections for each custom shelf
-        const customShelfSections: ShelfSection[] = [];
-        
-        for (const shelf of customShelvesData) {
-          // Fetch books for this custom shelf
-          const customBooksQuery = query(
-            collection(db, "users", user.uid, "customShelfBooks"),
-            where("shelfId", "==", shelf.id)
-          );
+    // Fetch default shelves
+    const shelvesQuery = query(collection(db, "users", user.uid, "shelves"));
+    const unsubscribeShelves = onSnapshot(shelvesQuery, (snapshot) => {
+      const shelvesData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        dateAdded: doc.data().dateAdded instanceof Timestamp ? doc.data().dateAdded : new Date(),
+        dateFinished: doc.data().dateFinished || null,
+      })) as BookItem[];
+
+      // Update each default shelf type
+      setDefaultShelves(prev => 
+        prev.map(shelf => {
+          if (shelf.type === 'favorites') return shelf;
           
-          const customBooksSnapshot = await getDocs(customBooksQuery);
-          const customBooksData = customBooksSnapshot.docs.map((doc) => ({
+          const filteredBooks = shelvesData.filter(book => book.shelfType === shelf.type);
+          return { ...shelf, books: filteredBooks };
+        })
+      );
+    });
+    unsubscribers.push(unsubscribeShelves);
+
+    return () => {
+      unsubscribers.forEach(unsubscribe => unsubscribe());
+    };
+  }, [user, router, reloadTrigger]);
+
+  // Set up listeners for custom shelves
+  useEffect(() => {
+    if (!user) return;
+
+    const unsubscribers: (() => void)[] = [];
+
+    // Listen to custom shelves collection
+    const customShelvesQuery = query(collection(db, "users", user.uid, "customShelves"));
+    const unsubscribeCustomShelves = onSnapshot(customShelvesQuery, async (snapshot) => {
+      const newCustomShelvesMap = new Map<string, { name: string, books: BookItem[] }>();
+      
+      // Initialize map with all shelves (empty books arrays)
+      snapshot.docs.forEach(doc => {
+        newCustomShelvesMap.set(doc.id, {
+          name: doc.data().name,
+          books: []
+        });
+      });
+      
+      setCustomShelvesMap(newCustomShelvesMap);
+      
+      // Now set up listeners for each shelf's books
+      snapshot.docs.forEach(shelfDoc => {
+        const shelfId = shelfDoc.id;
+        const shelfName = shelfDoc.data().name;
+        
+        const booksQuery = query(
+          collection(db, "users", user.uid, "customShelfBooks"),
+          where("shelfId", "==", shelfId)
+        );
+        
+        const unsubscribeBooks = onSnapshot(booksQuery, (booksSnapshot) => {
+          const books = booksSnapshot.docs.map(doc => ({
             id: doc.id,
             ...doc.data(),
             dateAdded: doc.data().dateAdded instanceof Timestamp ? doc.data().dateAdded : new Date(),
             isFromCustomShelf: true,
-            customShelfId: shelf.id
+            customShelfId: shelfId
           })) as BookItem[];
           
-          customShelfSections.push({
-            title: shelf.name,
-            books: customBooksData,
-            type: `custom-${shelf.id}`,
-            emptyMessage: "Add books to this shelf",
-            isCustom: true,
-            id: shelf.id
+          setCustomShelvesMap(prevMap => {
+            const newMap = new Map(prevMap);
+            // Merge with existing entry if it exists
+            const existing = newMap.get(shelfId);
+            if (existing) {
+              newMap.set(shelfId, { ...existing, books });
+            } else {
+              newMap.set(shelfId, { name: shelfName, books });
+            }
+            return newMap;
           });
-        }
+        });
         
-        setCustomShelves(customShelfSections);
+        unsubscribers.push(unsubscribeBooks);
       });
+    });
+    
+    unsubscribers.push(unsubscribeCustomShelves);
 
-      return () => {
-        unsubscribeCustomShelves();
-      };
+    return () => {
+      unsubscribers.forEach(unsubscribe => unsubscribe());
     };
+  }, [user, reloadTrigger]);
 
-    fetchDefaultBooks();
-    fetchCustomShelves();
-  }, [user, router]);
+  // Convert customShelvesMap to array format for rendering
+  useEffect(() => {
+    const shelves: ShelfSection[] = [];
+    
+    customShelvesMap.forEach((value, key) => {
+      shelves.push({
+        id: key,
+        title: value.name,
+        books: value.books,
+        type: `custom-${key}`,
+        emptyMessage: "Add books to this shelf",
+        isCustom: true
+      });
+    });
+    
+    setCustomShelves(shelves);
+  }, [customShelvesMap]);
 
   useEffect(() => {
     if (isCreatingShelf && newShelfInputRef.current) {
@@ -192,14 +237,6 @@ export default function UserLists() {
     }
   }, [isCreatingShelf, editingShelfId]);
 
-  const updateDefaultShelfBooks = (shelfType: string, books: BookItem[]) => {
-    setDefaultShelves(currentShelves => 
-      currentShelves.map(shelf => 
-        shelf.type === shelfType ? { ...shelf, books } : shelf
-      )
-    );
-  };
-
   const toggleEditMode = (sectionType: string) => {
     setEditModes(prev => ({
       ...prev,
@@ -209,6 +246,8 @@ export default function UserLists() {
 
   // Drag and Drop Handlers
   const handleDragStart = (book: BookItem, e: React.DragEvent, isCustomShelf = false, customShelfId?: string) => {
+    e.stopPropagation();
+    
     // Make a copy of the book to avoid modifying the original state
     let dragBook = {...book};
     
@@ -226,6 +265,7 @@ export default function UserLists() {
   };
 
   const handleDragEnd = (e: React.DragEvent) => {
+    e.stopPropagation();
     if (e.currentTarget instanceof HTMLElement) {
       e.currentTarget.style.opacity = '1';
     }
@@ -237,12 +277,14 @@ export default function UserLists() {
       return;
     }
     e.preventDefault();
+    e.stopPropagation();
     if (e.currentTarget instanceof HTMLElement) {
       e.currentTarget.style.backgroundColor = 'rgba(61, 47, 42, 0.2)';
     }
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
+    e.stopPropagation();
     if (e.currentTarget instanceof HTMLElement) {
       e.currentTarget.style.backgroundColor = '';
     }
@@ -250,6 +292,8 @@ export default function UserLists() {
 
   const handleDrop = async (targetShelfType: string, e: React.DragEvent, isCustomShelf = false, customShelfId?: string) => {
     e.preventDefault();
+    e.stopPropagation();
+    
     if (e.currentTarget instanceof HTMLElement) {
       e.currentTarget.style.backgroundColor = '';
     }
@@ -268,6 +312,9 @@ export default function UserLists() {
       if (!isCustomShelf && !isFromCustomShelf && draggedBook.shelfType === targetShelfType) return;
       if (isCustomShelf && isFromCustomShelf && sourceCustomShelfId === customShelfId) return;
       
+      console.log("Dropping book:", draggedBook);
+      console.log("Target shelf:", isCustomShelf ? `custom-${customShelfId}` : targetShelfType);
+      
       if (isCustomShelf && customShelfId) {
         // Handle dropping to custom shelf
         
@@ -282,6 +329,8 @@ export default function UserLists() {
         
         // Only add if book doesn't already exist in this custom shelf
         if (existingBookSnapshot.empty) {
+          console.log("Adding to custom shelf:", customShelfId);
+          
           // Add to custom shelf collection
           await addDoc(collection(db, "users", user.uid, "customShelfBooks"), {
             bookId: draggedBook.bookId,
@@ -294,6 +343,8 @@ export default function UserLists() {
           
           // If coming from another custom shelf, delete from that shelf
           if (isFromCustomShelf && sourceCustomShelfId) {
+            console.log("Removing from source custom shelf:", sourceCustomShelfId);
+            
             const customBooksQuery = query(
               collection(db, "users", user.uid, "customShelfBooks"),
               where("bookId", "==", draggedBook.bookId),
@@ -305,55 +356,65 @@ export default function UserLists() {
               await deleteDoc(doc.ref);
             }
           } 
-          // If coming from a default shelf, don't automatically remove from default shelf
-          // This allows books to exist in both custom shelves and default shelves
+          // We don't remove from default shelf if moving to a custom shelf
         }
       }
       else {
         // Handle dropping to default shelf
+        console.log("Adding to default shelf:", targetShelfType);
         
-        // If coming from a custom shelf, we'll add to default shelves
-        // but we won't remove from custom shelf - books can exist in both places
-        if (isFromCustomShelf) {
-          // Check if book already exists in shelves
-          const existingInShelvesQuery = query(
-            collection(db, "users", user.uid, "shelves"),
-            where("bookId", "==", draggedBook.bookId)
-          );
-          
-          const existingInShelvesSnapshot = await getDocs(existingInShelvesQuery);
-          
-          if (existingInShelvesSnapshot.empty) {
-            // Add to default shelves if it doesn't exist
-            await addDoc(collection(db, "users", user.uid, "shelves"), {
-              bookId: draggedBook.bookId,
-              title: draggedBook.title,
-              author: draggedBook.author,
-              coverUrl: draggedBook.coverUrl,
-              shelfType: targetShelfType,
-              dateAdded: new Date(),
-              dateFinished: targetShelfType === 'finished' ? new Date() : null,
-            });
-          } else {
-            // Update existing entry in default shelves
-            const bookRef = doc(db, "users", user.uid, "shelves", existingInShelvesSnapshot.docs[0].id);
-            await updateDoc(bookRef, {
-              shelfType: targetShelfType,
-              dateFinished: targetShelfType === 'finished' ? new Date() : null,
-            });
-          }
+        // Check if book already exists in shelves
+        const existingInShelvesQuery = query(
+          collection(db, "users", user.uid, "shelves"),
+          where("bookId", "==", draggedBook.bookId)
+        );
+        
+        const existingInShelvesSnapshot = await getDocs(existingInShelvesQuery);
+        
+        if (existingInShelvesSnapshot.empty) {
+          // Add to default shelves if it doesn't exist
+          await addDoc(collection(db, "users", user.uid, "shelves"), {
+            bookId: draggedBook.bookId,
+            title: draggedBook.title,
+            author: draggedBook.author,
+            coverUrl: draggedBook.coverUrl,
+            shelfType: targetShelfType,
+            dateAdded: new Date(),
+            dateFinished: targetShelfType === 'finished' ? new Date() : null,
+          });
         } else {
-          // Normal case - moving within default shelves
-          // We'll use the document ID from the draggedBook directly
-          if (draggedBook.id) {
-            const bookRef = doc(db, "users", user.uid, "shelves", draggedBook.id);
-            await updateDoc(bookRef, {
-              shelfType: targetShelfType,
-              dateFinished: targetShelfType === 'finished' ? new Date() : null,
-            });
+          // Update existing entry in default shelves
+          const bookRef = doc(db, "users", user.uid, "shelves", existingInShelvesSnapshot.docs[0].id);
+          await updateDoc(bookRef, {
+            shelfType: targetShelfType,
+            dateFinished: targetShelfType === 'finished' ? new Date() : null,
+          });
+        }
+        
+        // If coming from a custom shelf, optionally remove from custom shelf
+        if (isFromCustomShelf && sourceCustomShelfId) {
+          console.log("Removing from source custom shelf:", sourceCustomShelfId);
+          
+          const removeFromCustom = window.confirm("Do you want to remove the book from the custom shelf as well?");
+          
+          if (removeFromCustom) {
+            const customBooksQuery = query(
+              collection(db, "users", user.uid, "customShelfBooks"),
+              where("bookId", "==", draggedBook.bookId),
+              where("shelfId", "==", sourceCustomShelfId)
+            );
+            
+            const querySnapshot = await getDocs(customBooksQuery);
+            for (const doc of querySnapshot.docs) {
+              await deleteDoc(doc.ref);
+            }
           }
         }
       }
+      
+      // Force reload after drag/drop
+      triggerReload();
+      
     } catch (error) {
       console.error("Error moving book:", error);
     }
@@ -365,6 +426,8 @@ export default function UserLists() {
     try {
       if (isCustom && customShelfId) {
         // Delete from custom shelf
+        console.log("Deleting from custom shelf:", customShelfId, "Book ID:", bookId);
+        
         const customBooksQuery = query(
           collection(db, "users", user.uid, "customShelfBooks"),
           where("bookId", "==", bookId),
@@ -372,11 +435,19 @@ export default function UserLists() {
         );
         
         const querySnapshot = await getDocs(customBooksQuery);
-        if (!querySnapshot.empty) {
-          await deleteDoc(querySnapshot.docs[0].ref);
-        }
+        
+        console.log(`Found ${querySnapshot.docs.length} books to delete`);
+        
+        // Need to cleanup all matched documents
+        const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
+        await Promise.all(deletePromises);
+        
+        // Force reload after deletion
+        triggerReload();
       } else {
         // Delete from default shelf or favorites
+        console.log("Deleting from default shelf:", sectionType, "Book ID:", bookId);
+        
         const collectionName = sectionType === 'favorites' ? 'favorites' : 'shelves';
         await deleteDoc(doc(db, "users", user.uid, collectionName, bookId));
       }
@@ -397,6 +468,9 @@ export default function UserLists() {
       
       setNewShelfName('');
       setIsCreatingShelf(false);
+      
+      // Force refresh after creating a new shelf
+      triggerReload();
     } catch (error) {
       console.error("Error creating custom shelf:", error);
     }
@@ -418,6 +492,9 @@ export default function UserLists() {
       
       setEditingShelfId(null);
       setEditingShelfName('');
+      
+      // Force refresh after editing a shelf
+      triggerReload();
     } catch (error) {
       console.error("Error updating custom shelf:", error);
     }
@@ -440,6 +517,8 @@ export default function UserLists() {
       const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
       await Promise.all(deletePromises);
       
+      // Force refresh after deleting a shelf
+      triggerReload();
     } catch (error) {
       console.error("Error deleting custom shelf:", error);
     }
@@ -543,9 +622,9 @@ export default function UserLists() {
                 {section.isCustom && (
                   <button
                     onClick={() => section.id && deleteCustomShelf(section.id)}
-                    className="mr-2 text-[#DFDDCE] hover:text-[#3D2F2A]"
+                    className="mr-4 text-[#DFDDCE] bg-[#3D2F2A] px-3 py-1 rounded-lg hover:bg-[#847266] transition-colors flex items-center"
                   >
-                    <Trash2 className="w-5 h-5" />
+                    <Trash2 className="w-4 h-4 mr-1" /> Delete Shelf
                   </button>
                 )}
                 <button
@@ -570,7 +649,7 @@ export default function UserLists() {
                 {section.books.length > 0 ? (
                   section.books.map((book) => (
                     <div
-                      key={book.id}
+                      key={`${section.type}-${book.id}`}
                       className="flex-shrink-0 cursor-pointer relative group"
                       draggable={true}
                       onDragStart={(e) => handleDragStart(book, e, section.isCustom, section.id)}
@@ -588,7 +667,7 @@ export default function UserLists() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            deleteBook(book.id, section.type, section.isCustom, section.id);
+                            deleteBook(book.bookId, section.type, section.isCustom, section.id);
                           }}
                           className="absolute top-2 right-2 p-2 rounded-full bg-[#3D2F2A] text-[#DFDDCE] hover:bg-[#847266] transition-colors opacity-100"
                           aria-label="Delete book"

@@ -13,14 +13,14 @@ interface BookActionsProps {
   showDeleteOnly?: boolean; // Optional prop to show only delete button
 }
 
-const BookActions: React.FC<BookActionsProps> = ({ 
+const BookActions = ({ 
   bookId,
   title,
   author,
   coverUrl,
   onDelete,
   showDeleteOnly = false
-}) => {
+}: BookActionsProps) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [customShelves, setCustomShelves] = useState<{id: string, name: string}[]>([]);
@@ -150,7 +150,6 @@ const BookActions: React.FC<BookActionsProps> = ({
     }
 
     try {
-      // Add to custom shelf collection
       // Check if book already exists in this custom shelf
       const existingBookQuery = query(
         collection(db, "users", user.uid, "customShelfBooks"),
@@ -174,3 +173,92 @@ const BookActions: React.FC<BookActionsProps> = ({
 
       setIsDropdownOpen(false);
       alert(`Added to ${shelfName}`);
+    } catch (error) {
+      console.error("Error adding to custom shelf:", error);
+      alert("Failed to add to custom shelf.");
+    }
+  };
+
+  if (showDeleteOnly) {
+    return (
+      <button
+        onClick={(e) => {
+          e.stopPropagation(); // Prevent triggering the parent's onClick
+          deleteFromShelf();
+        }}
+        className="absolute top-2 right-2 p-2 rounded-full bg-[#3D2F2A] text-[#DFDDCE] hover:bg-[#847266] transition-colors opacity-0 group-hover:opacity-100"
+        aria-label="Remove from shelf"
+      >
+        <Trash2 className="w-4 h-4" />
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex gap-2">
+      <button
+        onClick={toggleFavorite}
+        className="bg-[#3D2F2A] text-[#DFDDCE] p-3 rounded-full hover:bg-[#847266] transition-colors flex items-center justify-center"
+        aria-label="Toggle favorite"
+      >
+        <Heart className={`w-6 h-6 ${isFavorite ? 'fill-current' : ''}`} />
+      </button>
+
+      <div className="relative inline-block flex-grow">
+        <button
+          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          className="w-full bg-[#3D2F2A] text-[#DFDDCE] py-3 px-6 rounded-full font-bold hover:bg-[#847266] transition-colors flex items-center justify-center gap-2"
+        >
+          Add To Shelf
+          <span className="material-icons-outlined text-sm">
+            {isDropdownOpen ? 'expand_less' : 'expand_more'}
+          </span>
+        </button>
+
+        {isDropdownOpen && (
+          <div className="absolute w-full mt-2 bg-[#DFDDCE] rounded-lg shadow-xl z-10 max-h-64 overflow-y-auto">
+            {/* Default shelves - removed "Stopped Reading" option */}
+            <div className="py-1 border-b border-[#3D2F2A]">
+              <button
+                onClick={() => addToShelf('currently-reading')}
+                className="w-full px-4 py-2 text-left text-[#3D2F2A] hover:bg-[#92A48A] first:rounded-t-lg transition-colors"
+              >
+                Currently Reading
+              </button>
+              <button
+                onClick={() => addToShelf('want-to-read')}
+                className="w-full px-4 py-2 text-left text-[#3D2F2A] hover:bg-[#92A48A] transition-colors"
+              >
+                Want to Read
+              </button>
+              <button
+                onClick={() => addToShelf('finished')}
+                className="w-full px-4 py-2 text-left text-[#3D2F2A] hover:bg-[#92A48A] transition-colors"
+              >
+                Finished Reading
+              </button>
+            </div>
+            
+            
+            {/* Custom shelves */}
+            {customShelves.length > 0 && (
+              <div className="py-1">
+                {customShelves.map(shelf => (
+                  <button
+                    key={shelf.id}
+                    onClick={() => addToCustomShelf(shelf.id, shelf.name)}
+                    className="w-full px-4 py-2 text-left text-[#3D2F2A] hover:bg-[#92A48A] transition-colors"
+                  >
+                    {shelf.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+export default BookActions;
