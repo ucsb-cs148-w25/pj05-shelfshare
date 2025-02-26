@@ -68,7 +68,7 @@ export default function UserLists() {
       emptyMessage: "Your completed books will appear here"
     },
     { 
-      title: 'Stopped Reading', 
+      title: 'Dropped', 
       books: [], 
       type: 'stopped-reading',
       emptyMessage: "Books you decided not to finish"
@@ -391,23 +391,19 @@ export default function UserLists() {
           });
         }
         
-        // If coming from a custom shelf, optionally remove from custom shelf
+        // If coming from a custom shelf, remove from custom shelf automatically
         if (isFromCustomShelf && sourceCustomShelfId) {
           console.log("Removing from source custom shelf:", sourceCustomShelfId);
           
-          const removeFromCustom = window.confirm("Do you want to remove the book from the custom shelf as well?");
+          const customBooksQuery = query(
+            collection(db, "users", user.uid, "customShelfBooks"),
+            where("bookId", "==", draggedBook.bookId),
+            where("shelfId", "==", sourceCustomShelfId)
+          );
           
-          if (removeFromCustom) {
-            const customBooksQuery = query(
-              collection(db, "users", user.uid, "customShelfBooks"),
-              where("bookId", "==", draggedBook.bookId),
-              where("shelfId", "==", sourceCustomShelfId)
-            );
-            
-            const querySnapshot = await getDocs(customBooksQuery);
-            for (const doc of querySnapshot.docs) {
-              await deleteDoc(doc.ref);
-            }
+          const querySnapshot = await getDocs(customBooksQuery);
+          for (const doc of querySnapshot.docs) {
+            await deleteDoc(doc.ref);
           }
         }
       }
@@ -420,17 +416,17 @@ export default function UserLists() {
     }
   };
 
-  const deleteBook = async (bookId: string, sectionType: string, isCustom = false, customShelfId?: string) => {
+  const deleteBook = async (book: BookItem, sectionType: string, isCustom = false, customShelfId?: string) => {
     if (!user) return;
     
     try {
       if (isCustom && customShelfId) {
         // Delete from custom shelf
-        console.log("Deleting from custom shelf:", customShelfId, "Book ID:", bookId);
+        console.log("Deleting from custom shelf:", customShelfId, "Book ID:", book.bookId);
         
         const customBooksQuery = query(
           collection(db, "users", user.uid, "customShelfBooks"),
-          where("bookId", "==", bookId),
+          where("bookId", "==", book.bookId),
           where("shelfId", "==", customShelfId)
         );
         
@@ -441,16 +437,16 @@ export default function UserLists() {
         // Need to cleanup all matched documents
         const deletePromises = querySnapshot.docs.map(doc => deleteDoc(doc.ref));
         await Promise.all(deletePromises);
-        
-        // Force reload after deletion
-        triggerReload();
+      } else if (sectionType === 'favorites') {
+        // Delete from favorites collection
+        await deleteDoc(doc(db, "users", user.uid, "favorites", book.id));
       } else {
-        // Delete from default shelf or favorites
-        console.log("Deleting from default shelf:", sectionType, "Book ID:", bookId);
-        
-        const collectionName = sectionType === 'favorites' ? 'favorites' : 'shelves';
-        await deleteDoc(doc(db, "users", user.uid, collectionName, bookId));
+        // Delete from default shelves collection
+        await deleteDoc(doc(db, "users", user.uid, "shelves", book.id));
       }
+      
+      // Force reload after deletion
+      triggerReload();
     } catch (error) {
       console.error("Error deleting book:", error);
     }
@@ -500,8 +496,16 @@ export default function UserLists() {
     }
   };
 
-  const deleteCustomShelf = async (shelfId: string) => {
+  const deleteCustomShelf = async (shelfId: string, shelfName: string) => {
     if (!user) return;
+    
+    // Show confirmation dialog
+    const confirmation = window.confirm(`Are you sure you want to delete the shelf "${shelfName}"? All books in this shelf will be removed from it.`);
+    
+    if (!confirmation) {
+      // User cancelled the deletion
+      return;
+    }
     
     try {
       // Delete the shelf
@@ -521,6 +525,7 @@ export default function UserLists() {
       triggerReload();
     } catch (error) {
       console.error("Error deleting custom shelf:", error);
+      alert("Failed to delete shelf");
     }
   };
 
@@ -619,20 +624,21 @@ export default function UserLists() {
               )}
               
               <div className="flex items-center">
-                {section.isCustom && (
-                  <button
-                    onClick={() => section.id && deleteCustomShelf(section.id)}
-                    className="mr-4 text-[#DFDDCE] bg-[#3D2F2A] px-3 py-1 rounded-lg hover:bg-[#847266] transition-colors flex items-center"
-                  >
-                    <Trash2 className="w-4 h-4 mr-1" /> Delete Shelf
-                  </button>
-                )}
                 <button
                   onClick={() => toggleEditMode(section.type)}
                   className="text-[#DFDDCE] px-4 py-2 rounded-lg hover:bg-[#3D2F2A] transition-colors"
                 >
                   {editModes[section.type] ? 'Done' : 'Edit'}
                 </button>
+                
+                {section.isCustom && (
+                  <button
+                    onClick={() => section.id && deleteCustomShelf(section.id, section.title)}
+                    className="ml-4 text-[#DFDDCE] bg-[#3D2F2A] px-3 py-1 rounded-lg hover:bg-[#847266] transition-colors flex items-center"
+                  >
+                    <Trash2 className="w-4 h-4 mr-1" /> Delete Shelf
+                  </button>
+                )}
               </div>
             </div>
             <div 
@@ -667,7 +673,7 @@ export default function UserLists() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            deleteBook(book.bookId, section.type, section.isCustom, section.id);
+                            deleteBook(book, section.type, section.isCustom, section.id);
                           }}
                           className="absolute top-2 right-2 p-2 rounded-full bg-[#3D2F2A] text-[#DFDDCE] hover:bg-[#847266] transition-colors opacity-100"
                           aria-label="Delete book"
