@@ -13,16 +13,17 @@ interface BookActionsProps {
   showDeleteOnly?: boolean; // Optional prop to show only delete button
 }
 
-const BookActions: React.FC<BookActionsProps> = ({ 
+const BookActions = ({ 
   bookId,
   title,
   author,
   coverUrl,
   onDelete,
   showDeleteOnly = false
-}) => {
+}: BookActionsProps) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [customShelves, setCustomShelves] = useState<{id: string, name: string}[]>([]);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -38,7 +39,22 @@ const BookActions: React.FC<BookActionsProps> = ({
       setIsFavorite(!querySnapshot.empty);
     };
 
+    const fetchCustomShelves = async () => {
+      if (!user) return;
+      
+      const customShelvesQuery = query(collection(db, "users", user.uid, "customShelves"));
+      const querySnapshot = await getDocs(customShelvesQuery);
+      
+      const shelves = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        name: doc.data().name
+      }));
+      
+      setCustomShelves(shelves);
+    };
+
     checkFavoriteStatus();
+    fetchCustomShelves();
   }, [user, bookId]);
 
   const toggleFavorite = async () => {
@@ -93,7 +109,7 @@ const BookActions: React.FC<BookActionsProps> = ({
     }
   };
 
-  const addToShelf = async (shelfType: 'currently-reading' | 'want-to-read' | 'finished') => {
+  const addToShelf = async (shelfType: 'currently-reading' | 'want-to-read' | 'finished' | 'stopped-reading') => {
     if (!user) {
       alert("You need to be logged in to add books to your shelf.");
       return;
@@ -124,6 +140,42 @@ const BookActions: React.FC<BookActionsProps> = ({
     } catch (error) {
       console.error("Error adding to shelf:", error);
       alert("Failed to add to shelf.");
+    }
+  };
+
+  const addToCustomShelf = async (shelfId: string, shelfName: string) => {
+    if (!user) {
+      alert("You need to be logged in to add books to your shelf.");
+      return;
+    }
+
+    try {
+      // Check if book already exists in this custom shelf
+      const existingBookQuery = query(
+        collection(db, "users", user.uid, "customShelfBooks"),
+        where("bookId", "==", bookId),
+        where("shelfId", "==", shelfId)
+      );
+      
+      const existingBookSnapshot = await getDocs(existingBookQuery);
+      
+      // Only add if book doesn't already exist in this custom shelf
+      if (existingBookSnapshot.empty) {
+        await addDoc(collection(db, "users", user.uid, "customShelfBooks"), {
+          bookId,
+          title,
+          author,
+          coverUrl,
+          shelfId,
+          dateAdded: new Date()
+        });
+      }
+
+      setIsDropdownOpen(false);
+      alert(`Added to ${shelfName}`);
+    } catch (error) {
+      console.error("Error adding to custom shelf:", error);
+      alert("Failed to add to custom shelf.");
     }
   };
 
@@ -164,25 +216,44 @@ const BookActions: React.FC<BookActionsProps> = ({
         </button>
 
         {isDropdownOpen && (
-          <div className="absolute w-full mt-2 bg-[#DFDDCE] rounded-lg shadow-xl z-10">
-            <button
-              onClick={() => addToShelf('currently-reading')}
-              className="w-full px-4 py-2 text-left text-[#3D2F2A] hover:bg-[#92A48A] first:rounded-t-lg transition-colors"
-            >
-              Currently Reading
-            </button>
-            <button
-              onClick={() => addToShelf('want-to-read')}
-              className="w-full px-4 py-2 text-left text-[#3D2F2A] hover:bg-[#92A48A] transition-colors"
-            >
-              Want to Read
-            </button>
-            <button
-              onClick={() => addToShelf('finished')}
-              className="w-full px-4 py-2 text-left text-[#3D2F2A] hover:bg-[#92A48A] last:rounded-b-lg transition-colors"
-            >
-              Finished Reading
-            </button>
+          <div className="absolute w-full mt-2 bg-[#DFDDCE] rounded-lg shadow-xl z-10 max-h-64 overflow-y-auto">
+            {/* Default shelves - removed "Stopped Reading" option */}
+            <div className="py-1 border-b border-[#3D2F2A]">
+              <button
+                onClick={() => addToShelf('currently-reading')}
+                className="w-full px-4 py-2 text-left text-[#3D2F2A] hover:bg-[#92A48A] first:rounded-t-lg transition-colors"
+              >
+                Currently Reading
+              </button>
+              <button
+                onClick={() => addToShelf('want-to-read')}
+                className="w-full px-4 py-2 text-left text-[#3D2F2A] hover:bg-[#92A48A] transition-colors"
+              >
+                Want to Read
+              </button>
+              <button
+                onClick={() => addToShelf('finished')}
+                className="w-full px-4 py-2 text-left text-[#3D2F2A] hover:bg-[#92A48A] transition-colors"
+              >
+                Finished Reading
+              </button>
+            </div>
+            
+            
+            {/* Custom shelves */}
+            {customShelves.length > 0 && (
+              <div className="py-1">
+                {customShelves.map(shelf => (
+                  <button
+                    key={shelf.id}
+                    onClick={() => addToCustomShelf(shelf.id, shelf.name)}
+                    className="w-full px-4 py-2 text-left text-[#3D2F2A] hover:bg-[#92A48A] transition-colors"
+                  >
+                    {shelf.name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
