@@ -21,7 +21,8 @@ interface BookItem {
   customShelfId?: string;
 }
 
-interface CustomShelf {
+// Using the interface since ShelfSection refers to it and we need to export it for type safety
+export interface CustomShelf {
   id: string;
   name: string;
   userId: string;
@@ -249,7 +250,7 @@ export default function UserLists() {
     e.stopPropagation();
     
     // Make a copy of the book to avoid modifying the original state
-    let dragBook = {...book};
+    const dragBook = {...book};
     
     // Attach custom shelf info if it's from a custom shelf
     if (isCustomShelf && customShelfId) {
