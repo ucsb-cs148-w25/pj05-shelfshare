@@ -1,10 +1,8 @@
 # User Feedback Needs 
 
-Deployment link: ***ADD DEPLOYMENT LINK HERE***
-
 ## Three things to get user feedback on: 
 
-### 1. User satisfaction with your overall current product
+### 1. User satisfaction with our overall current product
 > App as a whole is understandable, aesthetic, sensible, etc. 
 * Please go through app and give overall satisfaction with the entirety of it.
 * ***Note:*** the homepage has not been updated much since MVP, but we are also open to feedback of what users would want to appear in homepage. We do not like the current ideas we have as placeholders in the homepage so ideas are welcome!! 
