@@ -1,16 +1,41 @@
-// app/page.tsx
-import './globals.css';
+'use client';
 
-export default function Home() {
+import { useAuth } from './context/AuthContext';
+import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+
+export default function Login() {
+  const { signIn } = useAuth();
+  const router = useRouter();
+
+  const handleSignIn = async () => {
+    await signIn();
+    router.push('/home');
+  };
+
   return (
-    <div className="flex justify-center items-center h-screen bg-custom-green">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold text-custom-tan">Hello ShelfShare</h1>
-        <button className="mt-8 px-6 py-3 bg-pink-400 text-white text-2xl font-normal rounded-full transform transition-all hover:scale-110 hover:bg-pink-500">
-          <span className="mr-2">💖</span>≽^•⩊•^≼
-        </button>
-      </div>
+    <div className="relative w-full h-screen">
+      {/* Background divs */}
+      <div className="absolute top-[24%] w-full h-[40%] bg-[#847266]"></div>
+      <div className="absolute top-[24%] w-full h-[3%] bg-[#3D2F2A]"></div>
+      <div className="absolute top-[62%] w-full h-[3%] bg-[#3D2F2A]"></div>
+
+      {/* Logo */}
+      <Image 
+        src="/login-logo.png" 
+        alt="book" 
+        width={200} 
+        height={150} 
+        className="absolute top-[31%] left-[42%] w-[14%] object-contain"
+      />
+
+      {/* Sign-in button */}
+      <button 
+        onClick={handleSignIn}
+        className="absolute top-[50%] left-[43%] w-[12%] px-6 py-3 bg-custom-green text-white text-xl font-normal rounded-full transition-transform hover:scale-110 hover:bg-blue-600"
+      >
+        Sign in with Google
+      </button>
     </div>
   );
 }
-
