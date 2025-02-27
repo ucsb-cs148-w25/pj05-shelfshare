@@ -76,10 +76,32 @@ export default function BookDetails() {
           rating = ratingData.summary?.average || 0;
         }
 
-        const cleanDescription =
-          typeof data.description === "string"
+        const cleanDescription = () => {
+          if (!data.description) return "No description available.";
+          
+          let description = typeof data.description === "string"
             ? data.description
             : data.description?.value || "No description available.";
+          
+          // Remove HTML tags
+          description = description.replace(/<[^>]*>/g, '');
+          
+          // Remove special markdown-style links like [text](url)
+          description = description.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1');
+          
+          // Remove any remaining brackets content that looks like links or references
+          description = description.replace(/\s*-+\s*Also contained in:.*$/i, '');
+          description = description.replace(/\s*-+\s*.*?https?:\/\/\S+.*$/im, '');
+          
+          // Remove multiple consecutive dashes (often used as separators)
+          description = description.replace(/\s*-{3,}\s*/g, ' ');
+          
+          // Normalize whitespace
+          description = description.replace(/\s+/g, ' ').trim();
+          
+          return description;
+        };
+      
 
         const authors = await Promise.all(
           (data.authors || []).map(async (author: Author) => {
@@ -91,7 +113,7 @@ export default function BookDetails() {
 
         setBook({
           ...data,
-          description: cleanDescription,
+          description: cleanDescription(),
           rating,
           authors,
         });
