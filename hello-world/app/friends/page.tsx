@@ -14,6 +14,7 @@ import {
 } from "../context/friends";
 import { Trash2 } from 'lucide-react';
 
+import Profile_Screen from "./profileScreen";
 
 const Friends = () => {
   const { user } = useAuth();
@@ -26,6 +27,10 @@ const Friends = () => {
   const [acceptedRequestIds, setAcceptedRequestIds] = useState<string[]>([]);
   const [declinedRequestIds, setDeclinedRequestIds] = useState<string[]>([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
+
+  const [showFriendProfile, setShowFriendProfile] = useState<Record<string, boolean>>({});
+
+  
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -43,6 +48,16 @@ const Friends = () => {
     const usersQuery = query(collection(db, "users"));
     const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
       setUsers(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+    });
+
+    const unsubscribeUsersProfile = onSnapshot(usersQuery, (snapshot) => {
+      const friendsDict: Record<string, boolean> = {};
+    
+      snapshot.docs.forEach((doc) => {
+        friendsDict[doc.id] = false; // Default visibility to false
+      });
+    
+      setShowFriendProfile(friendsDict);
     });
 
     // Fetch friend requests
@@ -84,6 +99,7 @@ const Friends = () => {
     });
 
     return () => {
+      unsubscribeUsersProfile();
       unsubscribeUsers();
       unsubscribeRequests();
       unsubscribeFriends();
@@ -177,6 +193,23 @@ const Friends = () => {
     );
   };
 
+  const handleFriendProfile = (friendUid: string) => {
+    setShowFriendProfile((prev) => ({
+      ...prev,
+      [friendUid]: !prev[friendUid],
+    }));
+  };
+
+  const resetAllProfiles = () => {
+    setShowFriendProfile((prev) =>
+      Object.keys(prev).reduce((acc, key) => {
+        acc[key] = false; // Set each profile visibility to false
+        return acc;
+      }, {} as Record<string, boolean>)
+    );
+  };
+  
+
   if (!user) return null;
 
   return (
@@ -190,8 +223,9 @@ const Friends = () => {
             type="text"
             placeholder="Search users..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full p-3 border rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#DFDDCE]"
+            onChange={(e) => {setSearch(e.target.value);
+              resetAllProfiles();}}
+            className="w-full p-3 border rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           {search && (
             <button
@@ -215,8 +249,11 @@ const Friends = () => {
             <ul className="grid gap-4">
               {filteredUsers.map((u) => (
                 <li key={u.id} className="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm">
-                  <span className="text-gray-800">{u.name || "Unknown User"}</span>
-                  {friends.some(f => f.id === u.id) ? (
+                  <button onClick={() => handleFriendProfile(u.id)} className="text-gray-800 hover:bg-gray-300 rounded ml-1 mr-1">{u.name || "Unknown User"}</button>
+                  {showFriendProfile[u.id] && (
+                  <Profile_Screen friendUid={u.id}/>
+                )}
+                  {!showFriendProfile[u.id] && (friends.some(f => f.id === u.id) ? (
                     <div className="flex gap-2 items-center">
                       <span className="text-gray-600">Friend</span>
                       <button
@@ -240,7 +277,7 @@ const Friends = () => {
                     >
                       Add Friend
                     </button>
-                  )}
+                  ))}
                 </li>
               ))}
             </ul>
@@ -255,8 +292,10 @@ const Friends = () => {
           <ul className="grid gap-4">
             {friendRequests.map((request) => (
               <li key={request.id} className="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
-                <span className="text-gray-800">{request.name || "Unknown User"}</span>
-                {getFriendRequestButton(request)}
+                <button onClick={() => handleFriendProfile(request.id)} className="text-gray-800 hover:bg-gray-300 rounded ml-1 mr-1">{request.name || "Unknown User"}</button>
+                  {!showFriendProfile[request.id] ? getFriendRequestButton(request) : (
+                    <Profile_Screen friendUid={request.id} />
+                  )}
               </li>
             ))}
           </ul>
@@ -270,8 +309,9 @@ const Friends = () => {
           <ul className="grid gap-4">
             {friends.map((friend) => (
               <li key={friend.id} className="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
-                <span className="text-gray-800">{friend.name}</span>
-                <div className="flex gap-2 items-center">
+                <button onClick={() => handleFriendProfile(friend.id)}
+                  className="text-gray-800 hover:bg-gray-300 rounded ml-1 mr-1">{friend.name}</button>
+                {!showFriendProfile[friend.id] && (<div className="flex gap-2 items-center">
                   <span className="text-gray-600">Friend</span>
                   <button
                     onClick={() => handleRemoveFriend(friend.id)}
@@ -279,7 +319,11 @@ const Friends = () => {
                   >
                     <Trash2 className="w-4 h-4 mr-1" /> {/*Unfriend */}
                   </button>
-                </div>
+                </div>)}
+                {showFriendProfile[friend.id] && (
+                  <Profile_Screen friendUid={friend.id}/>
+                )
+                }
               </li>
             ))}
           </ul>
