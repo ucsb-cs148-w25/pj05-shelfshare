@@ -229,7 +229,7 @@ const Friends = () => {
                   ) : sentRequests.includes(u.id) ? (
                     <button
                       onClick={() => handleUnsendRequest(u.id)}
-                      className="bg-[#DFDDCE] text-white px-4 py-2 rounded-lg "
+                      className="bg-[#DFDDCE] text-[#3D2F2A] px-4 py-2 rounded-lg "
                     >
                       Cancel Request
                     </button>
