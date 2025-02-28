@@ -5,7 +5,7 @@ Our team is developing ShelfShare, which is a social platform for media enthusia
 ## Deployment Instructions
 To view our web app, here is the active deployment link: 
 
-https://hello-world-qnwr7ooz7-niyatis-projects-b4ef6fcc.vercel.app
+https://shelfshare7.vercel.app/
 
 ## Installation Instructions
 * Ensure you have the following installed before proceeding: Node.js, npm

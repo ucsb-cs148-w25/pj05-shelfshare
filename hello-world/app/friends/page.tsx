@@ -12,6 +12,7 @@ import {
   unsendFriendRequest,
   removeFriend
 } from "../context/friends";
+import { Trash2 } from 'lucide-react';
 
 import Profile_Screen from "./profileScreen";
 
@@ -152,12 +153,12 @@ const Friends = () => {
     if (acceptedRequestIds.includes(request.id)) {
       return (
         <div className="flex gap-2 items-center">
-          <span className="text-gray-600">Friend</span>
+          <span className="text-[#847266]">Friend</span>
           <button
             onClick={() => handleRemoveFriend(request.id)}
-            className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition text-sm"
+            className="bg-[#DFDDCE] text-white px-3 py-1 rounded-lg hover:bg-[#847266] transition text-sm"
           >
-            Unfriend
+            <Trash2 className="w-4 h-4 mr-1" /> {/*Unfriend */}
           </button>
         </div>
       );
@@ -168,13 +169,13 @@ const Friends = () => {
         <div className="flex gap-2">
           <button
             onClick={() => handleAcceptRequest(request.id)}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
+            className="bg-[#5a7463] text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
           >
             Accept
           </button>
           <button
             onClick={() => handleDeclineRequest(request.id)}
-            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
+            className="bg-[#847266] text-white px-4 py-2 rounded-lg hover:bg-red-700 transition"
           >
             Decline
           </button>
@@ -212,8 +213,8 @@ const Friends = () => {
   if (!user) return null;
 
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-white shadow-lg rounded-lg">
-      <h1 className="text-2xl font-bold mb-6 text-gray-800">Friends</h1>
+    <div className="max-w-2xl mx-auto p-6 bg-[#92A48A] shadow-lg rounded-lg">
+      <h1 className="text-2xl font-bold mb-6 text-[#DFDDCE]">Friends</h1>
 
       {/* Search Bar with Toggle Button */}
       <div className="relative mb-6">
@@ -240,10 +241,10 @@ const Friends = () => {
 
       {/* Search Results */}
       {showSearchResults && (
-        <section className="mb-6 border-2 border-blue-200 p-4 rounded-lg bg-white-50">
-          <h2 className="text-lg font-semibold text-blue-800 mb-3">Search Results</h2>
+        <section className="mb-6 border-2 border-[#DFDDCE] p-4 rounded-lg bg-white-50">
+          <h2 className="text-lg font-semibold text-[#DFDDCE] mb-3">Search Results</h2>
           {filteredUsers.length === 0 ? (
-            <p className="text-gray-500">No users found.</p>
+            <p className="text-[#DFDDCE]">No users found.</p>
           ) : (
             <ul className="grid gap-4">
               {filteredUsers.map((u) => (
@@ -257,22 +258,22 @@ const Friends = () => {
                       <span className="text-gray-600">Friend</span>
                       <button
                         onClick={() => handleRemoveFriend(u.id)}
-                        className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition text-sm"
+                        className="bg-[#3D2F2A] text-white px-3 py-1 rounded-lg hover:bg-red-700 transition text-sm"
                       >
-                        Unfriend
+                        <Trash2 className="w-4 h-4 mr-1" />
                       </button>
                     </div>
                   ) : sentRequests.includes(u.id) ? (
                     <button
                       onClick={() => handleUnsendRequest(u.id)}
-                      className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition"
+                      className="bg-[#DFDDCE] text-[#3D2F2A] px-4 py-2 rounded-lg "
                     >
                       Cancel Request
                     </button>
                   ) : (
                     <button
                       onClick={() => sendFriendRequest(user.uid, u.id)}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                      className="bg-[#847266] text-white px-4 py-2 rounded-lg hover:bg-[#847266] transition"
                     >
                       Add Friend
                     </button>
@@ -287,7 +288,7 @@ const Friends = () => {
       {/* Friend Requests */}
       {!showSearchResults && friendRequests.length > 0 && (
         <section className="mb-6">
-          <h2 className="text-lg font-semibold text-gray-700 mb-3">Friend Requests</h2>
+          <h2 className="text-lg font-semibold text-[#DFDDCE] mb-3">Friend Requests</h2>
           <ul className="grid gap-4">
             {friendRequests.map((request) => (
               <li key={request.id} className="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
@@ -304,7 +305,7 @@ const Friends = () => {
       {/* Current Friends */}
       {!showSearchResults && friends.length > 0 && (
         <section>
-          <h2 className="text-lg font-semibold text-gray-700 mb-3">My Friends</h2>
+          <h2 className="text-lg font-semibold text-[#DFDDCE] mb-3">My Friends</h2>
           <ul className="grid gap-4">
             {friends.map((friend) => (
               <li key={friend.id} className="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
@@ -314,9 +315,9 @@ const Friends = () => {
                   <span className="text-gray-600">Friend</span>
                   <button
                     onClick={() => handleRemoveFriend(friend.id)}
-                    className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition text-sm"
+                    className="bg-[#3D2F2A] text-white px-3 py-1 rounded-lg hover:bg-red-700 transition text-sm"
                   >
-                    Unfriend
+                    <Trash2 className="w-4 h-4 mr-1" /> {/*Unfriend */}
                   </button>
                 </div>)}
                 {showFriendProfile[friend.id] && (
