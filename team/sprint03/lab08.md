@@ -16,6 +16,7 @@ Daily Scrum
 - All members have submitted evals for team 06
 - Started working on lab08
 - Finalizing features for final deployment
+- Working to close existing prs
 
 ### Scribe:  
 - Hannah : Finished issues, made prs, pushed 
@@ -23,19 +24,19 @@ Daily Scrum
 - Towela: Opened pr, awaiting review 
 - Charlene: finished first bookclub issue, working on follow up bookclub issues, added UI pr
 - Srin: finished browse filtering and design doc
-- Bella: almost done with filtering (pr out today), starting next issue
+- Bella: almost done with filtering (pr out today), starting next issue, working on sprint planning and goals
 - Sungchae: done with view profile in friends page
 
 ### Roles 
-Product Owner: Bella Ward
-Scrum Master: Charlene Patenaude
-Testing/QA Coordinator: Bella Ward
-Retro 3 leader: Srinidhi Sathish 
-UX Coordinato: Hannah Shakouri 
-Design Document Coordinator: Srinidhi Sathish - Towela Phiri
-Deployment Document Coordinator: Niyati Mummidivarapu
-User Manual Coordinator: Sungchae Park
-Final presentation leader : Towela Phiri
+- Product Owner: Bella Ward
+- Scrum Master: Charlene Patenaude
+- Testing/QA Coordinator: Bella Ward
+- Retro 3 leader: Srinidhi Sathish 
+- UX Coordinato: Hannah Shakouri 
+- Design Document Coordinator: Srinidhi Sathish - Towela Phiri
+- Deployment Document Coordinator: Niyati Mummidivarapu
+- User Manual Coordinator: Sungchae Park
+- Final presentation leader : Towela Phiri
 
 
 ### Future Meetings:
