@@ -15,12 +15,6 @@ import {
 
 import Profile_Screen from "./profileScreen";
 
-
-interface FriendInfo {
-  friendUid: string,
-  showProfile: bool
-}
-
 const Friends = () => {
   const { user } = useAuth();
   const router = useRouter();
@@ -198,7 +192,7 @@ const Friends = () => {
     );
   };
 
-  const handleFriendProfile = (friendUid: string, event: React.MouseEvent) => {
+  const handleFriendProfile = (friendUid: string) => {
     setShowFriendProfile((prev) => ({
       ...prev,
       [friendUid]: !prev[friendUid],
@@ -254,7 +248,7 @@ const Friends = () => {
             <ul className="grid gap-4">
               {filteredUsers.map((u) => (
                 <li key={u.id} className="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm">
-                  <button onClick={(e) => handleFriendProfile(u.id, e)} className="text-gray-800 hover:bg-gray-300 rounded ml-1 mr-1">{u.name || "Unknown User"}</button>
+                  <button onClick={() => handleFriendProfile(u.id)} className="text-gray-800 hover:bg-gray-300 rounded ml-1 mr-1">{u.name || "Unknown User"}</button>
                   {showFriendProfile[u.id] && (
                   <Profile_Screen friendUid={u.id}/>
                 )}
@@ -297,7 +291,7 @@ const Friends = () => {
           <ul className="grid gap-4">
             {friendRequests.map((request) => (
               <li key={request.id} className="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
-                <button onClick={(e) => handleFriendProfile(request.id, e)} className="text-gray-800 hover:bg-gray-300 rounded ml-1 mr-1">{request.name || "Unknown User"}</button>
+                <button onClick={() => handleFriendProfile(request.id)} className="text-gray-800 hover:bg-gray-300 rounded ml-1 mr-1">{request.name || "Unknown User"}</button>
                   {!showFriendProfile[request.id] ? getFriendRequestButton(request) : (
                     <Profile_Screen friendUid={request.id} />
                   )}
@@ -314,12 +308,12 @@ const Friends = () => {
           <ul className="grid gap-4">
             {friends.map((friend) => (
               <li key={friend.id} className="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
-                <button onClick={(e) => handleFriendProfile(friend.id)}
+                <button onClick={() => handleFriendProfile(friend.id)}
                   className="text-gray-800 hover:bg-gray-300 rounded ml-1 mr-1">{friend.name}</button>
                 {!showFriendProfile[friend.id] && (<div className="flex gap-2 items-center">
                   <span className="text-gray-600">Friend</span>
                   <button
-                    onClick={(e) => handleRemoveFriend(friend.id, e)}
+                    onClick={() => handleRemoveFriend(friend.id)}
                     className="bg-red-600 text-white px-3 py-1 rounded-lg hover:bg-red-700 transition text-sm"
                   >
                     Unfriend
