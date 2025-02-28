@@ -223,7 +223,7 @@ const Friends = () => {
                         onClick={() => handleRemoveFriend(u.id)}
                         className="bg-[#3D2F2A] text-white px-3 py-1 rounded-lg hover:bg-red-700 transition text-sm"
                       >
-                        <Trash2 className="w-4 h-4 mr-1" /> {/*Unadd friend */}
+                        <Trash2 className="w-4 h-4 mr-1" />
                       </button>
                     </div>
                   ) : sentRequests.includes(u.id) ? (
