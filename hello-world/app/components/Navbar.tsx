@@ -328,6 +328,7 @@ const Navbar: React.FC = () => {
                 </div>
 
                 <Link href={`/${selectedMedia.toLowerCase()}/browse`} className="nav-link">Browse</Link>
+                <Link href="/clubs" className="nav-link">Book Club</Link>
                 <Link href="/timeline" className="nav-link">Timeline</Link>
                 <Link href={`/${selectedMedia.toLowerCase()}/my-shelf`} className="nav-link">My Shelf</Link>
                 <Link href="/for-you" className="nav-link">For You</Link>
