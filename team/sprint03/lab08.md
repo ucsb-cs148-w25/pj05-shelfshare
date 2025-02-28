@@ -1,4 +1,4 @@
-# Team Meeting 18: Lab 07 , 02/21
+# Team Meeting 21: Lab 08 , 02/28
 
 ### Type of Meeting
 Daily Scrum
@@ -14,16 +14,17 @@ Daily Scrum
 
 ### Notes:
 - All members have submitted evals for team 06
-- Started working on lab8
+- Started working on lab08
+- Finalizing features for final deployment
 
 ### Scribe:  
-- Hannah : Working on new issue, Sharing a book with friends
-- Niyati: She's working on Timeeline page
-- Towela: Fixing search and friends erros
-- Charlene : Finished working on fyp, reviewing on PRs and fixing merge conflicts
-- Srin: She is still working on Browse Page
-- Bella: She finished the PR for search backend, working on Challenges 
-- Sungchae: Working on Profile Page, trying to have pfp pop up on reviews
+- Hannah : Finished issues, made prs, pushed 
+- Niyati: Working on Spotify issue
+- Towela: Opened pr, awaiting review 
+- Charlene: finished first bookclub issue, working on follow up bookclub issues, added UI pr
+- Srin: finished browse filtering and design doc
+- Bella: almost done with filtering (pr out today), starting next issue
+- Sungchae: done with view profile in friends page
 
 ### Roles 
 Product Owner: Bella Ward
