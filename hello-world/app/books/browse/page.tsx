@@ -410,11 +410,9 @@ export default function Browse() {
   const selectGenre = (genre: string) => {
     console.log(`Selecting genre: ${genre}`);
     if (selectedGenre === genre && !showTrending) {
-      // Deselect current genre if it's already selected
       return;
     }
     
-    // We need to reset these in sequence to avoid race conditions
     setShowTrending(false);
     setSelectedGenre(genre);
   };
@@ -422,11 +420,9 @@ export default function Browse() {
   const selectTrending = () => {
     console.log("Selecting trending");
     if (showTrending) {
-      // Already showing trending
       return;
     }
     
-    // We need to reset these in sequence to avoid race conditions
     setSelectedGenre(null);
     setShowTrending(true);
   };
