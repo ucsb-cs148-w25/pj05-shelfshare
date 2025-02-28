@@ -4,7 +4,7 @@ import { useAuth } from '@/app/context/AuthContext';
 import { db } from '@/firebase';
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, doc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, doc, getDoc, setDoc, updateDoc, increment } from 'firebase/firestore';
 import { useParams } from 'next/navigation';
 
 interface ProfileItem {
@@ -22,6 +22,7 @@ interface ClubData {
   description: string;
   memberCount: number;
   imageUrl: string;
+  ownerId: string;
 }
 
 interface Review {
@@ -50,11 +51,12 @@ export default function ClubDetails() {
 
   const [profilePicture, setProfilePicture] = useState('upload-pic.png');
   const [username, setUsername] = useState('username');
+  const [creator, setCreator] = useState<ClubData | null>(null);
 
   // Fetch club details from Firestore
   useEffect(() => {
     if (!clubId) return;
-
+  
     const fetchClubDetails = async () => {
       try {
         const clubDocRef = doc(db, 'clubs', clubId);
@@ -62,12 +64,24 @@ export default function ClubDetails() {
           if (docSnapshot.exists()) {
             const clubData = docSnapshot.data() as ClubData;
             setClub({ ...clubData, id: docSnapshot.id });
+  
+            // Fetch the creator's profile
+            const creatorId = clubData.ownerId; 
+            if (creatorId) {
+              const creatorDocRef = doc(db, 'profile', creatorId);
+              getDoc(creatorDocRef).then((creatorDoc) => {
+                if (creatorDoc.exists()) {
+                  const creatorData = creatorDoc.data() as ClubData;
+                  setCreator(creatorData);
+                }
+              });
+            }
           } else {
             setError('Club not found.');
           }
           setLoading(false);
         });
-
+  
         return () => unsubscribe();
       } catch (err) {
         console.error('Error fetching club details:', err);
@@ -75,7 +89,7 @@ export default function ClubDetails() {
         setLoading(false);
       }
     };
-
+  
     fetchClubDetails();
   }, [clubId]);
 
@@ -117,6 +131,42 @@ export default function ClubDetails() {
       unsubscribe1();
     };
   }, [clubId, user]);
+
+  const handleJoinClub = async () => {
+    if (!user) {
+      alert('You need to be logged in to join the club.');
+      return;
+    }
+
+    try {
+      const clubDocRef = doc(db, 'clubs', clubId);
+      const memberRef = doc(db, 'clubs', clubId, 'members', user.uid);
+
+      // Check if the user is already a member
+      const memberDoc = await getDoc(memberRef);
+      if (memberDoc.exists()) {
+        alert('You are already a member of this club.');
+        return;
+      }
+
+      // Add the user to the members subcollection
+      await setDoc(memberRef, {
+        userId: user.uid,
+        userName: user.displayName || 'Anonymous',
+        joinedAt: serverTimestamp(),
+      });
+
+      // Update the member count
+      await updateDoc(clubDocRef, {
+        memberCount: increment(1),
+      });
+
+      alert('You have successfully joined the club!');
+    } catch (error) {
+      console.error('Error joining club: ', error);
+      alert('Failed to join the club.');
+    }
+  };
 
   interface StarRatingProps {
     rating: number;
@@ -219,15 +269,27 @@ export default function ClubDetails() {
               />
             </div>
           </div>
-
+  
           <div className="flex-grow space-y-6">
             <div>
               <h1 className="text-4xl font-bold text-[#DFDDCE]">{club.name}</h1>
+              {/* Display the creator's username */}
+              {creator && (
+                <p className="text-[#DFDDCE] text-lg mt-2">
+                  Created by: {creator.ownerId}
+                </p>
+              )}
               <p className="text-[#DFDDCE] text-lg mt-2">
                 Members: {club.memberCount}
               </p>
+              <button
+                onClick={handleJoinClub}
+                className="bg-[#3D2F2A] text-[#DFDDCE] px-6 py-2 rounded-lg hover:bg-[#847266] transition-colors mt-4"
+              >
+                Join Club
+              </button>
             </div>
-
+  
             <div className="space-y-4">
               <p className="text-[#DFDDCE] leading-relaxed">{club.description}</p>
             </div>

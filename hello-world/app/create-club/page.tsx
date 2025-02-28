@@ -5,9 +5,11 @@ import React, { useState } from 'react';
 import { db, storage } from '@/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { useAuth } from '@/app/context/AuthContext';
 
 export default function CreateClub() {
   const router = useRouter();
+  const { user } = useAuth(); // Get the current user
   const [clubName, setClubName] = useState<string>('');
   const [clubDescription, setClubDescription] = useState<string>('');
   const [clubImage, setClubImage] = useState<File | null>(null);
@@ -40,8 +42,9 @@ export default function CreateClub() {
       const clubData = {
         name: clubName,
         description: clubDescription,
-        memberCount: 1, // Default member count
-        imageUrl: imageUrl, // Use uploaded image or default
+        memberCount: 1,
+        imageUrl: imageUrl,
+        ownerId: user?.uid, 
       };
   
       const docRef = await addDoc(collection(db, 'clubs'), clubData);
