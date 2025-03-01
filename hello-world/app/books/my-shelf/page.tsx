@@ -87,6 +87,8 @@ export default function UserLists() {
   const editShelfInputRef = useRef<HTMLInputElement>(null);
   const [customShelvesMap, setCustomShelvesMap] = useState<Map<string, { name: string, books: BookItem[] }>>(new Map());
   const [reloadTrigger, setReloadTrigger] = useState(0);
+  const [scrollPositions, setScrollPositions] = useState<{ [key: string]: number }>({});
+  const [maxScrolls, setMaxScrolls] = useState<{ [key: string]: number }>({});
 
   // Use this function to trigger a reload when needed
   const triggerReload = useCallback(() => {
@@ -238,11 +240,77 @@ export default function UserLists() {
     }
   }, [isCreatingShelf, editingShelfId]);
 
+  // Set up scroll handling for each shelf
+  useEffect(() => {
+    const allShelves = [...defaultShelves, ...customShelves];
+    
+    allShelves.forEach(section => {
+      const container = document.getElementById(`scroll-container-${section.type}`);
+      if (container) {
+        const handleScroll = () => {
+          setScrollPositions(prev => ({
+            ...prev,
+            [section.type]: container.scrollLeft
+          }));
+          setMaxScrolls(prev => ({
+            ...prev,
+            [section.type]: container.scrollWidth - container.clientWidth
+          }));
+        };
+
+        // Initialize scroll positions
+        handleScroll();
+        
+        container.addEventListener('scroll', handleScroll);
+        return () => container.removeEventListener('scroll', handleScroll);
+      }
+    });
+  }, [defaultShelves, customShelves]);
+
+  // Inside your component, add these style constants
+  const leftShadowStyle: React.CSSProperties = {
+    position: 'absolute',
+    left: '40px',
+    top: '0',
+    height: '100%',
+    width: '40px',
+    background: 'linear-gradient(to right, rgba(90, 57, 44, 0.5), rgba(90, 57, 44, 0))',
+    pointerEvents: 'none', // Correctly typed as a valid CSS value
+    zIndex: 5,
+    transition: 'opacity 0.3s ease',
+  };
+  
+  const rightShadowStyle: React.CSSProperties = {
+    position: 'absolute',
+    right: '40px',
+    top: '0',
+    height: '100%',
+    width: '40px',
+    background: 'linear-gradient(to left, rgba(90, 57, 44, 0.5), rgba(90, 57, 44, 0))',
+    pointerEvents: 'none', // Correctly typed as a valid CSS value
+    zIndex: 5,
+    transition: 'opacity 0.3s ease',
+  };
+
   const toggleEditMode = (sectionType: string) => {
     setEditModes(prev => ({
       ...prev,
       [sectionType]: !prev[sectionType]
     }));
+  };
+
+  const scrollLeft = (sectionType: string) => {
+    const container = document.getElementById(`scroll-container-${sectionType}`);
+    if (container) {
+      container.scrollBy({ left: -170, behavior: 'smooth' }); // Scroll by one book width
+    }
+  };
+
+  const scrollRight = (sectionType: string) => {
+    const container = document.getElementById(`scroll-container-${sectionType}`);
+    if (container) {
+      container.scrollBy({ left: 170, behavior: 'smooth' }); // Scroll by one book width
+    }
   };
 
   // Drag and Drop Handlers
@@ -540,143 +608,79 @@ export default function UserLists() {
         {/* Custom Shelves Management */}
         <div className="mb-8">
           <div className="flex justify-between items-center">
-            <h2 className="text-[#DFDDCE] text-3xl font-bold">
-              My Shelves
-            </h2>
-            <button
-              onClick={() => setIsCreatingShelf(true)}
-              className="bg-[#3D2F2A] text-[#DFDDCE] px-4 py-2 rounded-lg hover:bg-[#847266] transition-colors flex items-center"
-            >
+            <h2 className="text-custom-tan text-3xl font-bold">My Shelves</h2>
+            <button onClick={() => setIsCreatingShelf(true)} className="bg-custom-brown text-custom-tan px-4 py-2 rounded-lg hover:bg-light-brown transition-colors flex items-center">
               <Plus className="mr-2" /> Create New Shelf
             </button>
           </div>
-          
           {isCreatingShelf && (
-            <div className="mt-4 flex items-center bg-[#847266] p-3 rounded-lg">
-              <input
-                ref={newShelfInputRef}
-                type="text"
-                value={newShelfName}
-                onChange={(e) => setNewShelfName(e.target.value)}
-                placeholder="Enter shelf name..."
-                className="bg-[#DFDDCE] text-[#3D2F2A] p-2 rounded flex-grow"
-                maxLength={30}
-              />
-              <button
-                onClick={createCustomShelf}
-                className="ml-2 bg-[#3D2F2A] text-[#DFDDCE] p-2 rounded hover:bg-opacity-80"
-              >
+            <div className="mt-4 flex items-center bg-light-brown p-3 rounded-lg">
+              <input ref={newShelfInputRef} type="text" value={newShelfName} onChange={(e) => setNewShelfName(e.target.value)} placeholder="Enter shelf name..." className="bg-custom-tan text-custom-brown p-2 rounded flex-grow" maxLength={30} />
+              <button onClick={createCustomShelf} className="ml-2 bg-custom-brown text-custom-tan p-2 rounded hover:bg-opacity-80">
                 <Check className="w-5 h-5" />
               </button>
-              <button
-                onClick={() => {
-                  setIsCreatingShelf(false);
-                  setNewShelfName('');
-                }}
-                className="ml-1 bg-[#847266] text-[#DFDDCE] p-2 rounded hover:bg-opacity-80"
-              >
+              <button onClick={() => { setIsCreatingShelf(false); setNewShelfName(''); }} className="ml-1 bg-light-brown text-custom-tan p-2 rounded hover:bg-opacity-80">
                 <X className="w-5 h-5" />
               </button>
             </div>
           )}
         </div>
-
         {allShelves.map((section) => (
           <div key={section.type}>
             <div className="flex justify-between items-center mb-4">
               {section.isCustom && editingShelfId === section.id ? (
                 <div className="flex items-center">
-                  <input
-                    ref={editShelfInputRef}
-                    type="text"
-                    value={editingShelfName}
-                    onChange={(e) => setEditingShelfName(e.target.value)}
-                    className="bg-[#DFDDCE] text-[#3D2F2A] p-1 rounded"
-                    maxLength={30}
-                  />
-                  <button
-                    onClick={saveShelfEdit}
-                    className="ml-2 bg-[#3D2F2A] text-[#DFDDCE] p-1 rounded hover:bg-opacity-80"
-                  >
+                  <input ref={editShelfInputRef} type="text" value={editingShelfName} onChange={(e) => setEditingShelfName(e.target.value)} className="bg-custom-tan text-custom-brown p-1 rounded" maxLength={30} />
+                  <button onClick={saveShelfEdit} className="ml-2 bg-custom-brown text-custom-tan p-1 rounded hover:bg-opacity-80">
                     <Check className="w-4 h-4" />
                   </button>
-                  <button
-                    onClick={() => {
-                      setEditingShelfId(null);
-                      setEditingShelfName('');
-                    }}
-                    className="ml-1 bg-[#847266] text-[#DFDDCE] p-1 rounded hover:bg-opacity-80"
-                  >
+                  <button onClick={() => { setEditingShelfId(null); setEditingShelfName(''); }} className="ml-1 bg-light-brown text-custom-tan p-1 rounded hover:bg-opacity-80">
                     <X className="w-4 h-4" />
                   </button>
                 </div>
               ) : (
-                <h2 className="text-[#DFDDCE] text-2xl font-bold flex items-center">
+                <h2 className="text-custom-tan text-2xl font-bold flex items-center">
                   {section.title} {section.icon}
                   {section.isCustom && (
-                    <button
-                      onClick={() => startEditingShelf(section.id!, section.title)}
-                      className="ml-2 text-[#DFDDCE] hover:text-[#3D2F2A]"
-                    >
+                    <button onClick={() => startEditingShelf(section.id!, section.title)} className="ml-2 text-custom-tan hover:text-custom-brown">
                       <Edit2 className="w-4 h-4" />
                     </button>
                   )}
                 </h2>
               )}
-              
               <div className="flex items-center">
-                <button
-                  onClick={() => toggleEditMode(section.type)}
-                  className="text-[#DFDDCE] px-4 py-2 rounded-lg hover:bg-[#3D2F2A] transition-colors"
-                >
+                <button onClick={() => toggleEditMode(section.type)} className="text-custom-tan px-4 py-2 rounded-lg hover:bg-[#3D2F2A] transition-colors">
                   {editModes[section.type] ? 'Done' : 'Edit'}
                 </button>
-                
                 {section.isCustom && (
-                  <button
-                    onClick={() => section.id && deleteCustomShelf(section.id, section.title)}
-                    className="ml-4 text-[#DFDDCE] bg-[#3D2F2A] px-3 py-1 rounded-lg hover:bg-[#847266] transition-colors flex items-center"
-                  >
+                  <button onClick={() => section.id && deleteCustomShelf(section.id, section.title)} className="ml-4 text-custom-tan bg-custom-brown px-3 py-1 rounded-lg hover:bg-light-brown transition-colors flex items-center">
                     <Trash2 className="w-4 h-4 mr-1" /> Delete Shelf
                   </button>
                 )}
               </div>
             </div>
-            <div 
-              className={`relative bg-[#847266] border-t-8 border-b-8 border-[#3D2F2A] h-44 flex items-center transition-colors
-                ${section.type !== 'favorites' ? 'droppable' : ''}`}
-              onDragOver={(e) => handleDragOver(e, section.type)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => section.isCustom
-                ? handleDrop(section.type, e, true, section.id)
-                : handleDrop(section.type, e)
-              }
-            >
-              <div className="flex space-x-4 overflow-x-auto px-4 w-full">
+            <div className="relative bg-light-brown border-t-8 border-b-8 border-[#3D2F2A] h-72" onDragOver={(e) => handleDragOver(e, section.type)} onDragLeave={handleDragLeave} onDrop={(e) => section.isCustom ? handleDrop(section.type, e, true, section.id) : handleDrop(section.type, e)}>
+              <button onClick={() => scrollLeft(section.type)} className={`absolute left-0 top-0 h-full w-8 flex items-center justify-center bg-custom-brown text-custom-tan z-10 hover:bg-[#2E221E] transition-colors ${!scrollPositions[section.type] || scrollPositions[section.type] <= 0 ? '' : ''}`} style={{ borderRight: '2px solid #3D2F2A' }} disabled={!scrollPositions[section.type] || scrollPositions[section.type] <= 0}>
+                &lt;
+              </button>
+              {scrollPositions[section.type] > 5 && (
+                <div style={{ ...leftShadowStyle, opacity: scrollPositions[section.type] > 0 ? 1 : 0 }}></div>
+              )}
+              {maxScrolls[section.type] > 0 && scrollPositions[section.type] < maxScrolls[section.type] - 5 && (
+                <div style={{ ...rightShadowStyle, opacity: scrollPositions[section.type] < maxScrolls[section.type] ? 1 : 0 }}></div>
+              )}
+              <button onClick={() => scrollRight(section.type)} className={`absolute right-0 top-0 h-full w-8 flex items-center justify-center bg-custom-brown text-custom-tan z-10 hover:bg-[#2E221E] transition-colors ${!maxScrolls[section.type] || !scrollPositions[section.type] || scrollPositions[section.type] >= maxScrolls[section.type] ? '' : ''}`} style={{ borderLeft: '2px solid #847266' }} disabled={!maxScrolls[section.type] || !scrollPositions[section.type] || scrollPositions[section.type] >= maxScrolls[section.type]}>
+                &gt;
+              </button>
+              <div id={`scroll-container-${section.type}`} className="relative bottom-1 left-3 flex space-x-5 overflow-x-auto no-scrollbar" style={{ width: 'calc(100% - 85px)', marginLeft: '32px', marginRight: '32px' }}>
                 {section.books.length > 0 ? (
                   section.books.map((book) => (
-                    <div
-                      key={`${section.type}-${book.id}`}
-                      className="flex-shrink-0 cursor-pointer relative group"
-                      draggable={true}
-                      onDragStart={(e) => handleDragStart(book, e, section.isCustom, section.id)}
-                      onDragEnd={handleDragEnd}
-                      onClick={() => !editModes[section.type] && router.push(`/books/${book.bookId}`)}
-                    >
-                      <Image
-                        src={book.coverUrl}
-                        alt={book.title}
-                        width={128}
-                        height={144}
-                        className="w-32 h-36 rounded-lg object-cover bg-[#3D2F2A]"
-                      />
+                    <div key={`${section.type}-${book.id}`} className="flex-shrink-0 cursor-pointer relative group mt-4" draggable={true} onDragStart={(e) => handleDragStart(book, e, section.isCustom, section.id)} onDragEnd={handleDragEnd} onClick={() => !editModes[section.type] && router.push(`/books/${book.bookId}`)}>
+                      <Image src={book.coverUrl} alt={book.title} width={128} height={144} className="w-[150px] h-[250px] rounded-lg object-cover bg-custom-brown" />
                       {editModes[section.type] && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteBook(book, section.type, section.isCustom, section.id);
+                        <button onClick={(e) => { e.stopPropagation(); deleteBook(book, section.type, section.isCustom, section.id);
                           }}
-                          className="absolute top-2 right-2 p-2 rounded-full bg-[#3D2F2A] text-[#DFDDCE] hover:bg-[#847266] transition-colors opacity-100"
+                          className="absolute top-2 right-2 p-2 rounded-full bg-custom-brown text-custom-tan hover:bg-light-brown transition-colors opacity-100"
                           aria-label="Delete book"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -685,7 +689,7 @@ export default function UserLists() {
                     </div>
                   ))
                 ) : (
-                  <div className="flex items-center justify-center w-full h-full text-[#DFDDCE] text-lg italic">
+                  <div className="flex items-center justify-center w-full h-full text-custom-tan text-lg italic">
                     {section.emptyMessage}
                   </div>
                 )}
