@@ -13,6 +13,7 @@ import {
   removeFriend
 } from "../context/friends";
 import { Trash2 } from 'lucide-react';
+import Link from "next/link";
 
 import Profile_Screen from "./profileScreen";
 
@@ -256,6 +257,9 @@ const Friends = () => {
                   {!showFriendProfile[u.id] && (friends.some(f => f.id === u.id) ? (
                     <div className="flex gap-2 items-center">
                       <span className="text-gray-600">Friend</span>
+                      <Link href={`/friend-profile?id=${u.id}`} className="bg-[#5a7463] text-white px-3 py-1 rounded-lg hover:bg-[#4a6453] transition text-sm mr-2">
+                        View Profile
+                      </Link>
                       <button
                         onClick={() => handleRemoveFriend(u.id)}
                         className="bg-[#3D2F2A] text-white px-3 py-1 rounded-lg hover:bg-red-700 transition text-sm"
@@ -311,19 +315,22 @@ const Friends = () => {
               <li key={friend.id} className="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
                 <button onClick={() => handleFriendProfile(friend.id)}
                   className="text-gray-800 hover:bg-gray-300 rounded ml-1 mr-1">{friend.name}</button>
-                {!showFriendProfile[friend.id] && (<div className="flex gap-2 items-center">
-                  <span className="text-gray-600">Friend</span>
-                  <button
-                    onClick={() => handleRemoveFriend(friend.id)}
-                    className="bg-[#3D2F2A] text-white px-3 py-1 rounded-lg hover:bg-red-700 transition text-sm"
-                  >
-                    <Trash2 className="w-4 h-4 mr-1" /> {/*Unfriend */}
-                  </button>
-                </div>)}
-                {showFriendProfile[friend.id] && (
+                {!showFriendProfile[friend.id] ? (
+                  <div className="flex gap-2 items-center">
+                    <span className="text-gray-600">Friend</span>
+                    <Link href={`/friend-profile?id=${friend.id}`} className="bg-[#5a7463] text-white px-3 py-1 rounded-lg hover:bg-[#4a6453] transition text-sm mr-2">
+                      View Profile
+                    </Link>
+                    <button
+                      onClick={() => handleRemoveFriend(friend.id)}
+                      className="bg-[#3D2F2A] text-white px-3 py-1 rounded-lg hover:bg-red-700 transition text-sm"
+                    >
+                      <Trash2 className="w-4 h-4 mr-1" />
+                    </button>
+                  </div>
+                ) : (
                   <Profile_Screen friendUid={friend.id}/>
-                )
-                }
+                )}
               </li>
             ))}
           </ul>
