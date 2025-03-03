@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname } from 'next/navigation';
 import debounce from 'lodash.debounce';
 
-// Interface for search results
+// Interface for Google Books search results
 interface SearchResult {
     id: string;
     title: string;
@@ -17,7 +17,6 @@ interface SearchResult {
     };
     language?: string;
     publishedDate?: string;
-    isbn?: string; // Used for OpenLibrary cover lookup
 }
 
 // Define action types
@@ -61,57 +60,9 @@ const Navbar: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [isSearching, setIsSearching] = useState(false);
-    const [coverCache, setCoverCache] = useState<Record<string, string>>({});
 
     const { openDropdown } = state;
     const searchCache = useRef(new Map<string, SearchResult[]>());
-
-    // Function to get ISBN from Google Books volume info
-    const extractISBN = (volumeInfo: any): string => {
-        if (!volumeInfo.industryIdentifiers || !volumeInfo.industryIdentifiers.length) {
-            return '';
-        }
-        
-        // Prefer ISBN_13 if available
-        const isbn13 = volumeInfo.industryIdentifiers.find(
-            (id: any) => id.type === 'ISBN_13'
-        );
-        
-        const isbn10 = volumeInfo.industryIdentifiers.find(
-            (id: any) => id.type === 'ISBN_10'
-        );
-        
-        return isbn13?.identifier || isbn10?.identifier || '';
-    };
-
-    // Function to check if an OpenLibrary cover exists and update the cache
-    const checkOpenLibraryCover = async (isbn: string): Promise<string | null> => {
-        // Return from cache if we've already checked this ISBN
-        if (coverCache[isbn]) {
-            return coverCache[isbn];
-        }
-        
-        try {
-            // Try medium size first
-            const response = await fetch(`https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg?default=false`, {
-                method: 'HEAD'
-            });
-            
-            if (response.ok) {
-                // Add a cache buster to prevent browser caching
-                const coverUrl = `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg?t=${Date.now()}`;
-                setCoverCache(prev => ({ ...prev, [isbn]: coverUrl }));
-                return coverUrl;
-            }
-            
-            // If no cover found, cache this result too
-            setCoverCache(prev => ({ ...prev, [isbn]: 'null' }));
-            return null;
-        } catch (error) {
-            console.error("Error checking OpenLibrary cover:", error);
-            return null;
-        }
-    };
 
     // Fetch function for Google Books API
     const fetchSearchResults = useCallback(async (query: string) => {
@@ -142,19 +93,14 @@ const Navbar: React.FC = () => {
             }
 
             // Map Google Books response to our SearchResult interface
-            const processedResults: SearchResult[] = data.items.map((item: any) => {
-                const isbn = extractISBN(item.volumeInfo);
-                
-                return {
-                    id: item.id,
-                    title: item.volumeInfo.title || 'Unknown Title',
-                    authors: item.volumeInfo.authors || ['Unknown Author'],
-                    imageLinks: item.volumeInfo.imageLinks || {},
-                    language: item.volumeInfo.language,
-                    publishedDate: item.volumeInfo.publishedDate,
-                    isbn: isbn
-                };
-            });
+            const processedResults: SearchResult[] = data.items.map((item: any) => ({
+                id: item.id,
+                title: item.volumeInfo.title || 'Unknown Title',
+                authors: item.volumeInfo.authors || ['Unknown Author'],
+                imageLinks: item.volumeInfo.imageLinks || {},
+                language: item.volumeInfo.language,
+                publishedDate: item.volumeInfo.publishedDate,
+            }));
 
             // Filter English-language books and deduplicate by title+author
             let filteredResults = processedResults.filter(book => book.language === 'en');
@@ -173,13 +119,6 @@ const Navbar: React.FC = () => {
             // Update cache
             searchCache.current.set(trimmedQuery, filteredResults);
             setSearchResults(filteredResults);
-            
-            // Check OpenLibrary for book covers
-            for (const book of filteredResults) {
-                if (book.isbn) {
-                    await checkOpenLibraryCover(book.isbn);
-                }
-            }
         } catch (error) {
             console.error("Search error:", error);
         } finally {
@@ -210,15 +149,10 @@ const Navbar: React.FC = () => {
         dispatch({ type: "TOGGLE_DROPDOWN", dropdown });
     };
 
-    // Get book cover using OpenLibrary API first, fallback to Google Books
-    const getBookCover = (result: SearchResult) => {
-        // If we have the ISBN, try to use the OpenLibrary cover first
-        if (result.isbn && coverCache[result.isbn] && coverCache[result.isbn] !== 'null') {
-            return coverCache[result.isbn];
-        }
-        
-        // Fallback to Google Books thumbnail
-        return result.imageLinks?.thumbnail || result.imageLinks?.smallThumbnail || null;
+    // Get thumbnail image with fallback
+    const getBookThumbnail = (imageLinks?: { thumbnail?: string; smallThumbnail?: string }) => {
+        if (!imageLinks) return null;
+        return imageLinks.thumbnail || imageLinks.smallThumbnail || null;
     };
 
     if (!isClient) {
@@ -258,23 +192,12 @@ const Navbar: React.FC = () => {
                                     className="flex items-center p-4 hover:bg-gray-50 transition-colors gap-4"
                                     onClick={handleSelectBook}
                                 >
-                                    {result.isbn && coverCache[result.isbn] && coverCache[result.isbn] !== 'null' ? (
+                                    {getBookThumbnail(result.imageLinks) ? (
                                         <Image
-                                            src={coverCache[result.isbn]}
+                                            src={getBookThumbnail(result.imageLinks)!}
                                             alt={result.title}
                                             width={30} height={45}
                                             className="w-10 h-14 object-cover flex-shrink-0"
-                                            unoptimized={true}
-                                            priority={true}
-                                        />
-                                    ) : getBookCover(result) ? (
-                                        <Image
-                                            src={getBookCover(result)!}
-                                            alt={result.title}
-                                            width={30} height={45}
-                                            className="w-10 h-14 object-cover flex-shrink-0"
-                                            unoptimized={true}
-                                            priority={true}
                                         />
                                     ) : (
                                         <div className="w-10 h-14 bg-gray-200 flex-shrink-0 flex items-center justify-center">

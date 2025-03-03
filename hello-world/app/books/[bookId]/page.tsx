@@ -27,8 +27,13 @@ interface BookData {
   imageLinks?: {
     thumbnail?: string;
     smallThumbnail?: string;
+    medium?: string;
+    large?: string;
   };
-  isbn?: string; // Store ISBN for OpenLibrary cover lookup
+  publishedDate?: string;
+  pageCount?: number;
+  categories?: string[];
+  publisher?: string;
 }
 
 interface Review {
@@ -40,7 +45,7 @@ interface Review {
   date: {
     seconds: number;
     nanoseconds: number;
-  } | null;
+  } | null; // Firestore timestamp type
 }
 
 interface ReviewData {
@@ -48,7 +53,8 @@ interface ReviewData {
   userName: string;
   text: string;
   rating: number;
-  date: FieldValue | null;
+  date: 
+    FieldValue | null; // This could be more specific based on what serverTimestamp returns
 }
 
 interface BookDetailsForNotification {
@@ -72,8 +78,6 @@ export default function BookDetails() {
   const [book, setBook] = useState<BookData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [openLibraryCoverUrl, setOpenLibraryCoverUrl] = useState<string | null>(null);
-  const [openLibraryRating, setOpenLibraryRating] = useState<number | null>(null);
 
   const [reviews, setReviews] = useState<Review[]>([]);
   const [newReview, setNewReview] = useState<string>("");
@@ -82,90 +86,6 @@ export default function BookDetails() {
   const [profilePicture, setProfilePicture] = useState("upload-pic.png");
   const [username, setUsername] = useState("username");
   const [userFriends, setUserFriends] = useState<Friend[]>([]);
-
-  // Function to clean HTML tags from text
-  const cleanHtmlTags = (html: string): string => {
-    if (!html) return '';
-    
-    // First replace common HTML entities
-    let text = html
-      .replace(/&nbsp;/g, ' ')
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'");
-    
-    // Then remove all HTML tags
-    text = text.replace(/<[^>]*>/g, '');
-    
-    // Remove any multiple spaces
-    text = text.replace(/\s+/g, ' ').trim();
-    
-    return text;
-  };
-
-  // Function to get OpenLibrary rating by ISBN
-  const getOpenLibraryRating = async (isbn: string) => {
-    try {
-      // Try to get book data from OpenLibrary
-      const response = await fetch(`https://openlibrary.org/isbn/${isbn}.json`);
-      
-      if (response.status === 200) {
-        const data = await response.json();
-        const olKey = data.key;
-        
-        if (olKey) {
-          // If we have the OpenLibrary key, try to get ratings
-          const ratingsResponse = await fetch(`https://openlibrary.org${olKey}/ratings.json`);
-          if (ratingsResponse.status === 200) {
-            const ratingsData = await ratingsResponse.json();
-            if (ratingsData.summary?.average) {
-              return ratingsData.summary.average;
-            }
-          }
-        }
-      }
-      
-      return null;
-    } catch (error) {
-      console.error("Error fetching OpenLibrary rating:", error);
-      return null;
-    }
-  };
-
-  // Function to get OpenLibrary cover URL by ISBN - with better error handling
-  const getOpenLibraryCover = async (isbn: string) => {
-    if (!isbn) return null;
-    
-    try {
-      // Add a cache buster to prevent browser caching
-      const timestamp = Date.now();
-      
-      // Try to get a large cover image from OpenLibrary
-      const response = await fetch(`https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg?default=false&t=${timestamp}`, {
-        method: 'HEAD' // Use HEAD request to check if image exists without downloading
-      });
-      
-      if (response.ok) {
-        return `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg?t=${timestamp}`;
-      }
-      
-      // If large image fails, try medium size
-      const mediumResponse = await fetch(`https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg?default=false&t=${timestamp}`, {
-        method: 'HEAD'
-      });
-      
-      if (mediumResponse.ok) {
-        return `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg?t=${timestamp}`;
-      }
-      
-      return null;
-    } catch (error) {
-      console.error("Error fetching OpenLibrary cover:", error);
-      return null;
-    }
-  };
 
   useEffect(() => {
     if (!user) return;
@@ -198,54 +118,19 @@ export default function BookDetails() {
         const data = await res.json();
         const volumeInfo = data.volumeInfo || {};
         
-        // Extract ISBN for OpenLibrary cover lookup
-        let isbn = '';
-        if (volumeInfo.industryIdentifiers && volumeInfo.industryIdentifiers.length > 0) {
-          // Prefer ISBN_13 if available
-          const isbn13 = volumeInfo.industryIdentifiers.find(
-            (id: any) => id.type === 'ISBN_13'
-          );
-          
-          const isbn10 = volumeInfo.industryIdentifiers.find(
-            (id: any) => id.type === 'ISBN_10'
-          );
-          
-          isbn = isbn13?.identifier || isbn10?.identifier || '';
-        }
-        
-        // Clean description from HTML tags
-        const cleanDescription = volumeInfo.description ? 
-                              cleanHtmlTags(volumeInfo.description) : 
-                              "No description available.";
-        
         // Process the Google Books data
-        const bookData = {
+        setBook({
           id: data.id,
           title: volumeInfo.title || "Unknown Title",
-          description: cleanDescription,
+          description: volumeInfo.description || "No description available.",
           authors: volumeInfo.authors || ["Unknown Author"],
           rating: volumeInfo.averageRating || 0,
           imageLinks: volumeInfo.imageLinks || {},
-          isbn: isbn
-        };
-        
-        setBook(bookData);
-        
-        // If we have an ISBN, try to get an OpenLibrary cover and rating
-        if (isbn) {
-          const [openLibraryCover, openLibraryRatingValue] = await Promise.all([
-            getOpenLibraryCover(isbn),
-            getOpenLibraryRating(isbn)
-          ]);
-          
-          if (openLibraryCover) {
-            setOpenLibraryCoverUrl(openLibraryCover);
-          }
-          
-          if (openLibraryRatingValue && (!bookData.rating || bookData.rating === 0)) {
-            setOpenLibraryRating(openLibraryRatingValue);
-          }
-        }
+          publishedDate: volumeInfo.publishedDate,
+          pageCount: volumeInfo.pageCount,
+          categories: volumeInfo.categories,
+          publisher: volumeInfo.publisher,
+        });
       } catch (err: unknown) {
         if (err instanceof Error) {
           setError(err.message);
@@ -401,10 +286,13 @@ export default function BookDetails() {
         await addDoc(collection(db, "books", bookId, "reviews"), reviewData);
         if (!book) return;
 
-        // Prefer OpenLibrary cover if available, otherwise use Google Books
-        const coverImageUrl = openLibraryCoverUrl || 
-                              book.imageLinks?.thumbnail || 
+        // Get cover image URL from Google Books
+        const coverImageUrl = book.imageLinks?.large ||
+                              book.imageLinks?.medium ||
+                              book.imageLinks?.thumbnail ||
+                              book.imageLinks?.smallThumbnail ||
                               "/placeholder.png";
+
         
         // Prepare book details for notification
         const bookDetails = {
@@ -440,14 +328,10 @@ export default function BookDetails() {
     );
   }
 
-  // Prefer OpenLibrary cover if available, otherwise use Google Books thumbnail
-  const coverImageUrl = openLibraryCoverUrl || 
-                        book.imageLinks?.thumbnail || 
+  // Get the appropriate cover image from Google Books
+  const coverImageUrl = book.imageLinks?.thumbnail || 
                         book.imageLinks?.smallThumbnail || 
                         "/placeholder.png";
-                        
-  // Use OpenLibrary rating if Google Books rating is not available
-  const displayRating = openLibraryRating || book.rating || 0;
 
   return (
     <div className="bg-[#5A7463] min-h-screen flex items-center justify-center p-8">
@@ -455,22 +339,16 @@ export default function BookDetails() {
         <div className="flex flex-col md:flex-row gap-8">
           <div className="flex-shrink-0">
             <div className="w-64 h-96 bg-[#3D2F2A] rounded-lg shadow-lg overflow-hidden flex items-center justify-center">
-              {coverImageUrl !== "/placeholder.png" ? (
-                <Image 
-                  src={coverImageUrl} 
-                  alt={book.title}
-                  width={300}
-                  height={450}
-                  quality={100}
-                  priority
-                  className="object-cover w-full h-full"
-                  unoptimized
-                />
-              ) : (
-                <div className="flex items-center justify-center h-full w-full bg-[#3D2F2A] text-[#DFDDCE]">
-                  <p className="text-center px-4">No cover available</p>
-                </div>
-              )}
+              <Image 
+                src={coverImageUrl} 
+                alt={book.title}
+                width={400} // Increased width for better clarity
+                height={600} // Increased height for better clarity
+                quality={100}
+                priority
+                className="object-cover w-full h-full"
+              />
+
             </div>
             <div className="mt-4">
               <BookActions 
@@ -492,12 +370,34 @@ export default function BookDetails() {
               ) : (
                 <p className="text-[#DFDDCE] text-lg mt-2">Author unknown</p>
               )}
+              
+              {/* Additional book details from Google Books */}
+              {book.publisher && (
+                <p className="text-[#DFDDCE] text-sm mt-1">
+                  Publisher: {book.publisher}
+                </p>
+              )}
+              {book.publishedDate && (
+                <p className="text-[#DFDDCE] text-sm">
+                  Published: {book.publishedDate}
+                </p>
+              )}
+              {book.pageCount && (
+                <p className="text-[#DFDDCE] text-sm">
+                  Pages: {book.pageCount}
+                </p>
+              )}
+              {book.categories && book.categories.length > 0 && (
+                <p className="text-[#DFDDCE] text-sm">
+                  Categories: {book.categories.join(', ')}
+                </p>
+              )}
             </div>
 
             <div className="flex items-center space-x-4">
-              <StarRating rating={displayRating} />
+              <StarRating rating={book.rating || 0} />
               <p className="text-[#DFDDCE] text-sm">
-                Average: {displayRating > 0 ? displayRating.toFixed(1)+" stars" : "No ratings yet"}
+                Average: {book.rating?.toFixed(1)+" stars" || "N/A"}
               </p>
             </div>
 
