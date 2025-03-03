@@ -3,10 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/context/AuthContext';
-import { db } from "@/firebase";
-import { onSnapshot, updateDoc, doc } from "firebase/firestore";
+import { db, deleteUser } from "@/firebase";
+import { onSnapshot, updateDoc, doc, getFirestore, collection, getDoc, setDoc, deleteDoc } from "firebase/firestore";
 import { Upload, Pencil } from "lucide-react";
 import dotenv from "dotenv";
+
+// Import Firebase SDK functions
+import { initializeApp } from "firebase/app";
 
 dotenv.config();
 
@@ -34,6 +37,8 @@ const Profile = () => {
   const [changeProfile, setChangeProfile] = useState<File | null>(null);
   const [preferredGenre, setPreferredGenre] = useState("#fantasy#romance#mystery");
   const [aboutMe, setAboutMe] = useState("Write about yourself!");
+
+  const [deleteAccount, setDeleteAccount] = useState(false);
 
   // Redirect to login page if user is not authenticated
   useEffect(() => {
@@ -112,6 +117,17 @@ const Profile = () => {
       [field]: value
     });
   };
+
+  if (deleteAccount) {
+    return (
+      <div className="flex justify-center items-center h-screen bg-[#5A7463]">
+          <div className="w-48 h-24 bg-blue-300">
+            <button onClick={() => setDeleteAccount(false)}> x </button>
+          </div>
+          <button onClick={() => deleteUser(user.uid)}>Delete </button>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-[#5A7463] p-8">
@@ -240,6 +256,12 @@ const Profile = () => {
               ) : (
                 <p className="text-[#3D2F2A] text-lg">{aboutMe}</p>
               )}
+            </div>
+
+            {/* Advance account setting, delete account*/}
+            <div className="px-4 py-2 bg-[#5A7463] text-[#DFDDCE] flex justify-end">
+              <button className="px-4 py-1 bg-[#3D2F2A] text-[#DFDDCE] rounded"
+                      onClick={() => setDeleteAccount(true)}>Delete Account</button>
             </div>
           </div>
         </div>
