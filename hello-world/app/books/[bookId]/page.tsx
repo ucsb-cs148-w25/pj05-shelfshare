@@ -3,8 +3,6 @@
 
 import { useAuth } from '@/app/context/AuthContext';
 import { db } from '@/firebase';
-
-// import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, doc, getDocs, writeBatch, FieldValue } from "firebase/firestore";
@@ -21,11 +19,16 @@ interface ProfileItem {
 }
 
 interface BookData {
+  id: string;
   title: string;
-  description?: string | { value: string };
-  covers?: number[];
+  description?: string;
   authors?: string[];
   rating?: number;
+  imageLinks?: {
+    thumbnail?: string;
+    smallThumbnail?: string;
+  };
+  isbn?: string; // Store ISBN for OpenLibrary cover lookup
 }
 
 interface Review {
@@ -37,7 +40,7 @@ interface Review {
   date: {
     seconds: number;
     nanoseconds: number;
-  } | null; // Firestore timestamp type
+  } | null;
 }
 
 interface ReviewData {
@@ -45,8 +48,7 @@ interface ReviewData {
   userName: string;
   text: string;
   rating: number;
-  date: 
-    FieldValue | null; // This could be more specific based on what serverTimestamp returns
+  date: FieldValue | null;
 }
 
 interface BookDetailsForNotification {
@@ -55,16 +57,13 @@ interface BookDetailsForNotification {
   coverUrl: string;
 }
 
-interface Author {
-  author: {
-    key: string;
-  };
-}
-
 interface Friend {
   id: string;
   username?: string;
 }
+
+// Replace with your actual Google Books API Key if needed for volume details
+const GOOGLE_BOOKS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY || '';
 
 export default function BookDetails() {
   const { bookId } = useParams<{ bookId: string }>();
@@ -73,6 +72,8 @@ export default function BookDetails() {
   const [book, setBook] = useState<BookData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [openLibraryCoverUrl, setOpenLibraryCoverUrl] = useState<string | null>(null);
+  const [openLibraryRating, setOpenLibraryRating] = useState<number | null>(null);
 
   const [reviews, setReviews] = useState<Review[]>([]);
   const [newReview, setNewReview] = useState<string>("");
@@ -81,6 +82,90 @@ export default function BookDetails() {
   const [profilePicture, setProfilePicture] = useState("upload-pic.png");
   const [username, setUsername] = useState("username");
   const [userFriends, setUserFriends] = useState<Friend[]>([]);
+
+  // Function to clean HTML tags from text
+  const cleanHtmlTags = (html: string): string => {
+    if (!html) return '';
+    
+    // First replace common HTML entities
+    let text = html
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'");
+    
+    // Then remove all HTML tags
+    text = text.replace(/<[^>]*>/g, '');
+    
+    // Remove any multiple spaces
+    text = text.replace(/\s+/g, ' ').trim();
+    
+    return text;
+  };
+
+  // Function to get OpenLibrary rating by ISBN
+  const getOpenLibraryRating = async (isbn: string) => {
+    try {
+      // Try to get book data from OpenLibrary
+      const response = await fetch(`https://openlibrary.org/isbn/${isbn}.json`);
+      
+      if (response.status === 200) {
+        const data = await response.json();
+        const olKey = data.key;
+        
+        if (olKey) {
+          // If we have the OpenLibrary key, try to get ratings
+          const ratingsResponse = await fetch(`https://openlibrary.org${olKey}/ratings.json`);
+          if (ratingsResponse.status === 200) {
+            const ratingsData = await ratingsResponse.json();
+            if (ratingsData.summary?.average) {
+              return ratingsData.summary.average;
+            }
+          }
+        }
+      }
+      
+      return null;
+    } catch (error) {
+      console.error("Error fetching OpenLibrary rating:", error);
+      return null;
+    }
+  };
+
+  // Function to get OpenLibrary cover URL by ISBN - with better error handling
+  const getOpenLibraryCover = async (isbn: string) => {
+    if (!isbn) return null;
+    
+    try {
+      // Add a cache buster to prevent browser caching
+      const timestamp = Date.now();
+      
+      // Try to get a large cover image from OpenLibrary
+      const response = await fetch(`https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg?default=false&t=${timestamp}`, {
+        method: 'HEAD' // Use HEAD request to check if image exists without downloading
+      });
+      
+      if (response.ok) {
+        return `https://covers.openlibrary.org/b/isbn/${isbn}-L.jpg?t=${timestamp}`;
+      }
+      
+      // If large image fails, try medium size
+      const mediumResponse = await fetch(`https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg?default=false&t=${timestamp}`, {
+        method: 'HEAD'
+      });
+      
+      if (mediumResponse.ok) {
+        return `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg?t=${timestamp}`;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error("Error fetching OpenLibrary cover:", error);
+      return null;
+    }
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -104,36 +189,63 @@ export default function BookDetails() {
   useEffect(() => {
     const fetchBookDetails = async () => {
       try {
-        const res = await fetch(`https://openlibrary.org/works/${bookId}.json`);
+        // Use Google Books API to fetch volume details
+        const apiUrl = `https://www.googleapis.com/books/v1/volumes/${bookId}?key=${GOOGLE_BOOKS_API_KEY}`;
+        const res = await fetch(apiUrl);
+        
         if (!res.ok) throw new Error("Failed to fetch book details.");
+        
         const data = await res.json();
-
-        const ratingRes = await fetch(`https://openlibrary.org/works/${bookId}/ratings.json`);
-        let rating = 0;
-        if (ratingRes.ok) {
-          const ratingData = await ratingRes.json();
-          rating = ratingData.summary?.average || 0;
+        const volumeInfo = data.volumeInfo || {};
+        
+        // Extract ISBN for OpenLibrary cover lookup
+        let isbn = '';
+        if (volumeInfo.industryIdentifiers && volumeInfo.industryIdentifiers.length > 0) {
+          // Prefer ISBN_13 if available
+          const isbn13 = volumeInfo.industryIdentifiers.find(
+            (id: any) => id.type === 'ISBN_13'
+          );
+          
+          const isbn10 = volumeInfo.industryIdentifiers.find(
+            (id: any) => id.type === 'ISBN_10'
+          );
+          
+          isbn = isbn13?.identifier || isbn10?.identifier || '';
         }
-
-        const cleanDescription =
-          typeof data.description === "string"
-            ? data.description
-            : data.description?.value || "No description available.";
-
-        const authors = await Promise.all(
-          (data.authors || []).map(async (author: Author) => {
-            const authorRes = await fetch(`https://openlibrary.org${author.author.key}.json`);
-            const authorData = await authorRes.json();
-            return authorData.name || "Unknown Author";
-          })
-        );
-
-        setBook({
-          ...data,
+        
+        // Clean description from HTML tags
+        const cleanDescription = volumeInfo.description ? 
+                              cleanHtmlTags(volumeInfo.description) : 
+                              "No description available.";
+        
+        // Process the Google Books data
+        const bookData = {
+          id: data.id,
+          title: volumeInfo.title || "Unknown Title",
           description: cleanDescription,
-          rating,
-          authors,
-        });
+          authors: volumeInfo.authors || ["Unknown Author"],
+          rating: volumeInfo.averageRating || 0,
+          imageLinks: volumeInfo.imageLinks || {},
+          isbn: isbn
+        };
+        
+        setBook(bookData);
+        
+        // If we have an ISBN, try to get an OpenLibrary cover and rating
+        if (isbn) {
+          const [openLibraryCover, openLibraryRatingValue] = await Promise.all([
+            getOpenLibraryCover(isbn),
+            getOpenLibraryRating(isbn)
+          ]);
+          
+          if (openLibraryCover) {
+            setOpenLibraryCoverUrl(openLibraryCover);
+          }
+          
+          if (openLibraryRatingValue && (!bookData.rating || bookData.rating === 0)) {
+            setOpenLibraryRating(openLibraryRatingValue);
+          }
+        }
       } catch (err: unknown) {
         if (err instanceof Error) {
           setError(err.message);
@@ -146,7 +258,7 @@ export default function BookDetails() {
     };
 
     if (bookId) fetchBookDetails();
-  }, [bookId]);
+  }, [bookId, GOOGLE_BOOKS_API_KEY]);
 
   // Firestore reviews integration
   useEffect(() => {
@@ -289,10 +401,10 @@ export default function BookDetails() {
         await addDoc(collection(db, "books", bookId, "reviews"), reviewData);
         if (!book) return;
 
-        const coverId = book.covers && book.covers[0];
-        const coverImageUrl = coverId && coverId > 0
-          ? `https://covers.openlibrary.org/b/id/${coverId}-L.jpg`
-          : "/placeholder.png";
+        // Prefer OpenLibrary cover if available, otherwise use Google Books
+        const coverImageUrl = openLibraryCoverUrl || 
+                              book.imageLinks?.thumbnail || 
+                              "/placeholder.png";
         
         // Prepare book details for notification
         const bookDetails = {
@@ -320,7 +432,6 @@ export default function BookDetails() {
     );
   }
 
-
   if (error || !book) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -329,15 +440,14 @@ export default function BookDetails() {
     );
   }
 
-  const description =
-    typeof book.description === 'string'
-      ? book.description
-      : book.description?.value || 'No description available.';
-
-  const coverId = book.covers && book.covers[0];
-  const coverImageUrl = coverId && coverId > 0
-    ? `https://covers.openlibrary.org/b/id/${coverId}-L.jpg`
-    : "/placeholder.png";
+  // Prefer OpenLibrary cover if available, otherwise use Google Books thumbnail
+  const coverImageUrl = openLibraryCoverUrl || 
+                        book.imageLinks?.thumbnail || 
+                        book.imageLinks?.smallThumbnail || 
+                        "/placeholder.png";
+                        
+  // Use OpenLibrary rating if Google Books rating is not available
+  const displayRating = openLibraryRating || book.rating || 0;
 
   return (
     <div className="bg-[#5A7463] min-h-screen flex items-center justify-center p-8">
@@ -345,14 +455,22 @@ export default function BookDetails() {
         <div className="flex flex-col md:flex-row gap-8">
           <div className="flex-shrink-0">
             <div className="w-64 h-96 bg-[#3D2F2A] rounded-lg shadow-lg overflow-hidden flex items-center justify-center">
-              <Image 
-                src={coverImageUrl} 
-                alt={book.title}
-                width={300}
-                height={400}
-                quality={100}
-                className="object-cover"
-              />
+              {coverImageUrl !== "/placeholder.png" ? (
+                <Image 
+                  src={coverImageUrl} 
+                  alt={book.title}
+                  width={300}
+                  height={450}
+                  quality={100}
+                  priority
+                  className="object-cover w-full h-full"
+                  unoptimized
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full w-full bg-[#3D2F2A] text-[#DFDDCE]">
+                  <p className="text-center px-4">No cover available</p>
+                </div>
+              )}
             </div>
             <div className="mt-4">
               <BookActions 
@@ -377,15 +495,15 @@ export default function BookDetails() {
             </div>
 
             <div className="flex items-center space-x-4">
-              <StarRating rating={book.rating || 0} />
+              <StarRating rating={displayRating} />
               <p className="text-[#DFDDCE] text-sm">
-                Average: {book.rating?.toFixed(1)+" stars" || "N/A"}
+                Average: {displayRating > 0 ? displayRating.toFixed(1)+" stars" : "No ratings yet"}
               </p>
             </div>
 
             <div className="space-y-4">
               <p className="text-[#DFDDCE] leading-relaxed">
-                {description}
+                {book.description}
               </p>
             </div>
 
@@ -412,41 +530,45 @@ export default function BookDetails() {
 
               <div className="mt-8 space-y-4">
                 <h3 className="text-xl font-semibold text-[#DFDDCE]">Reviews</h3>
-                {reviews.map((review) => (
-                  <div key={review.id} className="bg-[#847266] p-6 rounded-lg relative">
-                    <div className="flex items-start space-x-4">
-                      <Image 
-                        src={profilePicture}
-                        alt="Profile"
-                        width={24}
-                        height={24}
-                        className="w-12 h-12 rounded-full flex-shrink-0"
-                      />
-                      <div className="flex-grow">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center space-x-2">
-                            <span className="font-medium text-[#DFDDCE]">
-                              {username}
+                {reviews.length > 0 ? (
+                  reviews.map((review) => (
+                    <div key={review.id} className="bg-[#847266] p-6 rounded-lg relative">
+                      <div className="flex items-start space-x-4">
+                        <Image 
+                          src={profilePicture}
+                          alt="Profile"
+                          width={24}
+                          height={24}
+                          className="w-12 h-12 rounded-full flex-shrink-0"
+                        />
+                        <div className="flex-grow">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center space-x-2">
+                              <span className="font-medium text-[#DFDDCE]">
+                                {username}
+                              </span>
+                            </div>
+                            <span className="text-sm text-[#DFDDCE]">
+                              {review.date?.seconds 
+                                ? new Date(review.date.seconds * 1000).toLocaleDateString("en-US", { 
+                                    month: "short", 
+                                    day: "numeric", 
+                                    year: "numeric" 
+                                  })
+                                : "Just now"}
                             </span>
                           </div>
-                          <span className="text-sm text-[#DFDDCE]">
-                            {review.date?.seconds 
-                              ? new Date(review.date.seconds * 1000).toLocaleDateString("en-US", { 
-                                  month: "short", 
-                                  day: "numeric", 
-                                  year: "numeric" 
-                                })
-                              : "Just now"}
-                          </span>
+                          <div className="mb-2">
+                            <StarRating rating={review.rating} />
+                          </div>
+                          <p className="text-[#DFDDCE]">{review.text}</p>
                         </div>
-                        <div className="mb-2">
-                          <StarRating rating={review.rating} />
-                        </div>
-                        <p className="text-[#DFDDCE]">{review.text}</p>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-[#DFDDCE]">No reviews yet. Be the first to review!</p>
+                )}
               </div>
             </div>
           </div>
@@ -455,5 +577,3 @@ export default function BookDetails() {
     </div>
   );
 }
-
-

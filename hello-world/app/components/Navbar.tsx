@@ -3,59 +3,36 @@
 import React, { useEffect, useReducer, useState, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter, usePathname } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import debounce from 'lodash.debounce';
 
-// Interfaces for search results
+// Interface for search results
 interface SearchResult {
-    key: string;
-    title: string;
-    author_name?: string[];
-    cover_i?: number;
-    language?: string[];
-    edition_count?: number;
-}
-
-interface BookResult {
-    key: string;
-    title: string;
-    author_name?: string[];
-    language?: string[];
-    cover_i?: number;
-    edition_count?: number;
-}
-
-// Uncomment if using movies and music
-interface MovieResult {
-    id: number;
-    title: string;
-    release_date?: string;
-    poster_path?: string;
-}
-
-interface MusicResult {
     id: string;
-    name: string;
-    artists: { name: string }[];
-    album: { cover_url: string };
+    title: string;
+    authors?: string[];
+    imageLinks?: {
+        thumbnail?: string;
+        smallThumbnail?: string;
+    };
+    language?: string;
+    publishedDate?: string;
+    isbn?: string; // Used for OpenLibrary cover lookup
 }
 
 // Define action types
 type Action =
     | { type: "TOGGLE_DROPDOWN"; dropdown: string }
-    | { type: "CLOSE_DROPDOWNS" }
-    | { type: "SET_SELECTED_MEDIA"; option: string };
+    | { type: "CLOSE_DROPDOWNS" };
 
 // Define the state type
 type State = {
     openDropdown: string | null;
-    selectedMedia: string;
 };
 
 // Initial state
 const initialState: State = {
     openDropdown: null,
-    selectedMedia: "Books",
 };
 
 // Reducer function
@@ -69,14 +46,13 @@ const reducer = (state: State, action: Action): State => {
             return {
                 ...state, openDropdown: null,
             };
-        case "SET_SELECTED_MEDIA":
-            return {
-                ...state, selectedMedia: action.option, openDropdown: null
-            };
         default:
             return state;
     }
 };
+
+// Replace with your actual Google Books API Key
+const GOOGLE_BOOKS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_BOOKS_API_KEY || '';
 
 const Navbar: React.FC = () => {
     const [state, dispatch] = useReducer(reducer, initialState);
@@ -85,13 +61,59 @@ const Navbar: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [isSearching, setIsSearching] = useState(false);
-    const [searchCategory, setSearchCategory] = useState<"books" | "movies" | "music">("books");
+    const [coverCache, setCoverCache] = useState<Record<string, string>>({});
 
-    const { openDropdown, selectedMedia } = state;
+    const { openDropdown } = state;
     const searchCache = useRef(new Map<string, SearchResult[]>());
-    const router = useRouter();
 
-    // Fetch function with language filtering and author limitation
+    // Function to get ISBN from Google Books volume info
+    const extractISBN = (volumeInfo: any): string => {
+        if (!volumeInfo.industryIdentifiers || !volumeInfo.industryIdentifiers.length) {
+            return '';
+        }
+        
+        // Prefer ISBN_13 if available
+        const isbn13 = volumeInfo.industryIdentifiers.find(
+            (id: any) => id.type === 'ISBN_13'
+        );
+        
+        const isbn10 = volumeInfo.industryIdentifiers.find(
+            (id: any) => id.type === 'ISBN_10'
+        );
+        
+        return isbn13?.identifier || isbn10?.identifier || '';
+    };
+
+    // Function to check if an OpenLibrary cover exists and update the cache
+    const checkOpenLibraryCover = async (isbn: string): Promise<string | null> => {
+        // Return from cache if we've already checked this ISBN
+        if (coverCache[isbn]) {
+            return coverCache[isbn];
+        }
+        
+        try {
+            // Try medium size first
+            const response = await fetch(`https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg?default=false`, {
+                method: 'HEAD'
+            });
+            
+            if (response.ok) {
+                // Add a cache buster to prevent browser caching
+                const coverUrl = `https://covers.openlibrary.org/b/isbn/${isbn}-M.jpg?t=${Date.now()}`;
+                setCoverCache(prev => ({ ...prev, [isbn]: coverUrl }));
+                return coverUrl;
+            }
+            
+            // If no cover found, cache this result too
+            setCoverCache(prev => ({ ...prev, [isbn]: 'null' }));
+            return null;
+        } catch (error) {
+            console.error("Error checking OpenLibrary cover:", error);
+            return null;
+        }
+    };
+
+    // Fetch function for Google Books API
     const fetchSearchResults = useCallback(async (query: string) => {
         const trimmedQuery = query.trim().toLowerCase();
         if (!trimmedQuery) {
@@ -108,91 +130,64 @@ const Navbar: React.FC = () => {
 
         setIsSearching(true);
         try {
-            let apiUrl = "";
-            if (searchCategory === "books") {
-                apiUrl = `https://openlibrary.org/search.json?title=${encodeURIComponent(trimmedQuery)}&language=eng&fields=key,title,author_name,cover_i,language,edition_count&limit=10`;
-            } else if (searchCategory === "movies") {
-                apiUrl = `https://api.themoviedb.org/3/search/movie?query=${trimmedQuery}&api_key=YOUR_TMDB_API_KEY`;
-            } else if (searchCategory === "music") {
-                apiUrl = `https://api.musicdatabase.com/search?track=${trimmedQuery}&api_key=YOUR_MUSIC_API_KEY`;
-            }
+            // Google Books API URL - filtering for English language books
+            const apiUrl = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(trimmedQuery)}&langRestrict=en&maxResults=10&key=${GOOGLE_BOOKS_API_KEY}`;
 
             const response = await fetch(apiUrl);
             const data = await response.json();
 
-            let filteredResults: SearchResult[] = [];
-            if (searchCategory === "books") {
-                filteredResults = data.docs
-                    .filter((doc: BookResult) => doc.language?.includes("eng"))
-                    .map((result: BookResult) => ({
-                        key: result.key,
-                        title: result.title,
-                        author_name: result.author_name?.slice(0, 1),
-                        cover_i: result.cover_i,
-                        edition_count: result.edition_count || 1,
-                    }));
-
-                // Deduplicate results by title + author
-                const seen = new Set();
-                filteredResults = filteredResults.filter((book) => {
-                    const identifier = `${book.title.toLowerCase()}|${book.author_name?.[0]?.toLowerCase()}`;
-                    if (seen.has(identifier)) {
-                        return false;
-                    }
-                    seen.add(identifier);
-                    return true;
-                });
-
-                // Sort results for better relevancy
-                filteredResults.sort((a, b) => {
-                    const exactMatchA = a.title.toLowerCase() === trimmedQuery;
-                    const exactMatchB = b.title.toLowerCase() === trimmedQuery;
-
-                    if (exactMatchA && !exactMatchB) return -1;
-                    if (exactMatchB && !exactMatchA) return 1;
-
-                    const editionCountA = a.edition_count ?? 0;
-                    const editionCountB = b.edition_count ?? 0;
-
-                    if (editionCountA > editionCountB) return -1;
-                    if (editionCountA < editionCountB) return 1;
-
-                    return 0;
-                });
-            } else if (searchCategory === "movies") {
-                filteredResults = data.results.map((movie: MovieResult) => ({
-                    key: `movie-${movie.id}`,
-                    title: movie.title,
-                    author_name: movie.release_date ? [movie.release_date.split("-")[0]] : [],
-                    cover_i: movie.poster_path ? `https://image.tmdb.org/t/p/w200${movie.poster_path}` : undefined,
-                }));
-            } else if (searchCategory === "music") {
-                filteredResults = data.tracks.map((track: MusicResult) => ({
-                    key: `music-${track.id}`,
-                    title: track.name,
-                    author_name: track.artists.map((artist) => artist.name),
-                    cover_i: track.album.cover_url,
-                }));
+            if (!data.items) {
+                setSearchResults([]);
+                return;
             }
 
-            // Sort: exact matches appear first
-            filteredResults.sort((a, b) => {
-                if (a.title.toLowerCase() === trimmedQuery.toLowerCase()) return -1;
-                if (b.title.toLowerCase() === trimmedQuery.toLowerCase()) return 1;
-                return 0;
+            // Map Google Books response to our SearchResult interface
+            const processedResults: SearchResult[] = data.items.map((item: any) => {
+                const isbn = extractISBN(item.volumeInfo);
+                
+                return {
+                    id: item.id,
+                    title: item.volumeInfo.title || 'Unknown Title',
+                    authors: item.volumeInfo.authors || ['Unknown Author'],
+                    imageLinks: item.volumeInfo.imageLinks || {},
+                    language: item.volumeInfo.language,
+                    publishedDate: item.volumeInfo.publishedDate,
+                    isbn: isbn
+                };
+            });
+
+            // Filter English-language books and deduplicate by title+author
+            let filteredResults = processedResults.filter(book => book.language === 'en');
+            
+            // Deduplicate by title and first author
+            const seen = new Set();
+            filteredResults = filteredResults.filter((book) => {
+                const identifier = `${book.title.toLowerCase()}|${book.authors?.[0]?.toLowerCase() || ''}`;
+                if (seen.has(identifier)) {
+                    return false;
+                }
+                seen.add(identifier);
+                return true;
             });
 
             // Update cache
             searchCache.current.set(trimmedQuery, filteredResults);
             setSearchResults(filteredResults);
+            
+            // Check OpenLibrary for book covers
+            for (const book of filteredResults) {
+                if (book.isbn) {
+                    await checkOpenLibraryCover(book.isbn);
+                }
+            }
         } catch (error) {
             console.error("Search error:", error);
         } finally {
             setIsSearching(false);
         }
-    }, [searchCategory]);
+    }, []);
 
-    // Debounced search with dependency (300ms)
+    // Debounced search with dependency (200ms)
     const debouncedSearch = useCallback(
         debounce((query: string) => fetchSearchResults(query), 200),
         [fetchSearchResults]
@@ -208,38 +203,22 @@ const Navbar: React.FC = () => {
 
     const handleSelectBook = () => {
         setSearchResults([]); // Clear search results after selection
-        setSearchQuery("");    // Optionally clear the search query too
+        setSearchQuery("");   // Optionally clear the search query too
     };
 
     const toggleDropdown = (dropdown: string) => {
         dispatch({ type: "TOGGLE_DROPDOWN", dropdown });
     };
 
-    const handleSelectMedia = (option: "Books" | "Movies" | "Music") => {
-        dispatch({ type: "SET_SELECTED_MEDIA", option });
-
-        // Map the media selection to lowercase route names
-        const mediaRoute = option.toLowerCase();
-
-        // Ensure that if we are on the timeline page, we do not change the route
-        if (pathname === "/timeline" || pathname === "/home" || pathname === "/for-you") {
-            return; // Do nothing if the user is on the Timeline, Home, or For You page
+    // Get book cover using OpenLibrary API first, fallback to Google Books
+    const getBookCover = (result: SearchResult) => {
+        // If we have the ISBN, try to use the OpenLibrary cover first
+        if (result.isbn && coverCache[result.isbn] && coverCache[result.isbn] !== 'null') {
+            return coverCache[result.isbn];
         }
-
-        // Extract the current route and update media type
-        const segments = pathname.split("/").filter(Boolean); // Remove empty segments
-        if (segments.length > 0) {
-            segments[0] = mediaRoute; // Replace media type
-            router.push(`/${segments.join("/")}`); // Navigate to updated URL
-        } else {
-            router.push(`/${mediaRoute}/browse`); // Default fallback
-        }
-
-        // Set the search category based on selected media
-        const validCategories: ("books" | "movies" | "music")[] = ["books", "movies", "music"];
-        if (validCategories.includes(option.toLowerCase() as "books" | "movies" | "music")) {
-            setSearchCategory(option.toLowerCase() as "books" | "movies" | "music");
-        }
+        
+        // Fallback to Google Books thumbnail
+        return result.imageLinks?.thumbnail || result.imageLinks?.smallThumbnail || null;
     };
 
     if (!isClient) {
@@ -255,23 +234,6 @@ const Navbar: React.FC = () => {
             </div>
 
             <div className="nav-items">
-                <div className="relative">
-                    <button
-                        className="nav-link flex items-center"
-                        onClick={() => toggleDropdown("media")}
-                    >
-                        {selectedMedia} <span className="material-icons-outlined ml-1">expand_more</span>
-                    </button>
-
-                    {openDropdown === "media" && (
-                        <div className="dropdown-menu">
-                            <button className="dropdown-item" onClick={() => handleSelectMedia("Books")}>Books</button>
-                            <button className="dropdown-item" onClick={() => handleSelectMedia("Movies")}>Movies</button>
-                            <button className="dropdown-item" onClick={() => handleSelectMedia("Music")}>Music</button>
-                        </div>
-                    )}
-                </div>
-
                 {/* Search bar section */}
                 <div className="relative">
                     <input
@@ -291,26 +253,41 @@ const Navbar: React.FC = () => {
                         <div className="absolute top-full left-0 right-0 bg-white shadow-lg rounded-md mt-1 z-50 border border-gray-200">
                             {searchResults.map((result) => (
                                 <Link
-                                    key={result.key}
-                                    href={`/${selectedMedia.toLowerCase()}/${result.key.split('/').pop()}`}
+                                    key={result.id}
+                                    href={`/books/${result.id}`}
                                     className="flex items-center p-4 hover:bg-gray-50 transition-colors gap-4"
                                     onClick={handleSelectBook}
                                 >
-                                    {result.cover_i && (
+                                    {result.isbn && coverCache[result.isbn] && coverCache[result.isbn] !== 'null' ? (
                                         <Image
-                                            src={`https://covers.openlibrary.org/b/id/${result.cover_i}-S.jpg`}
+                                            src={coverCache[result.isbn]}
                                             alt={result.title}
-                                            width={15} height={30}
+                                            width={30} height={45}
                                             className="w-10 h-14 object-cover flex-shrink-0"
+                                            unoptimized={true}
+                                            priority={true}
                                         />
+                                    ) : getBookCover(result) ? (
+                                        <Image
+                                            src={getBookCover(result)!}
+                                            alt={result.title}
+                                            width={30} height={45}
+                                            className="w-10 h-14 object-cover flex-shrink-0"
+                                            unoptimized={true}
+                                            priority={true}
+                                        />
+                                    ) : (
+                                        <div className="w-10 h-14 bg-gray-200 flex-shrink-0 flex items-center justify-center">
+                                            <span className="text-gray-400 text-sm">No cover</span>
+                                        </div>
                                     )}
                                     <div className="flex-1 min-w-0">
                                         <div className="font-medium text-gray-900 truncate text-base">
                                             {result.title}
                                         </div>
-                                        {Array.isArray(result.author_name) && result.author_name.length > 0 && (
+                                        {Array.isArray(result.authors) && result.authors.length > 0 && (
                                             <div className="text-sm text-gray-600 truncate mt-1">
-                                                by {result.author_name[0]}
+                                                by {result.authors[0]}
                                             </div>
                                         )}
                                     </div>
@@ -327,9 +304,10 @@ const Navbar: React.FC = () => {
                     )}
                 </div>
 
-                <Link href={`/${selectedMedia.toLowerCase()}/browse`} className="nav-link">Browse</Link>
+                <Link href="/books/browse" className="nav-link">Browse</Link>
+                <Link href="/clubs" className="nav-link">Book Club</Link>
                 <Link href="/timeline" className="nav-link">Timeline</Link>
-                <Link href={`/${selectedMedia.toLowerCase()}/my-shelf`} className="nav-link">My Shelf</Link>
+                <Link href="/books/my-shelf" className="nav-link">My Shelf</Link>
                 <Link href="/for-you" className="nav-link">For You</Link>
 
                 <div className="relative">
@@ -345,7 +323,6 @@ const Navbar: React.FC = () => {
                         <div className="dropdown-menu">
                             <Link href="/profile" className="dropdown-item">Profile</Link>
                             <Link href="/friends" className="dropdown-item">Friends</Link>
-                            <Link href="/settings" className="dropdown-item">Settings</Link>
                             <Link href="/" className="dropdown-item">Logout</Link>
                         </div>
                     )}
