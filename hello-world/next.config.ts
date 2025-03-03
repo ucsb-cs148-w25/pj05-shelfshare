@@ -15,6 +15,10 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "lh3.googleusercontent.com",
       },
+      {
+        protocol: "http",  // Allowing the http protocol for books.google.com
+        hostname: "books.google.com",  // Allow images from books.google.com
+      },
     ],
   },
 };
