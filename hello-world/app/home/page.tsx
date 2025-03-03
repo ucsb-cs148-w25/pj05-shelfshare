@@ -44,6 +44,19 @@ export default function Home() {
   const [booksRead, setBooksRead] = useState(0);
   const [inputGoal, setInputGoal] = useState('');
   const [isEditingGoal, setIsEditingGoal] = useState(false);
+  const [spotifyToken, setSpotifyToken] = useState<string | null>(null);
+  const [bookInput, setBookInput] = useState("");
+
+  // Getting Spotify Token from URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get("spotifyToken");
+
+    if (token) {
+        localStorage.setItem("spotifyToken", token);
+        setSpotifyToken(token);
+    }
+}, []);
 
   // Redirect to login page if user is not authenticated
   useEffect(() => {
@@ -95,6 +108,22 @@ export default function Home() {
       }
     }
   };
+
+  const generatePlaylist = async () => {
+    if (!inputGoal) {
+      alert("Please enter a book name!");
+      return;
+  }
+
+  const response = await fetch("/api/generate-playlist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bookDescription: inputGoal }), // Use user input
+  });
+
+  const data = await response.json();
+  console.log("Generated Playlist:", data.playlist);
+};
 
   const handleEditGoal = () => {
     setIsEditingGoal(true);
@@ -282,6 +311,54 @@ export default function Home() {
               )}
             </div>
           </div>
+          {/* Spotify Connect Section */}
+          <div className="mt-6">
+            <h2 className="font-bold text-3xl"
+              style={{ color: '#DFDDCE', fontFamily: 'Outfit, sans-serif' }}>
+              Connect to Spotify
+            </h2>
+            
+            {!spotifyToken ? (
+              <button
+                onClick={() => {
+                  window.location.href = `/api/spotify-login`; // Redirects to Spotify login API
+                }}
+                className="mt-2 px-4 py-2 bg-[#3D2F2A] text-[#DFDDCE] rounded-lg font-bold"
+              >
+                Login with Spotify
+              </button>
+            ) : (
+              <p className="text-lg font-bold text-[#3D2F2A] mt-2">Connected to Spotify ✅</p>
+            )}
+          </div>
+          
+          {/* Book Input Form */}
+          <div className="mt-6">
+            <h2 className="font-bold text-3xl"
+              style={{ color: '#DFDDCE', fontFamily: 'Outfit, sans-serif' }}>
+              Generate a Playlist for a Book
+            </h2>
+            
+            <input
+              type="text"
+              placeholder="Enter book name"
+              value={bookInput} // Reuse the same input state for simplicity
+              onChange={(e) => setBookInput(e.target.value)}
+              className="flex-grow p-2 border rounded-lg w-full mt-2"
+              style={{
+                backgroundColor: '#DFDDCE',
+                color: '#3D2F2A',
+              }}
+            />
+            
+            <button
+              onClick={generatePlaylist}
+              className="mt-2 px-4 py-2 bg-[#3D2F2A] text-[#DFDDCE] rounded-lg font-bold"
+            >
+              Generate Playlist
+            </button>
+          </div>
+
 
           {/* Add Friend Section */}
           <div className="flex items-center space-x-2 mt-6">
