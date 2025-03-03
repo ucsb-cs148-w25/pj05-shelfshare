@@ -1,3 +1,5 @@
+// app/profile/page.tsx
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -29,7 +31,7 @@ interface BookItem {
   dateAdded: Timestamp;
   shelfType?: string;
   dateFinished?: Timestamp | null;
-  pgenre?: string;
+  genre?: string; // Changed from pgenre to genre to match your actual data structure
 }
 
 interface GenreData {
@@ -59,6 +61,7 @@ const Profile = () => {
   const [finishedBooksTimeline, setFinishedBooksTimeline] = useState<TimelineData[]>([]);
   const [currentlyReadingTimeline, setCurrentlyReadingTimeline] = useState<TimelineData[]>([]);
   const [activeTab, setActiveTab] = useState('genre');
+  const [booksLoaded, setBooksLoaded] = useState(false);
 
   // COLORS for pie chart
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#8DD1E1', '#A4DE6C', '#D0ED57'];
@@ -97,58 +100,117 @@ const Profile = () => {
   useEffect(() => {
     if (!user) return;
 
+    // Set up a real-time listener for books data
     const fetchBooks = async () => {
       try {
-        // Get currently reading and finished books
-        const shelvesQuery = query(
-          collection(db, "users", user.uid, "shelves"),
-          where("shelfType", "in", ["currently-reading", "finished"])
-        );
+        // First, fetch books from the "shelves" collection
+        const shelvesRef = collection(db, "users", user.uid, "shelves");
         
-        const shelvesSnapshot = await getDocs(shelvesQuery);
-        const booksData = shelvesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          dateAdded: doc.data().dateAdded,
-          dateFinished: doc.data().dateFinished || null
-        })) as BookItem[];
-
-        // Process genre distribution
-        processGenreDistribution(booksData);
+        // Listen for changes to shelves collection
+        const unsubscribe = onSnapshot(shelvesRef, async (snapshot) => {
+          const booksData: BookItem[] = [];
+          
+          // Get book data from each shelf document
+          for (const doc of snapshot.docs) {
+            const shelfData = doc.data();
+            const shelfType = shelfData.shelfType;
+            
+            // Skip shelves that aren't "currently-reading" or "finished"
+            if (shelfType !== "currently-reading" && shelfType !== "finished") continue;
+            
+            // If the document has a bookId, fetch the book details
+            if (shelfData.bookId) {
+              try {
+                // Get the book data from the books collection
+                const bookDoc = await getDocs(
+                  query(collection(db, "books"), where("bookId", "==", shelfData.bookId))
+                );
+                
+                if (!bookDoc.empty) {
+                  const bookData = bookDoc.docs[0].data();
+                  
+                  booksData.push({
+                    id: doc.id,
+                    bookId: shelfData.bookId,
+                    title: bookData.title || "Unknown Title",
+                    author: bookData.author || "Unknown Author",
+                    coverUrl: bookData.coverUrl || "",
+                    // Use book's genre if available, otherwise try to extract from preferred genre
+                    genre: bookData.genre || shelfData.genre || "",
+                    dateAdded: shelfData.dateAdded || Timestamp.now(),
+                    dateFinished: shelfData.dateFinished || null,
+                    shelfType: shelfType
+                  });
+                }
+              } catch (err) {
+                console.error("Error fetching book:", err);
+              }
+            }
+          }
+          
+          // Process the data for charts
+          processGenreDistribution(booksData);
+          processFinishedBooksTimeline(booksData.filter(book => book.shelfType === "finished"));
+          processCurrentlyReadingTimeline(booksData.filter(book => book.shelfType === "currently-reading"));
+          
+          setBooksLoaded(true);
+        });
         
-        // Process timeline data
-        processFinishedBooksTimeline(booksData.filter(book => book.shelfType === "finished"));
-        processCurrentlyReadingTimeline(booksData.filter(book => book.shelfType === "currently-reading"));
+        return unsubscribe;
       } catch (error) {
-        console.error("Error fetching books data:", error);
+        console.error("Error setting up books listener:", error);
+        setBooksLoaded(true); // Set to true even on error to prevent infinite loading
       }
     };
 
-    fetchBooks();
+    // Call the function and store the unsubscribe function
+    const unsubscribeBooks = fetchBooks();
+    
+    // Clean up the listener when component unmounts
+    return () => {
+      unsubscribeBooks.then(unsubscribe => {
+        if (unsubscribe) unsubscribe();
+      });
+    };
   }, [user]);
 
   // Process genre distribution for pie chart
   const processGenreDistribution = (books: BookItem[]) => {
+    if (!books.length) {
+      setGenreDistribution([]);
+      return;
+    }
+    
     const genreCounts: Record<string, number> = {};
 
     books.forEach(book => {
-      // Extract genre from pgenre field or use a default
-      let bookGenres: string[] = [];
+      // Try to get genre from the book's genre field
+      let bookGenre = book.genre || "";
       
-      if (book.pgenre) {
-        // If book has specific genres
-        bookGenres = book.pgenre.split('#').filter(genre => genre.trim() !== '');
-      } else {
-        // Use a default genre if none is specified
-        bookGenres = ['Unspecified'];
+      // If no genre is available, mark as "Unspecified"
+      if (!bookGenre || bookGenre.trim() === '') {
+        genreCounts["Unspecified"] = (genreCounts["Unspecified"] || 0) + 1;
+        return;
       }
-
-      // Count each genre
-      bookGenres.forEach(genre => {
-        if (genre) {
-          genreCounts[genre] = (genreCounts[genre] || 0) + 1;
+      
+      // Handle different genre formats - some might use # as separators
+      if (bookGenre.includes('#')) {
+        // Split the genre string by # and process each genre
+        const genres = bookGenre.split('#').filter(g => g.trim() !== '');
+        
+        if (genres.length === 0) {
+          genreCounts["Unspecified"] = (genreCounts["Unspecified"] || 0) + 1;
+        } else {
+          genres.forEach(genre => {
+            if (genre.trim()) {
+              genreCounts[genre.trim()] = (genreCounts[genre.trim()] || 0) + 1;
+            }
+          });
         }
-      });
+      } else {
+        // If it's a simple string without separators
+        genreCounts[bookGenre.trim()] = (genreCounts[bookGenre.trim()] || 0) + 1;
+      }
     });
 
     // Convert to array format for pie chart
@@ -164,11 +226,17 @@ const Profile = () => {
 
   // Process timeline data for finished books
   const processFinishedBooksTimeline = (books: BookItem[]) => {
+    if (!books.length) {
+      setFinishedBooksTimeline([]);
+      return;
+    }
+    
     const monthlyData: Record<string, number> = {};
-    const weeklyData: Record<string, number> = {};
     
     books.forEach(book => {
+      // Make sure we have a valid dateFinished
       if (book.dateFinished) {
+        // Convert Timestamp to JavaScript Date
         const finishedDate = book.dateFinished instanceof Timestamp 
           ? book.dateFinished.toDate() 
           : new Date(book.dateFinished);
@@ -176,67 +244,68 @@ const Profile = () => {
         // Format for monthly data (YYYY-MM)
         const monthKey = `${finishedDate.getFullYear()}-${String(finishedDate.getMonth() + 1).padStart(2, '0')}`;
         monthlyData[monthKey] = (monthlyData[monthKey] || 0) + 1;
-        
-        // Format for weekly data
-        const weekNumber = getWeekNumber(finishedDate);
-        const weekKey = `${finishedDate.getFullYear()}-W${weekNumber}`;
-        weeklyData[weekKey] = (weeklyData[weekKey] || 0) + 1;
       }
     });
 
-    // Convert monthly data to array and sort chronologically
-    const monthlyTimeline = Object.keys(monthlyData)
-      .map(date => ({ date, count: monthlyData[date] }))
-      .sort((a, b) => a.date.localeCompare(b.date));
+    // Create an array of the last 12 months (for a complete timeline even if no books)
+    const last12Months: string[] = [];
+    const today = new Date();
     
-    // Convert weekly data to array and sort chronologically
-    const weeklyTimeline = Object.keys(weeklyData)
-      .map(date => ({ date, count: weeklyData[date] }))
-      .sort((a, b) => a.date.localeCompare(b.date));
+    for (let i = 0; i < 12; i++) {
+      const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      last12Months.unshift(monthKey); // Add to the beginning so months are in ascending order
+    }
     
-    // Combine data for the chart (using monthly data for now)
+    // Create timeline data with the last 12 months, with 0 counts for months with no data
+    const monthlyTimeline = last12Months.map(monthKey => ({
+      date: monthKey,
+      count: monthlyData[monthKey] || 0
+    }));
+    
     setFinishedBooksTimeline(monthlyTimeline);
   };
 
   // Process timeline data for currently reading books
   const processCurrentlyReadingTimeline = (books: BookItem[]) => {
+    if (!books.length) {
+      setCurrentlyReadingTimeline([]);
+      return;
+    }
+    
     const monthlyData: Record<string, number> = {};
-    const weeklyData: Record<string, number> = {};
     
     books.forEach(book => {
-      const addedDate = book.dateAdded instanceof Timestamp 
-        ? book.dateAdded.toDate() 
-        : new Date(book.dateAdded);
-      
-      // Format for monthly data (YYYY-MM)
-      const monthKey = `${addedDate.getFullYear()}-${String(addedDate.getMonth() + 1).padStart(2, '0')}`;
-      monthlyData[monthKey] = (monthlyData[monthKey] || 0) + 1;
-      
-      // Format for weekly data
-      const weekNumber = getWeekNumber(addedDate);
-      const weekKey = `${addedDate.getFullYear()}-W${weekNumber}`;
-      weeklyData[weekKey] = (weeklyData[weekKey] || 0) + 1;
+      // Make sure we have a valid dateAdded
+      if (book.dateAdded) {
+        // Convert Timestamp to JavaScript Date
+        const addedDate = book.dateAdded instanceof Timestamp 
+          ? book.dateAdded.toDate() 
+          : new Date(book.dateAdded);
+        
+        // Format for monthly data (YYYY-MM)
+        const monthKey = `${addedDate.getFullYear()}-${String(addedDate.getMonth() + 1).padStart(2, '0')}`;
+        monthlyData[monthKey] = (monthlyData[monthKey] || 0) + 1;
+      }
     });
 
-    // Convert monthly data to array and sort chronologically
-    const monthlyTimeline = Object.keys(monthlyData)
-      .map(date => ({ date, count: monthlyData[date] }))
-      .sort((a, b) => a.date.localeCompare(b.date));
+    // Create an array of the last 12 months (for a complete timeline even if no books)
+    const last12Months: string[] = [];
+    const today = new Date();
     
-    // Convert weekly data to array and sort chronologically
-    const weeklyTimeline = Object.keys(weeklyData)
-      .map(date => ({ date, count: weeklyData[date] }))
-      .sort((a, b) => a.date.localeCompare(b.date));
+    for (let i = 0; i < 12; i++) {
+      const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      last12Months.unshift(monthKey); // Add to the beginning so months are in ascending order
+    }
     
-    // Combine data for the chart (using monthly data for now)
+    // Create timeline data with the last 12 months, with 0 counts for months with no data
+    const monthlyTimeline = last12Months.map(monthKey => ({
+      date: monthKey,
+      count: monthlyData[monthKey] || 0
+    }));
+    
     setCurrentlyReadingTimeline(monthlyTimeline);
-  };
-
-  // Helper function to get week number of a date
-  const getWeekNumber = (date: Date) => {
-    const firstDayOfYear = new Date(date.getFullYear(), 0, 1);
-    const pastDaysOfYear = (date.getTime() - firstDayOfYear.getTime()) / 86400000;
-    return Math.ceil((pastDaysOfYear + firstDayOfYear.getDay() + 1) / 7);
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -310,6 +379,12 @@ const Profile = () => {
       );
     }
     return null;
+  };
+
+  // Helper function to format dates for display on x-axis
+  const formatDateForXAxis = (dateStr: string) => {
+    const [year, month] = dateStr.split('-');
+    return `${month}/${year.slice(2)}`;
   };
 
   return (
@@ -472,93 +547,95 @@ const Profile = () => {
               
               {/* Charts */}
               <div className="h-64 md:h-80">
-                {activeTab === 'genre' && (
-                  <div className="h-full">
-                    {genreDistribution.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={genreDistribution}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={true}
-                            label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                            outerRadius={80}
-                            fill="#8884d8"
-                            dataKey="value"
-                          >
-                            {genreDistribution.map((entry, index) => (
-                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip content={<CustomTooltip />} />
-                          <Legend />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-[#3D2F2A]">
-                        No genre data available. Add books to your shelves!
+                {!booksLoaded ? (
+                  <div className="flex items-center justify-center h-full text-[#3D2F2A]">
+                    Loading data...
+                  </div>
+                ) : (
+                  <>
+                    {activeTab === 'genre' && (
+                      <div className="h-full">
+                        {genreDistribution.length > 0 ? (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                              <Pie
+                                data={genreDistribution}
+                                cx="50%"
+                                cy="50%"
+                                labelLine={true}
+                                label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                                outerRadius={80}
+                                fill="#8884d8"
+                                dataKey="value"
+                              >
+                                {genreDistribution.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                ))}
+                              </Pie>
+                              <Tooltip content={<CustomTooltip />} />
+                              <Legend />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <div className="flex items-center justify-center h-full text-[#3D2F2A]">
+                            No genre data available. Add books to your shelves!
+                          </div>
+                        )}
                       </div>
                     )}
-                  </div>
-                )}
-                
-                {activeTab === 'finished' && (
-                  <div className="h-full">
-                    {finishedBooksTimeline.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart
-                          data={finishedBooksTimeline}
-                          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                        >
-                          <XAxis 
-                            dataKey="date" 
-                            tickFormatter={(value) => {
-                              const [year, month] = value.split('-');
-                              return `${month}/${year.slice(2)}`;
-                            }}
-                          />
-                          <YAxis />
-                          <Tooltip content={<TimelineTooltip />} />
-                          <Legend />
-                          <Line type="monotone" dataKey="count" name="Finished Books" stroke="#8884d8" activeDot={{ r: 8 }} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-[#3D2F2A]">
-                        No finished books data available. Mark some books as finished!
+                    
+                    {activeTab === 'finished' && (
+                      <div className="h-full">
+                        {finishedBooksTimeline.length > 0 ? (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart
+                              data={finishedBooksTimeline}
+                              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                            >
+                              <XAxis 
+                                dataKey="date" 
+                                tickFormatter={formatDateForXAxis}
+                              />
+                              <YAxis />
+                              <Tooltip content={<TimelineTooltip />} />
+                              <Legend />
+                              <Line type="monotone" dataKey="count" name="Finished Books" stroke="#8884d8" activeDot={{ r: 8 }} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <div className="flex items-center justify-center h-full text-[#3D2F2A]">
+                            No finished books data available. Mark some books as finished!
+                          </div>
+                        )}
                       </div>
                     )}
-                  </div>
-                )}
-                
-                {activeTab === 'reading' && (
-                  <div className="h-full">
-                    {currentlyReadingTimeline.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart
-                          data={currentlyReadingTimeline}
-                          margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                        >
-                          <XAxis 
-                            dataKey="date" 
-                            tickFormatter={(value) => {
-                              const [year, month] = value.split('-');
-                              return `${month}/${year.slice(2)}`;
-                            }}
-                          />
-                          <YAxis />
-                          <Tooltip content={<TimelineTooltip />} />
-                          <Legend />
-                          <Line type="monotone" dataKey="count" name="Currently Reading" stroke="#82ca9d" activeDot={{ r: 8 }} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-[#3D2F2A]">
-                        No currently reading data available. Add books to your currently reading shelf!
+                    
+                    {activeTab === 'reading' && (
+                      <div className="h-full">
+                        {currentlyReadingTimeline.length > 0 ? (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <LineChart
+                              data={currentlyReadingTimeline}
+                              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                            >
+                              <XAxis 
+                                dataKey="date" 
+                                tickFormatter={formatDateForXAxis}
+                              />
+                              <YAxis />
+                              <Tooltip content={<TimelineTooltip />} />
+                              <Legend />
+                              <Line type="monotone" dataKey="count" name="Currently Reading" stroke="#82ca9d" activeDot={{ r: 8 }} />
+                            </LineChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <div className="flex items-center justify-center h-full text-[#3D2F2A]">
+                            No currently reading data available. Add books to your currently reading shelf!
+                          </div>
+                        )}
                       </div>
                     )}
-                  </div>
+                  </>
                 )}
               </div>
             </div>
