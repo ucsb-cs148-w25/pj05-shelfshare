@@ -29,6 +29,7 @@ interface BookData {
     smallThumbnail?: string;
     medium?: string;
     large?: string;
+    extraLarge?: string;
   };
   publishedDate?: string;
   pageCount?: number;
@@ -286,13 +287,13 @@ export default function BookDetails() {
         await addDoc(collection(db, "books", bookId, "reviews"), reviewData);
         if (!book) return;
 
-        // Get cover image URL from Google Books
-        const coverImageUrl = book.imageLinks?.large ||
+        // Get cover image URL from Google Books - prioritize highest quality
+        const coverImageUrl = book.imageLinks?.extraLarge ||
+                              book.imageLinks?.large ||
                               book.imageLinks?.medium ||
                               book.imageLinks?.thumbnail ||
                               book.imageLinks?.smallThumbnail ||
                               "/placeholder.png";
-
         
         // Prepare book details for notification
         const bookDetails = {
@@ -328,8 +329,11 @@ export default function BookDetails() {
     );
   }
 
-  // Get the appropriate cover image from Google Books
-  const coverImageUrl = book.imageLinks?.thumbnail || 
+  // Get the appropriate cover image from Google Books - prioritize highest quality
+  const coverImageUrl = book.imageLinks?.extraLarge || 
+                        book.imageLinks?.large || 
+                        book.imageLinks?.medium || 
+                        book.imageLinks?.thumbnail || 
                         book.imageLinks?.smallThumbnail || 
                         "/placeholder.png";
 
@@ -339,16 +343,29 @@ export default function BookDetails() {
         <div className="flex flex-col md:flex-row gap-8">
           <div className="flex-shrink-0">
             <div className="w-64 h-96 bg-[#3D2F2A] rounded-lg shadow-lg overflow-hidden flex items-center justify-center">
-              <Image 
-                src={coverImageUrl} 
-                alt={book.title}
-                width={400} // Increased width for better clarity
-                height={600} // Increased height for better clarity
-                quality={100}
-                priority
-                className="object-cover w-full h-full"
-              />
-
+              <div className="relative w-full h-full">
+                <Image 
+                  src={coverImageUrl} 
+                  alt={book.title}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 300px"
+                  quality={100}
+                  priority
+                  className="object-contain book-cover-image"
+                  style={{
+                    boxShadow: '0 10px 20px rgba(0,0,0,0.2)',
+                    transition: 'transform 0.3s ease'
+                  }}
+                  onError={(e) => {
+                    // Fallback if the high-res image fails to load
+                    const target = e.target as HTMLImageElement;
+                    const fallback = book.imageLinks?.thumbnail || "/placeholder.png";
+                    if (target.src !== fallback) {
+                      target.src = fallback;
+                    }
+                  }}
+                />
+              </div>
             </div>
             <div className="mt-4">
               <BookActions 
