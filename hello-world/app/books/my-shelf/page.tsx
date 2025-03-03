@@ -267,29 +267,44 @@ export default function UserLists() {
     });
   }, [defaultShelves, customShelves]);
 
-  // Inside your component, add these style constants
   const leftShadowStyle: React.CSSProperties = {
     position: 'absolute',
-    left: '40px',
+    left: '0px',
     top: '0',
     height: '100%',
-    width: '40px',
-    background: 'linear-gradient(to right, rgba(90, 57, 44, 0.5), rgba(90, 57, 44, 0))',
-    pointerEvents: 'none', // Correctly typed as a valid CSS value
+    width: '120px',
+    background: 'linear-gradient(to right, #3D2F2A, rgba(90, 57, 44, 0))',
+    pointerEvents: 'none', 
     zIndex: 5,
     transition: 'opacity 0.3s ease',
   };
   
   const rightShadowStyle: React.CSSProperties = {
     position: 'absolute',
-    right: '40px',
+    right: '0px', 
+    top: '0',
+    height: '100%',
+    width: '120px',
+    background: 'linear-gradient(to left, #3D2F2A, rgba(90, 57, 44, 0))',
+    pointerEvents: 'none', 
+    zIndex: 5, 
+    transition: 'opacity 0.3s ease',
+  };
+
+  const scrollButtonStyle: React.CSSProperties = {
+    position: 'absolute',
+    right: '0',
     top: '0',
     height: '100%',
     width: '40px',
-    background: 'linear-gradient(to left, rgba(90, 57, 44, 0.5), rgba(90, 57, 44, 0))',
-    pointerEvents: 'none', // Correctly typed as a valid CSS value
-    zIndex: 5,
-    transition: 'opacity 0.3s ease',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#3D2F2A',
+    color: '#FFF',
+    zIndex: 10, // Higher than the shadow
+    cursor: 'pointer',
+    transition: 'background-color 0.3s ease',
   };
 
   const toggleEditMode = (sectionType: string) => {
@@ -669,10 +684,12 @@ export default function UserLists() {
               {maxScrolls[section.type] > 0 && scrollPositions[section.type] < maxScrolls[section.type] - 5 && (
                 <div style={{ ...rightShadowStyle, opacity: scrollPositions[section.type] < maxScrolls[section.type] ? 1 : 0 }}></div>
               )}
-              <button onClick={() => scrollRight(section.type)} className={`absolute right-0 top-0 h-full w-8 flex items-center justify-center bg-custom-brown text-custom-tan z-10 hover:bg-[#2E221E] transition-colors ${!maxScrolls[section.type] || !scrollPositions[section.type] || scrollPositions[section.type] >= maxScrolls[section.type] ? '' : ''}`} style={{ borderLeft: '2px solid #847266' }} disabled={!maxScrolls[section.type] || !scrollPositions[section.type] || scrollPositions[section.type] >= maxScrolls[section.type]}>
+              <button onClick={() => scrollRight(section.type)} style={scrollButtonStyle} 
+                disabled={!maxScrolls[section.type] || !scrollPositions[section.type] || scrollPositions[section.type] >= maxScrolls[section.type]}
+              >
                 &gt;
               </button>
-              <div id={`scroll-container-${section.type}`} className="relative bottom-1 left-3 flex space-x-5 overflow-x-auto no-scrollbar" style={{ width: 'calc(100% - 85px)', marginLeft: '32px', marginRight: '32px' }}>
+              <div id={`scroll-container-${section.type}`} className="relative bottom-1 flex space-x-5 overflow-x-auto no-scrollbar" style={{ width: 'calc(100% - 16px)', marginLeft: '8px', marginRight: '8px', paddingRight: '40px', paddingLeft: '40px' }}>
                 {section.books.length > 0 ? (
                   section.books.map((book) => (
                     <div key={`${section.type}-${book.id}`} className="flex-shrink-0 cursor-pointer relative group mt-4" draggable={true} onDragStart={(e) => handleDragStart(book, e, section.isCustom, section.id)} onDragEnd={handleDragEnd} onClick={() => !editModes[section.type] && router.push(`/books/${book.bookId}`)}>
