@@ -26,6 +26,7 @@ interface BookData {
   covers?: number[];
   authors?: string[];
   rating?: number;
+  genres?: string[]; // Adding genres
 }
 
 interface Review {
@@ -70,7 +71,14 @@ export default function BookDetails() {
   const { bookId } = useParams<{ bookId: string }>();
   const { user } = useAuth();
 
-  const [book, setBook] = useState<BookData | null>(null);
+  const [book, setBook] = useState<BookData | null>({
+    title: '',
+    description: '',
+    covers: [],
+    authors: [],
+    rating: 0,
+    genres: [] // Initialize with empty array
+  });
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -367,6 +375,7 @@ export default function BookDetails() {
                 title={book.title}
                 author={book.authors?.[0] || "Unknown Author"}
                 coverUrl={coverImageUrl}
+                genres={book.genres} // Adding genres
               />
             </div>
           </div>

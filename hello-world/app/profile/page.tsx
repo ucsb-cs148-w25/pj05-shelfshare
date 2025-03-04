@@ -97,9 +97,6 @@ const Profile = () => {
   }, [user, router]);
 
 
-
-  
-    
   // Fetch books data for charts
   useEffect(() => {
     if (!user) return;
@@ -136,8 +133,14 @@ const Profile = () => {
 
           // Process data for charts
           processGenreDistribution(booksData);
-          processFinishedBooksTimeline(booksData.filter(book => book.shelfType === "finished"));
-          processCurrentlyReadingTimeline(booksData.filter(book => book.shelfType === "currently-reading"));
+          setFinishedBooksTimeline(processTimelineData(
+            booksData.filter(book => book.shelfType === "finished"), 
+            true
+          ));
+          setCurrentlyReadingTimeline(processTimelineData(
+            booksData.filter(book => book.shelfType === "currently-reading"), 
+            false
+          ));
           
           setBooksLoaded(true);
         });
@@ -159,14 +162,7 @@ const Profile = () => {
   }, [user]);
 
 
-
-
-
-
-
-
-
-  // Process genre distribution for pie chart
+  // Process genre distribution for pie chart ####################
   const processGenreDistribution = (books: BookItem[]) => {
     if (!books.length) {
       setGenreDistribution([]);
@@ -187,130 +183,58 @@ const Profile = () => {
       }
     });
 
-    books.forEach(book => {
-      // Try to get genre from the book's genre field
-      let bookGenre = book.genre || "";
-      
-      // If no genre is available, mark as "Unspecified"
-      if (!bookGenre || bookGenre.trim() === '') {
-        genreCounts["Unspecified"] = (genreCounts["Unspecified"] || 0) + 1;
-        return;
-      }
-      
-      // Handle different genre formats - some might use # as separators
-      if (bookGenre.includes('#')) {
-        // Split the genre string by # and process each genre
-        const genres = bookGenre.split('#').filter(g => g.trim() !== '');
-        
-        if (genres.length === 0) {
-          genreCounts["Unspecified"] = (genreCounts["Unspecified"] || 0) + 1;
-        } else {
-          genres.forEach(genre => {
-            if (genre.trim()) {
-              genreCounts[genre.trim()] = (genreCounts[genre.trim()] || 0) + 1;
-            }
-          });
-        }
-      } else {
-        // If it's a simple string without separators
-        genreCounts[bookGenre.trim()] = (genreCounts[bookGenre.trim()] || 0) + 1;
-      }
-    });
-
-    // Convert to array format for pie chart
     const genreData: GenreData[] = Object.keys(genreCounts).map(genre => ({
       name: genre,
       value: genreCounts[genre]
     }));
 
-    // Sort by count (descending) and limit to top 10 genres
     genreData.sort((a, b) => b.value - a.value);
     setGenreDistribution(genreData.slice(0, 10));
   };
 
-  // Process timeline data for finished books
-  const processFinishedBooksTimeline = (books: BookItem[]) => {
-    if (!books.length) {
-      setFinishedBooksTimeline([]);
-      return;
+  // New helper function for weekly timeline processing
+  const getWeekNumber = (d: Date) => {
+    const date = new Date(d);
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() + 4 - (date.getDay() || 7));
+    const yearStart = new Date(date.getFullYear(), 0, 1);
+    return Math.ceil(((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  };
+
+
+  const processTimelineData = (books: BookItem[], isFinished: boolean) => {
+    const weeklyData: Record<string, number> = {};
+    const today = new Date();
+    const weeksToShow = 12;
+
+    // Create weekly buckets for the last 12 weeks
+    const weekKeys: string[] = [];
+    for (let i = weeksToShow - 1; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - (7 * i));
+      const weekNumber = getWeekNumber(date);
+      weekKeys.push(`${date.getFullYear()}-W${weekNumber.toString().padStart(2, '0')}`);
     }
-    
-    const monthlyData: Record<string, number> = {};
-    
+
     books.forEach(book => {
-      // Make sure we have a valid dateFinished
-      if (book.dateFinished) {
-        // Convert Timestamp to JavaScript Date
-        const finishedDate = book.dateFinished instanceof Timestamp 
-          ? book.dateFinished.toDate() 
-          : new Date(book.dateFinished);
-        
-        // Format for monthly data (YYYY-MM)
-        const monthKey = `${finishedDate.getFullYear()}-${String(finishedDate.getMonth() + 1).padStart(2, '0')}`;
-        monthlyData[monthKey] = (monthlyData[monthKey] || 0) + 1;
+      const date = isFinished && book.dateFinished ? 
+        (book.dateFinished instanceof Timestamp ? book.dateFinished.toDate() : new Date(book.dateFinished)) :
+        (book.dateAdded instanceof Timestamp ? book.dateAdded.toDate() : new Date(book.dateAdded));
+      
+      const weekNumber = getWeekNumber(date);
+      const weekKey = `${date.getFullYear()}-W${weekNumber.toString().padStart(2, '0')}`;
+      
+      if (weekKeys.includes(weekKey)) {
+        weeklyData[weekKey] = (weeklyData[weekKey] || 0) + 1;
       }
     });
 
-    // Create an array of the last 12 months (for a complete timeline even if no books)
-    const last12Months: string[] = [];
-    const today = new Date();
-    
-    for (let i = 0; i < 12; i++) {
-      const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      last12Months.unshift(monthKey); // Add to the beginning so months are in ascending order
-    }
-    
-    // Create timeline data with the last 12 months, with 0 counts for months with no data
-    const monthlyTimeline = last12Months.map(monthKey => ({
-      date: monthKey,
-      count: monthlyData[monthKey] || 0
+    return weekKeys.map(weekKey => ({
+      date: weekKey,
+      count: weeklyData[weekKey] || 0
     }));
-    
-    setFinishedBooksTimeline(monthlyTimeline);
   };
 
-  // Process timeline data for currently reading books
-  const processCurrentlyReadingTimeline = (books: BookItem[]) => {
-    if (!books.length) {
-      setCurrentlyReadingTimeline([]);
-      return;
-    }
-    
-    const monthlyData: Record<string, number> = {};
-    
-    books.forEach(book => {
-      // Make sure we have a valid dateAdded
-      if (book.dateAdded) {
-        // Convert Timestamp to JavaScript Date
-        const addedDate = book.dateAdded instanceof Timestamp 
-          ? book.dateAdded.toDate() 
-          : new Date(book.dateAdded);
-        
-        // Format for monthly data (YYYY-MM)
-        const monthKey = `${addedDate.getFullYear()}-${String(addedDate.getMonth() + 1).padStart(2, '0')}`;
-        monthlyData[monthKey] = (monthlyData[monthKey] || 0) + 1;
-      }
-    });
-
-    // Create an array of the last 12 months (for a complete timeline even if no books)
-    const last12Months: string[] = [];
-    const today = new Date();
-    
-    for (let i = 0; i < 12; i++) {
-      const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
-      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-      last12Months.unshift(monthKey); // Add to the beginning so months are in ascending order
-    }
-    
-    // Create timeline data with the last 12 months, with 0 counts for months with no data
-    const monthlyTimeline = last12Months.map(monthKey => ({
-      date: monthKey,
-      count: monthlyData[monthKey] || 0
-    }));
-    
-    setCurrentlyReadingTimeline(monthlyTimeline);
-  };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -592,18 +516,32 @@ const Profile = () => {
                       <div className="h-full">
                         {finishedBooksTimeline.length > 0 ? (
                           <ResponsiveContainer width="100%" height="100%">
-                            <LineChart
-                              data={finishedBooksTimeline}
-                              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                            >
+                            <LineChart data={finishedBooksTimeline}>
                               <XAxis 
                                 dataKey="date" 
                                 tickFormatter={formatDateForXAxis}
+                                label={{ 
+                                  value: 'Week', 
+                                  position: 'bottom', 
+                                  offset: 0 
+                                }}
                               />
-                              <YAxis />
+                              <YAxis 
+                                label={{ 
+                                  value: 'Books Added', 
+                                  angle: -90, 
+                                  position: 'insideLeft' 
+                                }}
+                              />
                               <Tooltip content={<TimelineTooltip />} />
                               <Legend />
-                              <Line type="monotone" dataKey="count" name="Finished Books" stroke="#8884d8" activeDot={{ r: 8 }} />
+                              <Line 
+                                type="monotone" 
+                                dataKey="count" 
+                                name="Finished Books" 
+                                stroke="#8884d8" 
+                                activeDot={{ r: 8 }}
+                              />
                             </LineChart>
                           </ResponsiveContainer>
                         ) : (
@@ -618,18 +556,32 @@ const Profile = () => {
                       <div className="h-full">
                         {currentlyReadingTimeline.length > 0 ? (
                           <ResponsiveContainer width="100%" height="100%">
-                            <LineChart
-                              data={currentlyReadingTimeline}
-                              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-                            >
+                            <LineChart data={currentlyReadingTimeline}>
                               <XAxis 
                                 dataKey="date" 
                                 tickFormatter={formatDateForXAxis}
+                                label={{ 
+                                  value: 'Week', 
+                                  position: 'bottom', 
+                                  offset: 0 
+                                }}
                               />
-                              <YAxis />
+                              <YAxis 
+                                label={{ 
+                                  value: 'Books Added', 
+                                  angle: -90, 
+                                  position: 'insideLeft' 
+                                }}
+                              />
                               <Tooltip content={<TimelineTooltip />} />
                               <Legend />
-                              <Line type="monotone" dataKey="count" name="Currently Reading" stroke="#82ca9d" activeDot={{ r: 8 }} />
+                              <Line  
+                                type="monotone" 
+                                dataKey="count" 
+                                name="Currently Reading" 
+                                stroke="#82ca9d" 
+                                activeDot={{ r: 8 }} 
+                              />
                             </LineChart>
                           </ResponsiveContainer>
                         ) : (

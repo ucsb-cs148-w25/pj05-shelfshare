@@ -9,6 +9,7 @@ interface BookActionsProps {
   title: string;
   author: string;
   coverUrl: string;
+  genres?: string[]; // Adding genres as a prop
   onDelete?: () => void; // Optional callback for delete operation
   showDeleteOnly?: boolean; // Optional prop to show only delete button
 }
