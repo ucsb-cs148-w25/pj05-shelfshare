@@ -108,6 +108,12 @@ export default function BookDetails() {
         if (!res.ok) throw new Error("Failed to fetch book details.");
         const data = await res.json();
 
+        // Extract genres from Open Library subjects #############
+        const genres = data.subjects?.map((subject: string) => 
+          typeof subject === 'string' ? subject.split(' -- ')[0] : 'Unknown'
+        ) || [];
+
+
         const ratingRes = await fetch(`https://openlibrary.org/works/${bookId}/ratings.json`);
         let rating = 0;
         if (ratingRes.ok) {
@@ -133,6 +139,7 @@ export default function BookDetails() {
           description: cleanDescription,
           rating,
           authors,
+          genres,
         });
       } catch (err: unknown) {
         if (err instanceof Error) {

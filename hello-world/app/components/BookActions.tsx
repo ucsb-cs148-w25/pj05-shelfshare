@@ -25,6 +25,32 @@ const BookActions = ({
   const [isFavorite, setIsFavorite] = useState(false);
   const [customShelves, setCustomShelves] = useState<{id: string, name: string}[]>([]);
   const { user } = useAuth();
+  const [genres, setGenres] = useState<string[]>([]);
+
+
+  // Fetch book genres from Open Library when component mounts
+  useEffect(() => {
+    const fetchGenres = async () => {
+      try {
+        const response = await fetch(`https://openlibrary.org/works/${bookId}.json`);
+        const data = await response.json();
+        
+        // Extract genres from subjects (first 3 subjects)
+        const subjects = data.subjects || [];
+        const extractedGenres = subjects
+          .filter((s: string) => typeof s === 'string')
+          .map((s: string) => s.split(' -- ')[0]) // Take main category before '--'
+          .slice(0, 3); // Limit to 3 genres
+        
+        setGenres(extractedGenres);
+      } catch (error) {
+        console.error("Error fetching genres:", error);
+        setGenres([]);
+      }
+    };
+
+    fetchGenres();
+  }, [bookId]);
 
   useEffect(() => {
     const checkFavoriteStatus = async () => {
@@ -131,6 +157,7 @@ const BookActions = ({
         author,
         coverUrl,
         shelfType,
+        genre: genres.join('#'), // Store genres as #-separated string
         dateAdded: new Date(),
         dateFinished: shelfType === 'finished' ? new Date() : null, // Store the finish date if applicable
       });
@@ -167,6 +194,7 @@ const BookActions = ({
           author,
           coverUrl,
           shelfId,
+          genre: genres.join('#'), // Add genres to custom shelves
           dateAdded: new Date()
         });
       }
