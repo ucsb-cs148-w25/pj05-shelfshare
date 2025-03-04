@@ -375,7 +375,7 @@ export default function BookDetails() {
                 title={book.title}
                 author={book.authors?.[0] || "Unknown Author"}
                 coverUrl={coverImageUrl}
-                genres={book.genres} // Adding genres
+                genres={book.genres || []} // Ensure this line exists and passes genres
               />
             </div>
           </div>

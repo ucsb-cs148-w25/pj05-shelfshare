@@ -158,7 +158,7 @@ const BookActions = ({
         author,
         coverUrl,
         shelfType,
-        genre: genres.join('#'), // Store genres as #-separated string
+        genre: (genres || []).join('#') || 'Unspecified', // Store genres as #-separated string
         dateAdded: new Date(),
         dateFinished: shelfType === 'finished' ? new Date() : null, // Store the finish date if applicable
       });
