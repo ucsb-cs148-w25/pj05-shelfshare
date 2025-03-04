@@ -96,6 +96,16 @@ const Profile = () => {
     return () => unsubscribe();
   }, [user, router]);
 
+
+
+
+
+
+
+
+
+
+    
   // Fetch books data for charts
   useEffect(() => {
     if (!user) return;
@@ -103,52 +113,34 @@ const Profile = () => {
     // Set up a real-time listener for books data
     const fetchBooks = async () => {
       try {
-        // First, fetch books from the "shelves" collection
         const shelvesRef = collection(db, "users", user.uid, "shelves");
         
         // Listen for changes to shelves collection
-        const unsubscribe = onSnapshot(shelvesRef, async (snapshot) => {
+        const unsubscribe = onSnapshot(shelvesRef, (snapshot) => {
           const booksData: BookItem[] = [];
           
-          // Get book data from each shelf document
-          for (const doc of snapshot.docs) {
+          // Process each shelf document
+          snapshot.docs.forEach((doc) => {
             const shelfData = doc.data();
             const shelfType = shelfData.shelfType;
             
-            // Skip shelves that aren't "currently-reading" or "finished"
-            if (shelfType !== "currently-reading" && shelfType !== "finished") continue;
+            // Only include 'currently-reading' and 'finished' shelves
+            if (shelfType !== "currently-reading" && shelfType !== "finished") return;
             
-            // If the document has a bookId, fetch the book details
-            if (shelfData.bookId) {
-              try {
-                // Get the book data from the books collection
-                const bookDoc = await getDocs(
-                  query(collection(db, "books"), where("bookId", "==", shelfData.bookId))
-                );
-                
-                if (!bookDoc.empty) {
-                  const bookData = bookDoc.docs[0].data();
-                  
-                  booksData.push({
-                    id: doc.id,
-                    bookId: shelfData.bookId,
-                    title: bookData.title || "Unknown Title",
-                    author: bookData.author || "Unknown Author",
-                    coverUrl: bookData.coverUrl || "",
-                    // Use book's genre if available, otherwise try to extract from preferred genre
-                    genre: bookData.genre || shelfData.genre || "",
-                    dateAdded: shelfData.dateAdded || Timestamp.now(),
-                    dateFinished: shelfData.dateFinished || null,
-                    shelfType: shelfType
-                  });
-                }
-              } catch (err) {
-                console.error("Error fetching book:", err);
-              }
-            }
-          }
-          
-          // Process the data for charts
+            booksData.push({
+              id: doc.id,
+              bookId: shelfData.bookId,
+              title: shelfData.title || "Unknown Title",
+              author: shelfData.author || "Unknown Author",
+              coverUrl: shelfData.coverUrl || "",
+              genre: shelfData.genre || "", // Use shelfData's genre if available
+              dateAdded: shelfData.dateAdded || Timestamp.now(),
+              dateFinished: shelfData.dateFinished || null,
+              shelfType: shelfType
+            });
+          });
+
+          // Process data for charts
           processGenreDistribution(booksData);
           processFinishedBooksTimeline(booksData.filter(book => book.shelfType === "finished"));
           processCurrentlyReadingTimeline(booksData.filter(book => book.shelfType === "currently-reading"));
@@ -159,20 +151,22 @@ const Profile = () => {
         return unsubscribe;
       } catch (error) {
         console.error("Error setting up books listener:", error);
-        setBooksLoaded(true); // Set to true even on error to prevent infinite loading
+        setBooksLoaded(true);
       }
     };
 
-    // Call the function and store the unsubscribe function
     const unsubscribeBooks = fetchBooks();
     
-    // Clean up the listener when component unmounts
     return () => {
       unsubscribeBooks.then(unsubscribe => {
         if (unsubscribe) unsubscribe();
       });
     };
   }, [user]);
+
+
+
+
 
   // Process genre distribution for pie chart
   const processGenreDistribution = (books: BookItem[]) => {
