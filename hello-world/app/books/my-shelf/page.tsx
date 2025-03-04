@@ -269,10 +269,10 @@ export default function UserLists() {
 
   const leftShadowStyle: React.CSSProperties = {
     position: 'absolute',
-    left: '0px',
+    left: '30px',
     top: '0',
     height: '100%',
-    width: '120px',
+    width: '40px',
     background: 'linear-gradient(to right, #3D2F2A, rgba(90, 57, 44, 0))',
     pointerEvents: 'none', 
     zIndex: 5,
@@ -281,10 +281,10 @@ export default function UserLists() {
   
   const rightShadowStyle: React.CSSProperties = {
     position: 'absolute',
-    right: '0px', 
+    right: '35px', 
     top: '0',
     height: '100%',
-    width: '120px',
+    width: '40px',
     background: 'linear-gradient(to left, #3D2F2A, rgba(90, 57, 44, 0))',
     pointerEvents: 'none', 
     zIndex: 5, 
