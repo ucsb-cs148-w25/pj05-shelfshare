@@ -10,6 +10,7 @@ import Image from 'next/image';
 import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, doc, getDocs, writeBatch, FieldValue } from "firebase/firestore";
 import { useParams } from 'next/navigation';
 import BookActions from '@/app/components/BookActions';
+import FriendActivity from '@/app/components/FriendActivity';
 
 interface ProfileItem {
   email: string;
@@ -389,6 +390,9 @@ export default function BookDetails() {
               </p>
             </div>
 
+            {/* Friend Activity Section */}
+            {user && <FriendActivity bookId={bookId as string} />}
+
             <div className="mt-8">
               <h2 className="text-2xl font-semibold text-[#DFDDCE] mb-4">Leave A Review:</h2>
               <form onSubmit={handleSubmitReview} className="space-y-4">
@@ -455,5 +459,3 @@ export default function BookDetails() {
     </div>
   );
 }
-
-
