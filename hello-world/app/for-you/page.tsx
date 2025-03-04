@@ -111,7 +111,7 @@ export default function ForYou() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-[#5A7463] font-['Outfit', sans-serif]">
+    <div className="min-h-screen bg-custom-green font-['Outfit', sans-serif]">
       <Section title="Read Next" books={recommendations.readNext.slice(0, 10)} />
       <Section title="Try Something New" books={recommendations.youMayLike.slice(0, 10)} />
       <Section title="Top books of the Year" books={recommendations.topBooks.slice(0, 2)} />
@@ -175,19 +175,19 @@ function Section({ title, books }: SectionProps) {
         >
           {/* Background Bar for Scroll Buttons */}
           <div
-            className="absolute left-0 top-0 h-full w-8 bg-[#3D2F2A] z-0"
+            className="absolute left-0 top-0 h-full w-8 bg-custom-brown z-0"
             style={{ borderRight: '2px solid #847266' }}
           />
           <div
-            className="absolute right-0 top-0 h-full w-8 bg-[#3D2F2A] z-0"
+            className="absolute right-0 top-0 h-full w-8 bg-custom-brown z-0"
             style={{ borderLeft: '2px solid #847266' }}
           />
 
           {/* Scroll Buttons */}
           <button
             onClick={scrollLeft}
-            className={`absolute left-0 top-0 h-full w-8 flex items-center justify-center bg-[#3D2F2A] text-white z-10 hover:bg-[#2E221E] transition-colors ${
-              scrollPosition <= 0 ? 'opacity-50 cursor-not-allowed' : ''
+            className={`absolute left-0 top-0 h-full w-8 flex items-center justify-center bg-custom-brown text-white z-10 hover:bg-[#2E221E] transition-colors ${
+              scrollPosition <= 0 ? '' : ''
             }`}
             style={{ borderRight: '2px solid #847266' }}
             disabled={scrollPosition <= 0}
@@ -197,8 +197,8 @@ function Section({ title, books }: SectionProps) {
 
           <button
             onClick={scrollRight}
-            className={`absolute right-0 top-0 h-full w-8 flex items-center justify-center bg-[#3D2F2A] text-white z-10 hover:bg-[#2E221E] transition-colors ${
-              scrollPosition >= maxScroll ? 'opacity-50 cursor-not-allowed' : ''
+            className={`absolute right-0 top-0 h-full w-8 flex items-center justify-center bg-custom-brown text-white z-10 hover:bg-[#2E221E] transition-colors ${
+              scrollPosition >= maxScroll ? '' : ''
             }`}
             style={{ borderLeft: '2px solid #847266' }}
             disabled={scrollPosition >= maxScroll}
@@ -216,7 +216,7 @@ function Section({ title, books }: SectionProps) {
               books.map((book, index) => (
                 <div
                   key={index}
-                  className="bg-[#3D2F2A] w-[150px] h-[250px] rounded-lg flex items-center justify-center text-white text-sm p-2 relative flex-shrink-0"
+                  className="bg-custom-brown w-[150px] h-[250px] rounded-lg flex items-center justify-center text-white text-sm p-2 relative flex-shrink-0"
                   style={{ 
                     backgroundImage: `url(${book.coverUrl})`, 
                     backgroundSize: 'cover', 
