@@ -46,8 +46,6 @@ const Profile_Screen: React.FC<{ friendUid: string }> = ({ friendUid }) => {
   const formatGenres = () => {
     if (Array.isArray(friendData.genres) && friendData.genres.length > 0) {
       return friendData.genres.join(", ");
-    } else if (friendData.pgenre) {
-      return friendData.pgenre;
     }
     return "No genres specified";
   };

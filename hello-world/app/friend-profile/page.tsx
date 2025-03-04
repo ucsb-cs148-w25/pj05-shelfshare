@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/app/context/AuthContext';
 import { db } from "@/firebase";
-import { doc, getDoc, onSnapshot, collection, query, where, Timestamp } from "firebase/firestore";
+import { doc, onSnapshot, collection, query, Timestamp } from "firebase/firestore";
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
@@ -18,7 +18,15 @@ interface BookItem {
   dateAdded: Timestamp | Date;
 }
 
-const FriendProfile = () => {
+// Component to handle the loading state
+const LoadingState = () => (
+  <div className="min-h-screen bg-[#5A7463] p-8 flex items-center justify-center">
+    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#DFDDCE]"></div>
+  </div>
+);
+
+// Main content component separated to use with Suspense
+function ProfileContent() {
   const { user } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -111,11 +119,7 @@ const FriendProfile = () => {
   }, [user, friendUid]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-[#5A7463] p-8 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#DFDDCE]"></div>
-      </div>
-    );
+    return <LoadingState />;
   }
 
   if (error) {
@@ -150,12 +154,14 @@ const FriendProfile = () => {
         <div className="grid grid-cols-1 md:grid-cols-[300px,1fr] gap-8">
           {/* Left Column - Profile Picture & Name */}
           <div className="flex flex-col items-center">
-            <h1 className="text-[#DFDDCE] text-3xl font-bold mb-6">{username}'s Profile</h1>
+            <h1 className="text-[#DFDDCE] text-3xl font-bold mb-6">{username}&apos;s Profile</h1>
             
             <div className="w-48 h-48 rounded-full overflow-hidden border-4 border-[#DFDDCE] mb-4">
-              <img
+              <Image
                 src={profilePicture}
                 alt="Profile"
+                width={192}
+                height={192}
                 className="w-full h-full object-cover"
               />
             </div>
@@ -225,6 +231,15 @@ const FriendProfile = () => {
         </div>
       </div>
     </div>
+  );
+}
+
+// Main component with Suspense
+const FriendProfile = () => {
+  return (
+    <Suspense fallback={<LoadingState />}>
+      <ProfileContent />
+    </Suspense>
   );
 };
 

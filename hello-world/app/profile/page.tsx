@@ -2,12 +2,14 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { useAuth } from '@/app/context/AuthContext';
 import { db } from "@/firebase";
 import { onSnapshot, updateDoc, doc, getDoc, setDoc } from "firebase/firestore";
 import { Upload, Pencil, Check, X, Plus } from "lucide-react";
 
-interface ProfileItem {
+// Keep the interface but mark it as exported to avoid unused warning
+export interface ProfileItem {
   email: string;
   aboutMe: string;
   genres?: string[];
@@ -30,7 +32,7 @@ const Profile = () => {
   const [aboutMe, setAboutMe] = useState("Write about yourself!");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [changeProfile, setChangeProfile] = useState<File | null>(null);
+  // Removed unused state variables: changeProfile, setChangeProfile
   const nameInputRef = useRef<HTMLInputElement>(null);
   const genreInputRef = useRef<HTMLInputElement>(null);
 
@@ -59,7 +61,7 @@ const Profile = () => {
           });
           console.log("Created new profile document");
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.error("Error checking profile:", err);
         setError("Failed to load profile");
       }
@@ -93,7 +95,7 @@ const Profile = () => {
           }
         }
       },
-      (err) => {
+      (err: unknown) => {
         console.error("Error in profile snapshot listener:", err);
         setError("Failed to sync profile changes");
       }
@@ -117,7 +119,7 @@ const Profile = () => {
 
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file || !user) return; // Add user null check here
     
     // Validate file size (limit to 500KB to avoid Firestore document size limits)
     if (file.size > 500 * 1024) {
@@ -146,15 +148,19 @@ const Profile = () => {
       console.log("Profile image updated in Firestore");
       
       // Image is already displayed from local preview
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Error updating profile picture:", err);
-      setError(`Failed to upload image: ${err.message}`);
+      // Type check err before accessing message property
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+      setError(`Failed to upload image: ${errorMessage}`);
       
       // Revert to previous picture on error
-      const userDocRef = doc(db, "profile", user.uid);
-      const snapshot = await getDoc(userDocRef);
-      if (snapshot.exists()) {
-        setProfilePicture(snapshot.data().profilePicUrl || "https://via.placeholder.com/150");
+      if (user) { // Add null check here
+        const userDocRef = doc(db, "profile", user.uid);
+        const snapshot = await getDoc(userDocRef);
+        if (snapshot.exists()) {
+          setProfilePicture(snapshot.data().profilePicUrl || "https://via.placeholder.com/150");
+        }
       }
     } finally {
       setLoading(false);
@@ -172,9 +178,8 @@ const Profile = () => {
     });
   };
 
-  // No longer needed as handleFileChange now handles the upload automatically
-
-  const updateProfile = async (field: string, value: any) => {
+  // Fixed the any type issue
+  const updateProfile = async (field: string, value: string | string[]) => {
     if (!user) return;
     setLoading(true);
     setError("");
@@ -188,7 +193,7 @@ const Profile = () => {
       });
       
       console.log(`Successfully updated ${field}`);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error(`Error updating ${field}:`, err);
       setError(`Failed to update ${field}`);
     } finally {
@@ -214,7 +219,7 @@ const Profile = () => {
       
       setNewGenre("");
       setIsAddingGenre(false);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Error adding genre:", err);
       setError("Failed to add genre");
     } finally {
@@ -233,7 +238,7 @@ const Profile = () => {
       
       await updateProfile('genres', updatedGenres);
       // Local state is updated through the Firestore listener
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("Error removing genre:", err);
       setError("Failed to remove genre");
     } finally {
@@ -269,10 +274,14 @@ const Profile = () => {
             <h1 className="text-[#DFDDCE] text-4xl font-bold mb-8">Profile</h1>
             
             <div className="w-64 h-64 rounded-full overflow-hidden border-4 border-[#DFDDCE] mb-4 relative">
-              <img
+              {/* Replaced img with Next.js Image component */}
+              <Image
                 src={profilePicture}
                 alt="Profile"
-                className="w-full h-full object-cover"
+                className="object-cover"
+                fill
+                sizes="(max-width: 768px) 100vw, 256px"
+                priority
               />
               {loading && (
                 <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
