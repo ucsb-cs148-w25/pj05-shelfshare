@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/context/AuthContext';
 import { db } from "@/firebase";
 import { onSnapshot, updateDoc, doc } from "firebase/firestore";
+import { collection, deleteDoc, getDocs, query, orderBy, limit } from "firebase/firestore";
 import { Upload, Pencil } from "lucide-react";
 import dotenv from "dotenv";
 
@@ -34,6 +35,8 @@ const Profile = () => {
   const [changeProfile, setChangeProfile] = useState<File | null>(null);
   const [preferredGenre, setPreferredGenre] = useState("#fantasy#romance#mystery");
   const [aboutMe, setAboutMe] = useState("Write about yourself!");
+
+  const [deleteAccount, setDeleteAccount] = useState(false);
 
   // Redirect to login page if user is not authenticated
   useEffect(() => {
@@ -111,6 +114,76 @@ const Profile = () => {
     await updateDoc(userDocRef, {
       [field]: value
     });
+  };
+
+// ✅ Delete all subcollections first, then delete the user document
+const deleteUserAndSubcollections = async (uid) => {
+  const userRef = doc(db, "users", uid);
+
+  try {
+    // Step 1: List all subcollections
+    const subcollections = await getDocs(collection(db, `users/${uid}`));
+
+    // Step 2: Delete all documents inside each subcollection
+    for (const subcollection of subcollections.docs) {
+      await deleteCollection(`users/${uid}/${subcollection.id}`, 10);
+    }
+
+    // Step 3: Delete the user document itself
+    await deleteDoc(userRef);
+    console.log(`User document (${uid}) and all subcollections deleted successfully.`);
+  } catch (error) {
+    console.error("Error deleting user and subcollections:", error);
+  }
+};
+
+// ✅ Batch Delete Helper Function
+const deleteCollection = async (collectionPath, batchSize) => {
+  const collectionRef = collection(db, collectionPath);
+  const q = query(collectionRef, orderBy("__name__"), limit(batchSize));
+
+  return new Promise((resolve, reject) => {
+    deleteQueryBatch(q, resolve).catch(reject);
+  });
+};
+
+// ✅ Recursively delete in batches
+const deleteQueryBatch = async (query, resolve) => {
+  const snapshot = await getDocs(query);
+  const batchSize = snapshot.size;
+
+  if (batchSize === 0) {
+    resolve();
+    return;
+  }
+
+  const batch = db.batch();
+  snapshot.docs.forEach((doc) => batch.delete(doc.ref));
+
+  await batch.commit();
+
+  // 🔥 Fix: Use setTimeout instead of process.nextTick()
+  setTimeout(() => deleteQueryBatch(query, resolve), 0);
+};
+
+// ✅ Delete user and subcollections in the correct order
+const deleteUser = async (uid: string) => {
+  await deleteUserAndSubcollections(uid); // Delete subcollections first
+  await deleteDoc(doc(db, "profile", uid)); // Then delete user document
+  console.log(`User ${uid} and all subcollections deleted.`);
+};
+
+  
+
+  if (deleteAccount) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-[300px_1fr] gap-8">
+          <div className="max-w-6xl mx-auto">
+            <button onClick={() => setDeleteAccount(false)}> x </button>
+          </div>
+          <button onClick={() => deleteUser(user.uid)}>Delete </button>
+      </div>
+    );
   };
 
   return (
@@ -241,6 +314,13 @@ const Profile = () => {
                 <p className="text-[#3D2F2A] text-lg">{aboutMe}</p>
               )}
             </div>
+
+             {/* Advance account setting, delete account*/}
+             <div className="px-4 py-2 bg-[#5A7463] text-[#DFDDCE] flex justify-end">
+                <button className="px-4 py-1 bg-[#3D2F2A] text-[#DFDDCE] rounded"
+                        onClick={() => setDeleteAccount(true)}>Delete Account</button>
+              </div>
+          </div>
           </div>
         </div>
       </div>
