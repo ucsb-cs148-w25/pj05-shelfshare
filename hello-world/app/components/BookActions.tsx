@@ -159,7 +159,7 @@ const BookActions = ({
         author,
         coverUrl,
         shelfType,
-        genre: (genres || []).join('#') || 'Unspecified', // Use props.genres
+        genre: (genres || []).slice(0, 2).join('#') || 'Unspecified', // Use props.genres
         dateAdded: new Date(),
         dateFinished: shelfType === 'finished' ? new Date() : null, // Store the finish date if applicable
       });
@@ -196,7 +196,7 @@ const BookActions = ({
           author,
           coverUrl,
           shelfId,
-          genre: (genres || []).join('#') || 'Unspecified', // Use genres prop
+          genre: (genres || []).slice(0, 2).join('#') || 'Unspecified', // Use genres prop
           dateAdded: new Date()
         });
       }
