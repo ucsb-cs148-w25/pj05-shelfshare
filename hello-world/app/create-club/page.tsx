@@ -5,14 +5,26 @@ import React, { useState } from 'react';
 import { db, storage } from '@/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import { useAuth } from '@/app/context/AuthContext'; // Import useAuth
+
+interface Chapter {
+  title: string;
+  deadline: string; // ISO string format
+}
 
 export default function CreateClub() {
   const router = useRouter();
+  const { user } = useAuth(); // Get the current user
   const [clubName, setClubName] = useState<string>('');
   const [clubDescription, setClubDescription] = useState<string>('');
   const [clubImage, setClubImage] = useState<File | null>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [chapters, setChapters] = useState<Chapter[]>([]);
+  const [newChapterTitle, setNewChapterTitle] = useState<string>('');
+  const [newChapterDeadline, setNewChapterDeadline] = useState<Date | null>(null);
 
   const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -22,31 +34,47 @@ export default function CreateClub() {
     }
   };
 
+  const handleAddChapter = () => {
+    if (newChapterTitle && newChapterDeadline) {
+      setChapters([
+        ...chapters,
+        {
+          title: newChapterTitle,
+          deadline: newChapterDeadline.toISOString(),
+        },
+      ]);
+      setNewChapterTitle('');
+      setNewChapterDeadline(null);
+    }
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setLoading(true);
-  
+
     try {
       let imageUrl = '/bookclub.png'; // Default image URL
-  
+
       // Upload custom image to Firebase Storage if provided
       if (clubImage) {
         const storageRef = ref(storage, `club-images/${clubImage.name}`);
         await uploadBytes(storageRef, clubImage);
         imageUrl = await getDownloadURL(storageRef);
       }
-  
+
       // Save club data to Firestore
       const clubData = {
         name: clubName,
         description: clubDescription,
         memberCount: 1, // Default member count
         imageUrl: imageUrl, // Use uploaded image or default
+        chapters: chapters, // Include chapters with deadlines
+        creatorId: user?.uid, // Store the creator's UID
       };
-  
+
       const docRef = await addDoc(collection(db, 'clubs'), clubData);
       console.log('Club created with ID:', docRef.id);
-  
+
       // Redirect to the specific club's page
       router.push(`/clubs/${docRef.id}`);
     } catch (error) {
@@ -100,6 +128,40 @@ export default function CreateClub() {
                 />
               </div>
             )}
+          </div>
+          <div>
+            <label className="block text-lg font-bold text-[#3D2F2A]">Add Chapters</label>
+            <div className="flex space-x-2">
+              <input
+                type="text"
+                value={newChapterTitle}
+                onChange={(e) => setNewChapterTitle(e.target.value)}
+                placeholder="Chapter Title"
+                className="w-full px-4 py-2 rounded-lg bg-[#92A48A] text-[#3D2F2A]"
+              />
+              <DatePicker
+                selected={newChapterDeadline}
+                onChange={(date: Date | null) => setNewChapterDeadline(date)}
+                placeholderText="Deadline"
+                className="w-full px-4 py-2 rounded-lg bg-[#92A48A] text-[#3D2F2A]"
+                dateFormat="yyyy/MM/dd"
+              />
+              <button
+                type="button"
+                onClick={handleAddChapter}
+                className="bg-[#3D2F2A] text-[#DFDDCE] px-4 py-2 rounded-lg"
+              >
+                Add
+              </button>
+            </div>
+            <ul className="mt-2">
+              {chapters.map((chapter, index) => (
+                <li key={index} className="text-[#3D2F2A]">
+                  <strong>{chapter.title}</strong> - Due by{' '}
+                  {new Date(chapter.deadline).toLocaleDateString()}
+                </li>
+              ))}
+            </ul>
           </div>
           <button
             type="submit"
