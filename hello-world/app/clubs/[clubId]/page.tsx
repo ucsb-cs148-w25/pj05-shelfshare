@@ -129,10 +129,10 @@ export default function ClubDetails() {
   // Function to delete the club
   const handleDeleteClub = async () => {
     if (!clubId || !user || club?.creatorId !== user.uid) return;
-
+  
     try {
       await deleteDoc(doc(db, 'clubs', clubId));
-      router.push('/'); // Redirect to home page after deletion
+      router.push('/clubs'); // Redirect to the book club page
     } catch (error) {
       console.error('Error deleting club:', error);
       alert('Failed to delete club.');
@@ -173,14 +173,14 @@ export default function ClubDetails() {
 
           <div className="flex-grow space-y-6">
             <div>
-              <h1 className="text-4xl font-bold text-[#DFDDCE]">{club.name}</h1>
-              <p className="text-[#DFDDCE] text-lg mt-2">
+              <h1 className="text-4xl font-bold text-[#3D2F2A]">{club.name}</h1>
+              <p className="text-[#3D2F2A] text-lg mt-2">
                 Members: {club.memberCount}
               </p>
               {club.creatorId === user?.uid && (
                 <button
                   onClick={handleDeleteClub}
-                  className="bg-red-500 text-white px-4 py-2 rounded-lg mt-2"
+                  className="bg-[#CD5C5C] text-white px-4 py-2 rounded-lg mt-2"
                 >
                   Delete Club
                 </button>
@@ -188,16 +188,17 @@ export default function ClubDetails() {
             </div>
 
             <div className="space-y-4">
-              <p className="text-[#DFDDCE] leading-relaxed">{club.description}</p>
+            <h2 className="text-2xl font-semibold text-[#3D2F2A] mb-4"> Description: </h2>
+              <p className="text-[#3D2F2A] leading-relaxed">{club.description}</p>
             </div>
 
             {/* Display Chapters */}
             {club.chapters && club.chapters.length > 0 && (
               <div>
-                <h2 className="text-2xl font-semibold text-[#DFDDCE] mb-4">Chapters</h2>
+                <h2 className="text-2xl font-semibold text-[#3D2F2A] mb-4">Chapters</h2>
                 <ul className="space-y-2">
                   {club.chapters.map((chapter, index) => (
-                    <li key={index} className="text-[#DFDDCE]">
+                    <li key={index} className="text-[#3D2F2A]">
                       <strong>{chapter.title}</strong> - Due by{' '}
                       {new Date(chapter.deadline).toLocaleDateString()}
                     </li>
@@ -208,7 +209,7 @@ export default function ClubDetails() {
 
             {/* Discussion Forum */}
             <div className="mt-8">
-              <h2 className="text-2xl font-semibold text-[#DFDDCE] mb-4">Discussion Forum</h2>
+              <h2 className="text-2xl font-semibold text-[#3D2F2A] mb-4">Discussion Forum</h2>
               <form onSubmit={handleSubmitMessage} className="space-y-4">
                 <textarea
                   value={newMessage}
@@ -225,7 +226,7 @@ export default function ClubDetails() {
               </form>
 
               <div className="mt-8 space-y-4">
-                <h3 className="text-xl font-semibold text-[#DFDDCE]">Discussion</h3>
+                <h3 className="text-xl font-semibold text-[#3D2F2A]">Discussion</h3>
                 {discussionMessages.map((message) => (
                   <div key={message.id} className="bg-[#847266] p-6 rounded-lg relative">
                     <div className="flex items-start space-x-4">
