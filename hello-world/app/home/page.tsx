@@ -44,6 +44,7 @@ export default function Home() {
   const [booksRead, setBooksRead] = useState(0);
   const [inputGoal, setInputGoal] = useState('');
   const [isEditingGoal, setIsEditingGoal] = useState(false);
+  const [goalError, setGoalError] = useState('');
 
   // Redirect to login page if user is not authenticated
   useEffect(() => {
@@ -83,7 +84,14 @@ export default function Home() {
 
   const handleSetGoal = async () => {
     const goal = parseInt(inputGoal, 10);
-    if (!isNaN(goal) && goal > 0) {
+    // Clear previous error
+    setGoalError('');
+    
+    if (isNaN(goal)) {
+      setGoalError('Please enter a valid number');
+    } else if (goal <= 0) {
+      setGoalError('Book goal must be greater than zero');
+    } else {
       setReadingGoal(goal);
       setInputGoal('');
       setIsEditingGoal(false);
@@ -99,6 +107,7 @@ export default function Home() {
   const handleEditGoal = () => {
     setIsEditingGoal(true);
     setInputGoal(readingGoal?.toString() || '');
+    setGoalError(''); // Clear any previous errors
   };
 
   if (!user) {
@@ -244,19 +253,29 @@ export default function Home() {
               {readingGoal === null || isEditingGoal ? (
                 <div>
                   <p className="text-lg font-bold text-[#3D2F2A]">Set your reading goal for the year:</p>
-                  <input
-                    type="number"
-                    className="p-2 border rounded-lg w-full mt-2 font-bold text-[#3D2F2A] placeholder-[#847266]"
-                    placeholder="Enter goal"
-                    value={inputGoal}
-                    onChange={(e) => setInputGoal(e.target.value)}
-                  />
-                  <button
-                    className="mt-2 px-4 py-2 bg-[#3D2F2A] text-[#DFDDCE] rounded-lg font-bold"
-                    onClick={handleSetGoal}
-                  >
-                    Set Goal
-                  </button>
+                  <div className="flex flex-col md:flex-row md:items-center gap-2">
+                    <input
+                      type="number"
+                      className={`p-2 border rounded-lg flex-grow mt-2 font-bold text-[#3D2F2A] placeholder-[#847266] ${
+                        goalError ? 'border-red-500' : ''
+                      }`}
+                      placeholder="Enter goal"
+                      value={inputGoal}
+                      onChange={(e) => {
+                        setInputGoal(e.target.value);
+                        setGoalError(''); // Clear error when user types
+                      }}
+                    />
+                    <button
+                      className="mt-2 px-4 py-2 bg-[#3D2F2A] text-[#DFDDCE] rounded-lg font-bold"
+                      onClick={handleSetGoal}
+                    >
+                      Set Goal
+                    </button>
+                  </div>
+                  {goalError && (
+                    <p className="text-red-600 mt-1 text-sm font-medium">{goalError}</p>
+                  )}
                 </div>
               ) : (
                 <div>
