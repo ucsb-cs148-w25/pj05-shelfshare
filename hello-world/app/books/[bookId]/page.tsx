@@ -282,7 +282,7 @@ export default function BookDetails() {
     if (newReview.trim() && userRating > 0) {
       const reviewData = {
         userId: user.uid || "Unknown User",
-        userName: user.displayName || "Anonymous",
+        userName: username || "Anonymous",
         userProfilePic: profilePicture,
         text: newReview,
         rating: userRating,
@@ -421,7 +421,7 @@ export default function BookDetails() {
                     <div className="flex items-start space-x-4">
                       <div className="w-12 h-12 rounded-full flex-shrink-0 overflow-hidden">
                       <Image 
-                        src={review. userProfilePic || "/upload-pic.png"}
+                        src={review.userProfilePic || "/upload-pic.png"}
                         alt={`${review.userName}'s profile`}
                         width={24}
                         height={24}
@@ -469,3 +469,4 @@ export default function BookDetails() {
     </div>
   );
 }
+
