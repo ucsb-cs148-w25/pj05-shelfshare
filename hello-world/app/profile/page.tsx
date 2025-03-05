@@ -164,22 +164,22 @@ const Profile = () => {
 
   // Process genre distribution for pie chart ####################
   const processGenreDistribution = (books: BookItem[]) => {
-    if (!books.length) {
-      setGenreDistribution([]);
-      return;
-    }
-    
     const genreCounts: Record<string, number> = {};
 
     books.forEach(book => {
       const genres = book.genre?.split('#').filter(g => g.trim()) || [];
       
+      genres.forEach(genre => {
+        // Final cleanup pass
+        const cleanGenre = genre
+          .replace(/s$/, '') // Remove plural s
+          .replace(/\b\w/g, l => l.toUpperCase()); // Capitalize
+
+        genreCounts[cleanGenre] = (genreCounts[cleanGenre] || 0) + 1;
+      });
+
       if (genres.length === 0) {
         genreCounts["Unspecified"] = (genreCounts["Unspecified"] || 0) + 1;
-      } else {
-        genres.forEach(genre => {
-          genreCounts[genre.trim()] = (genreCounts[genre.trim()] || 0) + 1;
-        });
       }
     });
 
