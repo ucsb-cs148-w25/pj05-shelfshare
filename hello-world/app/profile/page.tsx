@@ -165,31 +165,41 @@ const Profile = () => {
   // Process genre distribution for pie chart ####################
   const processGenreDistribution = (books: BookItem[]) => {
     const genreCounts: Record<string, number> = {};
-
+    const CORE_GENRES = [
+      'Fiction', 'Non-Fiction', 'Fantasy', 'Mystery', 'Romance', 
+      'Science Fiction', 'Biography', 'History', 'Young Adult', 
+      "Children's", 'Horror', 'Poetry', 'Drama', 'Animals & Nature'
+    ];
+  
     books.forEach(book => {
       const genres = book.genre?.split('#').filter(g => g.trim()) || [];
-      
-      genres.forEach(genre => {
-        // Final cleanup pass
-        const cleanGenre = genre
-          .replace(/s$/, '') // Remove plural s
-          .replace(/\b\w/g, l => l.toUpperCase()); // Capitalize
 
-        genreCounts[cleanGenre] = (genreCounts[cleanGenre] || 0) + 1;
+      const coreGenres = genres.map(genre => {
+        const cleanInput = genre.toLowerCase().replace(/[^a-z]/g, '');
+        return CORE_GENRES.find(core => 
+          core.toLowerCase().replace(/[^a-z]/g, '') === cleanInput
+        ) || 'Unspecified';
       });
-
-      if (genres.length === 0) {
+  
+      // Count only valid core genres
+      coreGenres.forEach(genre => {
+        if (genre !== 'Unspecified') {
+          genreCounts[genre] = (genreCounts[genre] || 0) + 1;
+        }
+      });
+  
+      // Only count as Unspecified if NO valid genres found
+      if (coreGenres.length === 0 || coreGenres.every(g => g === 'Unspecified')) {
         genreCounts["Unspecified"] = (genreCounts["Unspecified"] || 0) + 1;
       }
     });
-
-    const genreData: GenreData[] = Object.keys(genreCounts).map(genre => ({
-      name: genre,
-      value: genreCounts[genre]
-    }));
-
-    genreData.sort((a, b) => b.value - a.value);
-    setGenreDistribution(genreData.slice(0, 10));
+  
+    const genreData: GenreData[] = Object.entries(genreCounts)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 10);
+  
+    setGenreDistribution(genreData);
   };
 
   // New helper function for weekly timeline processing
@@ -506,7 +516,10 @@ const Profile = () => {
                           </ResponsiveContainer>
                         ) : (
                           <div className="flex items-center justify-center h-full text-[#3D2F2A]">
-                            No genre data available. Add books to your shelves!
+                            {booksLoaded ? 
+                              "No genre data available. Add books to your shelves!" : 
+                              "Loading genre data..."
+                            }
                           </div>
                         )}
                       </div>

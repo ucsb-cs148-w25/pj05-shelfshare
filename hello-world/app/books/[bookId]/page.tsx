@@ -111,6 +111,14 @@ const normalizeGenre = (rawGenre: string) => {
     'drama': 'Drama',
     'animals': 'Animals & Nature',
     'nature': 'Animals & Nature',
+    'time travel': 'Sci-Fi',
+    'detective stories': 'Mystery',
+    'picture books': "Children's",
+    'social life and customs': 'History',
+    'romantic suspense fiction': 'Romance',
+    'short stories': 'Fiction',
+    'adventure stories': 'Adventure',
+    'psychological fiction': 'Drama',
     
     // Spanish translations
     'Pece': 'Animals & Nature',
@@ -120,6 +128,9 @@ const normalizeGenre = (rawGenre: string) => {
     'ficción juvenil': 'Young Adult',
     'cuentos infantiles': "Children's",
     'literatura juvenil': 'Young Adult',
+    'novela policíaca': 'Mystery',
+    'cuentos de animales': 'Animals & Nature',
+    'aventura': 'Adventure',
 
     // Common Open Library special categories
     'missing persons': 'Mystery',

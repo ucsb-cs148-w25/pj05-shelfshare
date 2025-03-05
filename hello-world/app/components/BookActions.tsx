@@ -14,6 +14,12 @@ interface BookActionsProps {
   showDeleteOnly?: boolean; // Optional prop to show only delete button
 }
 
+const CORE_GENRES = [
+  'Fiction', 'Non-Fiction', 'Fantasy', 'Mystery', 'Romance',
+  'Science Fiction', 'Biography', 'History', 'Young Adult',
+  "Children's", 'Horror', 'Poetry', 'Drama', 'Animals & Nature'
+];
+
 const BookActions = ({ 
   bookId,
   title,
@@ -159,7 +165,7 @@ const BookActions = ({
         author,
         coverUrl,
         shelfType,
-        genre: (genres || []).slice(0, 2).join('#') || 'Unspecified', // Use props.genres
+        genre: (genres || []).filter(g => CORE_GENRES.includes(g)).slice(0, 2).join('#') || 'Unspecified',
         dateAdded: new Date(),
         dateFinished: shelfType === 'finished' ? new Date() : null, // Store the finish date if applicable
       });
@@ -196,7 +202,7 @@ const BookActions = ({
           author,
           coverUrl,
           shelfId,
-          genre: (genres || []).slice(0, 2).join('#') || 'Unspecified', // Use genres prop
+          genre: (genres || []).filter(g => CORE_GENRES.includes(g)).slice(0, 2).join('#') || 'Unspecified', // Use genres prop
           dateAdded: new Date()
         });
       }
