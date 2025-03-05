@@ -283,7 +283,7 @@ export default function BookDetails() {
       const reviewData = {
         userId: user.uid || "Unknown User",
         userName: username || "Anonymous",
-        userProfilePic: profilePicture,
+        userProfilePic: profilePicture || "/user-circle.png",
         text: newReview,
         rating: userRating,
         date: serverTimestamp(),
@@ -421,7 +421,7 @@ export default function BookDetails() {
                     <div className="flex items-start space-x-4">
                       <div className="w-12 h-12 rounded-full flex-shrink-0 overflow-hidden">
                       <Image 
-                        src={review.userProfilePic || "/upload-pic.png"}
+                        src={review.userProfilePic || "/user-circle.png"}
                         alt={`${review.userName}'s profile`}
                         width={24}
                         height={24}
