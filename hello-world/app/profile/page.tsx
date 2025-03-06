@@ -694,7 +694,11 @@ const Profile = () => {
                                 <YAxis 
                                   domain={[0, 10]} // Y-axis up to 10 books as requested
                                   label={{ 
-                                    value: 'Books',
+                                    value: 'Books', 
+                                    angle: -90, 
+                                    position: 'insideLeft',
+                                    style: { textAnchor: 'middle' },
+                                    offset: 0
                                   }}
                                   />
                                   <Tooltip content={<WeeklyTooltip />} />
