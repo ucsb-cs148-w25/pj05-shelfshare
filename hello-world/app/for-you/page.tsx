@@ -5,42 +5,43 @@ import { useEffect, useState } from 'react';
 import { db } from "@/firebase";
 import { collection, query, where, onSnapshot, DocumentData, getDocs } from "firebase/firestore";
 import Image from 'next/image';
-import { useRouter } from 'next/navigation'; // Add router for navigation
+import { useRouter } from 'next/navigation';
 
 interface Book {
   title: string;
   author: string;
   coverUrl: string;
-  bookId?: string; // Add bookId for navigation
+  bookId?: string;
+  frequency?: number; // Add frequency field to track duplicates
 }
 
 // Hardcoded list of top 10 books
 const topBooksList: Book[] = [
-  { title: "ALl Fours", author: "Miranda July", coverUrl: "https://covers.openlibrary.org/b/olid/OL51098015M-M.jpg" },
-  { title: "Good Material", author: "Dolly Alderton", coverUrl: "https://covers.openlibrary.org/b/olid/OL50718238M-M.jpg" },
-  { title: "James", author: "Percival Everett", coverUrl: "https://covers.openlibrary.org/b/olid/OL51613391M-M.jpg" },
-  { title: "You Dreamed of Empires", author: "Álvaro Enrigue", coverUrl: "https://covers.openlibrary.org/b/olid/OL50709435M-M.jpg" },
-  { title: "Cold Crematorium", author: "József Debreczeni", coverUrl: "https://covers.openlibrary.org/b/olid/OL51083358M-M.jpg" },
-  { title: "Everyone Who Is Gone Is Here", author: " Jonathan Blitzer", coverUrl: "https://covers.openlibrary.org/b/olid/OL50728881M-M.jpg" },
-  { title: "I Heard Her Call My Name", author: "Lucy Sante", coverUrl: "https://covers.openlibrary.org/b/olid/OL51100380M-M.jpg" },
-  { title: "Reagan: His Life and Legend", author: "Max Boot", coverUrl: "https://covers.openlibrary.org/b/olid/OL51133455M-M.jpg" },
-  { title: "1984", author: "George Orwell", coverUrl: "https://covers.openlibrary.org/b/olid/OL36632156M-M.jpg" },
-  { title: "Fahrenheit 451", author: "Ray Bradbury", coverUrl: "https://covers.openlibrary.org/b/olid/OL49348365M-M.jpg" },
+  { title: "ALl Fours", author: "Miranda July", coverUrl: "https://covers.openlibrary.org/b/olid/OL51098015M-M.jpg", bookId: "OL37827700W" },
+  { title: "Good Material", author: "Dolly Alderton", coverUrl: "https://covers.openlibrary.org/b/olid/OL50718238M-M.jpg", bookId: "OL35714854W" },
+  { title: "James", author: "Percival Everett", coverUrl: "https://covers.openlibrary.org/b/olid/OL51613391M-M.jpg", bookId: "OL36506504W" },
+  { title: "You Dreamed of Empires", author: "Álvaro Enrigue", coverUrl: "https://covers.openlibrary.org/b/olid/OL50709435M-M.jpg", bookId: "OL35720233W" },
+  { title: "Cold Crematorium", author: "József Debreczeni", coverUrl: "https://covers.openlibrary.org/b/olid/OL51083358M-M.jpg", bookId: "OL31473516W" },
+  { title: "Everyone Who Is Gone Is Here", author: " Jonathan Blitzer", coverUrl: "https://covers.openlibrary.org/b/olid/OL50728881M-M.jpg", bookId: "OL37572496W" },
+  { title: "I Heard Her Call My Name", author: "Lucy Sante", coverUrl: "https://covers.openlibrary.org/b/olid/OL51100380M-M.jpg", bookId: "OL37568416W" },
+  { title: "Reagan: His Life and Legend", author: "Max Boot", coverUrl: "https://covers.openlibrary.org/b/olid/OL51133455M-M.jpg", bookId: "OL37878585W" },
+  { title: "1984", author: "George Orwell", coverUrl: "https://covers.openlibrary.org/b/olid/OL36632156M-M.jpg", bookId: "OL1168083W" },
+  { title: "Fahrenheit 451", author: "Ray Bradbury", coverUrl: "https://covers.openlibrary.org/b/olid/OL49348365M-M.jpg", bookId: "OL103123W" },
 ];
 
 export default function ForYou() {
   const { user } = useAuth();
-  const router = useRouter(); // Add router for navigation
+  const router = useRouter();
   const [recommendations, setRecommendations] = useState<{
     readNext: Book[];
     youMayLike: Book[];
     topBooks: Book[];
-    friendsFavorites: Book[]; // Change from friendsBooks to friendsFavorites
+    friendsFavorites: Book[];
   }>({
     readNext: [],
     youMayLike: [],
     topBooks: topBooksList,
-    friendsFavorites: [], // Initialize as empty
+    friendsFavorites: [],
   });
 
   const [scrollPositions, setScrollPositions] = useState<{ [key: string]: number }>({});
@@ -80,10 +81,10 @@ export default function ForYou() {
     const unsubscribeFriends = onSnapshot(friendsQuery, async (friendsSnapshot) => {
       const friendIds = friendsSnapshot.docs.map(doc => doc.id);
 
-      // Fetch favorite books from each friend instead of finished shelf
+      // Fetch favorite books from each friend
       const friendsFavoritesPromises = friendIds.map(async (friendId) => {
         const friendFavoritesQuery = query(
-          collection(db, "users", friendId, "favorites") // Changed from shelves to favorites
+          collection(db, "users", friendId, "favorites")
         );
         const friendFavoritesSnapshot = await getDocs(friendFavoritesQuery);
         return friendFavoritesSnapshot.docs.map(doc => {
@@ -92,17 +93,41 @@ export default function ForYou() {
             title: data.title || "Unknown Title",
             author: data.author || "Unknown Author",
             coverUrl: data.coverUrl || "",
-            bookId: data.bookId || "", // Add bookId for navigation
+            bookId: data.bookId || "",
           };
         });
       });
 
-      const friendsFavorites = (await Promise.all(friendsFavoritesPromises)).flat();
+      const allFriendsFavorites = (await Promise.all(friendsFavoritesPromises)).flat();
 
-      // Update recommendations state with friends' favorite books
+      // Count occurrences of each book based on title and author
+      const bookOccurrences = new Map<string, Book & { frequency: number }>();
+      
+      allFriendsFavorites.forEach(book => {
+        const bookKey = `${book.title}|${book.author}`;
+        if (bookOccurrences.has(bookKey)) {
+          const existingBook = bookOccurrences.get(bookKey)!;
+          existingBook.frequency += 1;
+        } else {
+          bookOccurrences.set(bookKey, { ...book, frequency: 1 });
+        }
+      });
+
+      // Convert to array, sort by frequency (highest first), then by title
+      const uniqueSortedBooks = Array.from(bookOccurrences.values())
+        .sort((a, b) => {
+          // First sort by frequency (descending)
+          if (b.frequency !== a.frequency) {
+            return b.frequency - a.frequency;
+          }
+          // Then sort alphabetically by title if frequencies are equal
+          return a.title.localeCompare(b.title);
+        });
+
+      // Update recommendations state with sorted friends' favorite books
       setRecommendations(prev => ({
         ...prev,
-        friendsFavorites: friendsFavorites.slice(0, 10), // Limit to 10 books
+        friendsFavorites: uniqueSortedBooks.slice(0, 10), // Limit to 10 books
       }));
     });
 
@@ -210,7 +235,17 @@ export default function ForYou() {
         <Section title="Top books of the Year" books={recommendations.topBooks.slice(0, 10)} type="topBooks" scrollPositions={scrollPositions} maxScrolls={maxScrolls} scrollLeft={scrollLeft} scrollRight={scrollRight} onBookClick={(bookId) => bookId && router.push(`/books/${bookId}`)} />
         <Section title="Read Next" books={recommendations.readNext.slice(0, 10)} type="readNext" scrollPositions={scrollPositions} maxScrolls={maxScrolls} scrollLeft={scrollLeft} scrollRight={scrollRight} onBookClick={(bookId) => bookId && router.push(`/books/${bookId}`)} />
         <Section title="Try Something New" books={recommendations.youMayLike.slice(0, 10)} type="youMayLike" scrollPositions={scrollPositions} maxScrolls={maxScrolls} scrollLeft={scrollLeft} scrollRight={scrollRight} onBookClick={(bookId) => bookId && router.push(`/books/${bookId}`)} />
-        <Section title="Your Friends' Favorites" books={recommendations.friendsFavorites.slice(0, 10)} type="friendsFavorites" scrollPositions={scrollPositions} maxScrolls={maxScrolls} scrollLeft={scrollLeft} scrollRight={scrollRight} onBookClick={(bookId) => bookId && router.push(`/books/${bookId}`)} />
+        <Section 
+          title="Your Friends' Favorites" 
+          books={recommendations.friendsFavorites.slice(0, 10)} 
+          type="friendsFavorites" 
+          scrollPositions={scrollPositions} 
+          maxScrolls={maxScrolls} 
+          scrollLeft={scrollLeft} 
+          scrollRight={scrollRight} 
+          onBookClick={(bookId) => bookId && router.push(`/books/${bookId}`)}
+          showFrequency={true} // Optional prop to show frequency if needed
+        />
       </div>
     </div>
   );
@@ -218,16 +253,17 @@ export default function ForYou() {
 
 interface SectionProps {
   title: string;
-  books: { title: string; author: string; coverUrl: string; bookId?: string }[];
+  books: { title: string; author: string; coverUrl: string; bookId?: string; frequency?: number }[];
   type: string;
   scrollPositions: { [key: string]: number };
   maxScrolls: { [key: string]: number };
   scrollLeft: (sectionType: string) => void;
   scrollRight: (sectionType: string) => void;
-  onBookClick: (bookId?: string) => void; // Add click handler
+  onBookClick: (bookId?: string) => void;
+  showFrequency?: boolean; // Optional prop to show frequency badges
 }
 
-function Section({ title, books, type, scrollPositions, maxScrolls, scrollLeft, scrollRight, onBookClick }: SectionProps) {
+function Section({ title, books, type, scrollPositions, maxScrolls, scrollLeft, scrollRight, onBookClick, showFrequency }: SectionProps) {
   const leftShadowStyle: React.CSSProperties = {
     position: 'absolute',
     left: '30px',
@@ -315,7 +351,7 @@ function Section({ title, books, type, scrollPositions, maxScrolls, scrollLeft, 
               <div 
                 key={index} 
                 className="flex-shrink-0 cursor-pointer relative group mt-4"
-                onClick={() => onBookClick(book.bookId)}  // Add click handler to navigate to book details
+                onClick={() => onBookClick(book.bookId)}
               >
                 <Image
                   src={book.coverUrl}
@@ -324,6 +360,13 @@ function Section({ title, books, type, scrollPositions, maxScrolls, scrollLeft, 
                   height={144}
                   className="w-[150px] h-[250px] rounded-lg object-cover bg-custom-brown"
                 />
+                
+                {/* Frequency badge for friends' favorites - optional display */}
+                {showFrequency && book.frequency && book.frequency > 1 && (
+                  <div className="absolute -top-3 -right-3 bg-[#3D2F2A] text-custom-tan rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
+                    {book.frequency}
+                  </div>
+                )}
               </div>
             ))
           ) : (
