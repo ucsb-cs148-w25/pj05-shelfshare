@@ -440,31 +440,33 @@ export default function Browse() {
       <div className="flex flex-col items-center space-y-4">
         <div className="flex items-center space-x-4 overflow-x-auto pb-2 max-w-full">
           <span className="text-lg font-bold text-[#DFDDCE] whitespace-nowrap">Genre</span>
-          <div className="flex space-x-4 font-bold">
+          <div className="flex flex-wrap justify-center gap-2">
             <button
               onClick={selectTrending}
-              className={`px-4 py-2 rounded-[15px] shadow-md transition-colors whitespace-nowrap ${
-                showTrending
-                  ? 'bg-[#3D2F2A] text-[#DFDDCE]'
-                  : 'bg-[#DFDDCE] text-[#3D2F2A]'
-              }`}
+              className={`px-4 py-2 rounded-[15px] shadow-md font-bold transition-colors whitespace-nowrap 
+                ${showTrending ? 'bg-[#3D2F2A] text-[#DFDDCE]' : 'bg-[#DFDDCE] text-[#3D2F2A]'} 
+                hover:bg-[#3D2F2A] hover:text-[#DFDDCE]`}
             >
               Popular
             </button>
+            
             {genres.map((genre) => (
-            <button
-              key={genre}
-              onClick={() => selectGenre(genre.toLowerCase())}
-              className={`px-4 py-2 rounded-[15px] shadow-md transition-colors whitespace-nowrap ${
-                selectedGenre === genre.toLowerCase() && !showTrending
-                  ? 'bg-[#3D2F2A] text-[#DFDDCE]'
-                  : 'bg-[#DFDDCE] text-[#3D2F2A]'
-              }`}
-            >
-              {genre}
-            </button>
-          ))}
+              <button
+                key={genre}
+                onClick={() => selectGenre(genre.toLowerCase())}
+                className={`px-4 py-2 font-bold rounded-[15px] shadow-md transition-colors whitespace-nowrap 
+                  ${
+                    selectedGenre === genre.toLowerCase() && !showTrending
+                      ? 'bg-[#3D2F2A] text-[#DFDDCE]'
+                      : 'bg-[#DFDDCE] text-[#3D2F2A]'
+                  } 
+                  hover:bg-[#3D2F2A] hover:text-[#DFDDCE]`}
+              >
+                {genre}
+              </button>
+            ))}
           </div>
+
         </div>
       </div>
 
