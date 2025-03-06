@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, BarChart, Bar } from 'recharts';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/context/AuthContext';
 import { db } from "@/firebase";
 import { collection, query, Timestamp, onSnapshot, updateDoc, doc, getDocs, where } from "firebase/firestore";
-import { Upload, Pencil, PieChart as PieChartIcon, LineChart as LineChartIcon, Book } from "lucide-react";
+import { Upload, Pencil, PieChart as PieChartIcon, LineChart as LineChartIcon, Book, BarChart as BarChartIcon } from "lucide-react";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -42,6 +42,11 @@ interface TimelineData {
   count: number;
 }
 
+interface WeeklyData {
+  day: string;
+  count: number;
+}
+
 const Profile = () => {
   const { user } = useAuth();
   const router = useRouter();
@@ -58,7 +63,10 @@ const Profile = () => {
   const [genreDistribution, setGenreDistribution] = useState<GenreData[]>([]);
   const [finishedBooksTimeline, setFinishedBooksTimeline] = useState<TimelineData[]>([]);
   const [currentlyReadingTimeline, setCurrentlyReadingTimeline] = useState<TimelineData[]>([]);
+  const [finishedBooksWeekly, setFinishedBooksWeekly] = useState<WeeklyData[]>([]);
+  const [currentlyReadingWeekly, setCurrentlyReadingWeekly] = useState<WeeklyData[]>([]);
   const [activeTab, setActiveTab] = useState('genre');
+  const [activeSubTab, setActiveSubTab] = useState('monthly');
   const [booksLoaded, setBooksLoaded] = useState(false);
 
   // COLORS for pie chart
@@ -66,6 +74,9 @@ const Profile = () => {
 
   // Month abbreviations array - Changed to 3-letter abbreviations
   const monthAbbreviations = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  
+  // Day abbreviations array
+  const dayAbbreviations = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   // Redirect to login page if user is not authenticated
   useEffect(() => {
@@ -143,6 +154,14 @@ const Profile = () => {
             false
           ));
           
+          // Process weekly data for new charts
+          setFinishedBooksWeekly(processWeeklyData(
+            booksData.filter(book => book.shelfType === "finished")
+          ));
+          setCurrentlyReadingWeekly(processWeeklyData(
+            booksData.filter(book => book.shelfType === "currently-reading")
+          ));
+          
           setBooksLoaded(true);
         });
         
@@ -203,7 +222,7 @@ const Profile = () => {
     setGenreDistribution(genreData);
   };
 
-  // New function to process monthly timeline data
+  // Function to process monthly timeline data
   const processTimelineData = (books: BookItem[], isFinished: boolean) => {
     // Initialize monthly data with all 12 months
     const monthlyData: Record<string, number> = {};
@@ -233,6 +252,46 @@ const Profile = () => {
     return Object.entries(monthlyData)
       .map(([date, count]) => ({ date, count }))
       .sort((a, b) => a.date.localeCompare(b.date));
+  };
+
+  // New function to process weekly data
+  const processWeeklyData = (books: BookItem[]) => {
+    // Initialize weekly data with all 7 days
+    const weeklyData: Record<string, number> = {};
+    
+    // Get the current date and the start of the week (Monday)
+    const now = new Date();
+    const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Calculate days to subtract to get to Monday
+    
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - mondayOffset);
+    monday.setHours(0, 0, 0, 0);
+    
+    // Create entries for all 7 days of the week
+    for (let day = 0; day < 7; day++) {
+      const currentDay = new Date(monday);
+      currentDay.setDate(monday.getDate() + day);
+      weeklyData[dayAbbreviations[day]] = 0;
+    }
+    
+    // Process books to populate daily counts
+    books.forEach(book => {
+      const dateObj = book.dateFinished instanceof Timestamp ? 
+        book.dateFinished.toDate() : 
+        (book.dateAdded instanceof Timestamp ? book.dateAdded.toDate() : new Date(book.dateAdded));
+      
+      // Only count books from the current week
+      if (dateObj >= monday && dateObj < new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)) {
+        const day = dateObj.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+        const dayIndex = day === 0 ? 6 : day - 1; // Convert to our 0 = Monday, ..., 6 = Sunday format
+        weeklyData[dayAbbreviations[dayIndex]] = (weeklyData[dayAbbreviations[dayIndex]] || 0) + 1;
+      }
+    });
+    
+    // Convert to array format needed for chart
+    return Object.entries(weeklyData)
+      .map(([day, count]) => ({ day, count }));
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -311,8 +370,21 @@ const Profile = () => {
     }
     return null;
   };
+  
+  // Custom tooltip component for weekly charts
+  const WeeklyTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-[#DFDDCE] p-2 rounded border border-[#3D2F2A]">
+          <p className="font-bold">{label}</p>
+          <p>{`Books: ${payload[0].value}`}</p>
+        </div>
+      );
+    }
+    return null;
+  };
 
-  // Format month abbreviation for x-axis - Updated to use three-letter abbreviations
+  // Format month abbreviation for x-axis
   const formatMonthAbbreviation = (dateStr: string) => {
     const month = parseInt(dateStr.split('-')[1]) - 1; // Convert from 1-based to 0-based
     return monthAbbreviations[month];
@@ -451,7 +523,7 @@ const Profile = () => {
             <div className="bg-[#DFDDCE] p-6 rounded-lg relative">
               <h3 className="text-2xl font-semibold text-[#3D2F2A] mb-4">Reading Analytics</h3>
               
-              {/* Analytics Tabs - Reordered tabs to put "Currently Reading" before "Finished" */}
+              {/* Analytics Tabs */}
               <div className="flex mb-4 border-b border-[#3D2F2A]">
                 <button
                   onClick={() => setActiveTab('genre')}
@@ -475,6 +547,26 @@ const Profile = () => {
                   Finished Books
                 </button>
               </div>
+              
+              {/* Sub-tabs for timeline and weekly views - Only show for reading and finished tabs */}
+              {(activeTab === 'reading' || activeTab === 'finished') && (
+                <div className="flex mb-4">
+                  <button
+                    onClick={() => setActiveSubTab('monthly')}
+                    className={`flex items-center px-4 py-1 mr-2 rounded ${activeSubTab === 'monthly' ? 'bg-[#3D2F2A] text-[#DFDDCE]' : 'bg-gray-200 text-[#3D2F2A]'}`}
+                  >
+                    <LineChartIcon className="w-4 h-4 mr-2" />
+                    Monthly
+                  </button>
+                  <button
+                    onClick={() => setActiveSubTab('weekly')}
+                    className={`flex items-center px-4 py-1 rounded ${activeSubTab === 'weekly' ? 'bg-[#3D2F2A] text-[#DFDDCE]' : 'bg-gray-200 text-[#3D2F2A]'}`}
+                  >
+                    <BarChartIcon className="w-4 h-4 mr-2" />
+                    This Week
+                  </button>
+                </div>
+              )}
               
               {/* Charts */}
               <div className="h-64 md:h-80">
@@ -518,7 +610,7 @@ const Profile = () => {
                       </div>
                     )}
                     
-                    {activeTab === 'reading' && (
+                    {activeTab === 'reading' && activeSubTab === 'monthly' && (
                       <div className="h-full">
                         {currentlyReadingTimeline.length > 0 ? (
                           <>
@@ -546,7 +638,7 @@ const Profile = () => {
                                   }}
                                 />
                                 <YAxis 
-                                  domain={[0, 15]}
+                                  domain={[0, 25]} // Modified to go up to 25 books
                                   label={{ 
                                     value: 'Books', 
                                     angle: -90, 
@@ -573,69 +665,169 @@ const Profile = () => {
                       </div>
                     )}
                     
-                    {activeTab === 'finished' && (
+                    {activeTab === 'reading' && activeSubTab === 'weekly' && (
                       <div className="h-full">
-                        {finishedBooksTimeline.length > 0 ? (
+                        {currentlyReadingWeekly.length > 0 ? (
                           <>
                             {/* Legend above chart */}
                             <div className="flex mb-2 ml-2">
                               <div className="flex items-center">
-                                <div className="w-4 h-4 bg-[#8884d8] mr-2"></div>
-                                <span className="text-sm text-[#3D2F2A]">Finished Books</span>
+                                <div className="w-4 h-4 bg-[#82ca9d] mr-2"></div>
+                                <span className="text-sm text-[#3D2F2A]">Current Week Reading Activity</span>
                               </div>
                             </div>
                             
                             <ResponsiveContainer width="100%" height="90%">
-                              <LineChart 
-                                data={finishedBooksTimeline}
+                              <BarChart 
+                                data={currentlyReadingWeekly}
                                 margin={{ top: 20, right: 30, left: 20, bottom: 25 }}
                               >
                                 <XAxis 
-                                  dataKey="date" 
-                                  tickFormatter={formatMonthAbbreviation}
+                                  dataKey="day" 
                                   height={50}
                                   label={{ 
-                                    value: 'Month', 
+                                    value: 'Day of Week', 
                                     position: 'insideBottom', 
                                     offset: -10
                                   }}
                                 />
                                 <YAxis 
-                                  domain={[0, 15]}
+                                  domain={[0, 10]} // Y-axis up to 10 books as requested
                                   label={{ 
-                                    value: 'Books', 
-                                    angle: -90, 
-                                    position: 'insideLeft',
-                                    style: { textAnchor: 'middle' },
-                                    offset: 0
+                                    value: 'Books',
                                   }}
-                                />
-                                <Tooltip content={<TimelineTooltip />} />
-                                <Line 
-                                  type="monotone" 
-                                  dataKey="count" 
-                                  stroke="#8884d8" 
-                                  activeDot={{ r: 8 }}
-                                />
-                              </LineChart>
-                            </ResponsiveContainer>
-                          </>
-                        ) : (
-                          <div className="flex items-center justify-center h-full text-[#3D2F2A]">
-                            No finished books data available. Mark some books as finished!
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </>
-                )}
+                                  />
+                                  <Tooltip content={<WeeklyTooltip />} />
+                                  <Bar  
+                                    dataKey="count" 
+                                    fill="#82ca9d" 
+                                  />
+                                </BarChart>
+                              </ResponsiveContainer>
+                            </>
+                          ) : (
+                            <div className="flex items-center justify-center h-full text-[#3D2F2A]">
+                              No weekly reading data available for this week.
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
+                      {activeTab === 'finished' && activeSubTab === 'monthly' && (
+                        <div className="h-full">
+                          {finishedBooksTimeline.length > 0 ? (
+                            <>
+                              {/* Legend above chart */}
+                              <div className="flex mb-2 ml-2">
+                                <div className="flex items-center">
+                                  <div className="w-4 h-4 bg-[#8884d8] mr-2"></div>
+                                  <span className="text-sm text-[#3D2F2A]">Finished Books</span>
+                                </div>
+                              </div>
+                              
+                              <ResponsiveContainer width="100%" height="90%">
+                                <LineChart 
+                                  data={finishedBooksTimeline}
+                                  margin={{ top: 20, right: 30, left: 20, bottom: 25 }}
+                                >
+                                  <XAxis 
+                                    dataKey="date" 
+                                    tickFormatter={formatMonthAbbreviation}
+                                    height={50}
+                                    label={{ 
+                                      value: 'Month', 
+                                      position: 'insideBottom', 
+                                      offset: -10
+                                    }}
+                                  />
+                                  <YAxis 
+                                    domain={[0, 25]} // Modified to go up to 25 books
+                                    label={{ 
+                                      value: 'Books', 
+                                      angle: -90, 
+                                      position: 'insideLeft',
+                                      style: { textAnchor: 'middle' },
+                                      offset: 0
+                                    }}
+                                  />
+                                  <Tooltip content={<TimelineTooltip />} />
+                                  <Line 
+                                    type="monotone" 
+                                    dataKey="count" 
+                                    stroke="#8884d8" 
+                                    activeDot={{ r: 8 }} 
+                                  />
+                                </LineChart>
+                              </ResponsiveContainer>
+                            </>
+                          ) : (
+                            <div className="flex items-center justify-center h-full text-[#3D2F2A]">
+                              No finished books data available. Mark some books as finished!
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
+                      {activeTab === 'finished' && activeSubTab === 'weekly' && (
+                        <div className="h-full">
+                          {finishedBooksWeekly.length > 0 ? (
+                            <>
+                              {/* Legend above chart */}
+                              <div className="flex mb-2 ml-2">
+                                <div className="flex items-center">
+                                  <div className="w-4 h-4 bg-[#8884d8] mr-2"></div>
+                                  <span className="text-sm text-[#3D2F2A]">Current Week Finished Books</span>
+                                </div>
+                              </div>
+                              
+                              <ResponsiveContainer width="100%" height="90%">
+                                <BarChart 
+                                  data={finishedBooksWeekly}
+                                  margin={{ top: 20, right: 30, left: 20, bottom: 25 }}
+                                >
+                                  <XAxis 
+                                    dataKey="day" 
+                                    height={50}
+                                    label={{ 
+                                      value: 'Day of Week', 
+                                      position: 'insideBottom', 
+                                      offset: -10
+                                    }}
+                                  />
+                                  <YAxis 
+                                    domain={[0, 10]} // Y-axis up to 10 books as requested
+                                    label={{ 
+                                      value: 'Books', 
+                                      angle: -90, 
+                                      position: 'insideLeft',
+                                      style: { textAnchor: 'middle' },
+                                      offset: 0
+                                    }}
+                                  />
+                                  <Tooltip content={<WeeklyTooltip />} />
+                                  <Bar 
+                                    dataKey="count" 
+                                    fill="#8884d8" 
+                                  />
+                                </BarChart>
+                              </ResponsiveContainer>
+                            </>
+                          ) : (
+                            <div className="flex items-center justify-center h-full text-[#3D2F2A]">
+                              No books finished this week yet.
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
-};
-
-export default Profile;
+    );
+  };
+  
+  export default Profile;
