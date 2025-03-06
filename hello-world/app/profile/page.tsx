@@ -64,8 +64,8 @@ const Profile = () => {
   // COLORS for pie chart
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#8DD1E1', '#A4DE6C', '#D0ED57'];
 
-  // Month abbreviations array
-  const monthAbbreviations = ['J', 'F', 'Ma', 'A', 'My', 'Jn', 'Jl', 'Au', 'S', 'O', 'N', 'D'];
+  // Month abbreviations array - Changed to 3-letter abbreviations
+  const monthAbbreviations = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
   // Redirect to login page if user is not authenticated
   useEffect(() => {
@@ -312,8 +312,8 @@ const Profile = () => {
     return null;
   };
 
-  // Format month initial for x-axis
-  const formatMonthInitial = (dateStr: string) => {
+  // Format month abbreviation for x-axis - Updated to use three-letter abbreviations
+  const formatMonthAbbreviation = (dateStr: string) => {
     const month = parseInt(dateStr.split('-')[1]) - 1; // Convert from 1-based to 0-based
     return monthAbbreviations[month];
   };
@@ -451,7 +451,7 @@ const Profile = () => {
             <div className="bg-[#DFDDCE] p-6 rounded-lg relative">
               <h3 className="text-2xl font-semibold text-[#3D2F2A] mb-4">Reading Analytics</h3>
               
-              {/* Analytics Tabs */}
+              {/* Analytics Tabs - Reordered tabs to put "Currently Reading" before "Finished" */}
               <div className="flex mb-4 border-b border-[#3D2F2A]">
                 <button
                   onClick={() => setActiveTab('genre')}
@@ -461,18 +461,18 @@ const Profile = () => {
                   Genre Distribution
                 </button>
                 <button
-                  onClick={() => setActiveTab('finished')}
-                  className={`flex items-center px-4 py-2 ${activeTab === 'finished' ? 'bg-[#5A7463] text-[#DFDDCE] rounded-t' : 'text-[#3D2F2A]'}`}
-                >
-                  <LineChartIcon className="w-4 h-4 mr-2" />
-                  Finished Books
-                </button>
-                <button
                   onClick={() => setActiveTab('reading')}
                   className={`flex items-center px-4 py-2 ${activeTab === 'reading' ? 'bg-[#5A7463] text-[#DFDDCE] rounded-t' : 'text-[#3D2F2A]'}`}
                 >
                   <Book className="w-4 h-4 mr-2" />
                   Currently Reading
+                </button>
+                <button
+                  onClick={() => setActiveTab('finished')}
+                  className={`flex items-center px-4 py-2 ${activeTab === 'finished' ? 'bg-[#5A7463] text-[#DFDDCE] rounded-t' : 'text-[#3D2F2A]'}`}
+                >
+                  <LineChartIcon className="w-4 h-4 mr-2" />
+                  Finished Books
                 </button>
               </div>
               
@@ -518,83 +518,111 @@ const Profile = () => {
                       </div>
                     )}
                     
-                    {activeTab === 'finished' && (
+                    {activeTab === 'reading' && (
                       <div className="h-full">
-                        {finishedBooksTimeline.length > 0 ? (
-                          <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={finishedBooksTimeline}>
-                              <XAxis 
-                                dataKey="date" 
-                                tickFormatter={formatMonthInitial}
-                                label={{ 
-                                  value: 'Month', 
-                                  position: 'bottom', 
-                                  offset: 0 
-                                }}
-                              />
-                              <YAxis 
-                                domain={[0, 15]}
-                                label={{ 
-                                  value: 'Books Added', 
-                                  angle: -90, 
-                                  position: 'insideLeft' 
-                                }}
-                              />
-                              <Tooltip content={<TimelineTooltip />} />
-                              <Legend />
-                              <Line 
-                                type="monotone" 
-                                dataKey="count" 
-                                name="Finished Books" 
-                                stroke="#8884d8" 
-                                activeDot={{ r: 8 }}
-                              />
-                            </LineChart>
-                          </ResponsiveContainer>
+                        {currentlyReadingTimeline.length > 0 ? (
+                          <>
+                            {/* Legend above chart */}
+                            <div className="flex mb-2 ml-2">
+                              <div className="flex items-center">
+                                <div className="w-4 h-4 bg-[#82ca9d] mr-2"></div>
+                                <span className="text-sm text-[#3D2F2A]">Currently Reading</span>
+                              </div>
+                            </div>
+                            
+                            <ResponsiveContainer width="100%" height="90%">
+                              <LineChart 
+                                data={currentlyReadingTimeline}
+                                margin={{ top: 20, right: 30, left: 20, bottom: 25 }}
+                              >
+                                <XAxis 
+                                  dataKey="date" 
+                                  tickFormatter={formatMonthAbbreviation}
+                                  height={50}
+                                  label={{ 
+                                    value: 'Month', 
+                                    position: 'insideBottom', 
+                                    offset: -10
+                                  }}
+                                />
+                                <YAxis 
+                                  domain={[0, 15]}
+                                  label={{ 
+                                    value: 'Books', 
+                                    angle: -90, 
+                                    position: 'insideLeft',
+                                    style: { textAnchor: 'middle' },
+                                    offset: 0
+                                  }}
+                                />
+                                <Tooltip content={<TimelineTooltip />} />
+                                <Line  
+                                  type="monotone" 
+                                  dataKey="count" 
+                                  stroke="#82ca9d" 
+                                  activeDot={{ r: 8 }} 
+                                />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </>
                         ) : (
                           <div className="flex items-center justify-center h-full text-[#3D2F2A]">
-                            No finished books data available. Mark some books as finished!
+                            No currently reading data available. Add books to your currently reading shelf!
                           </div>
                         )}
                       </div>
                     )}
                     
-                    {activeTab === 'reading' && (
+                    {activeTab === 'finished' && (
                       <div className="h-full">
-                        {currentlyReadingTimeline.length > 0 ? (
-                          <ResponsiveContainer width="100%" height="100%">
-                            <LineChart data={currentlyReadingTimeline}>
-                              <XAxis 
-                                dataKey="date" 
-                                tickFormatter={formatMonthInitial}
-                                label={{ 
-                                  value: 'Month', 
-                                  position: 'bottom', 
-                                  offset: 0 
-                                }}
-                              />
-                              <YAxis 
-                                domain={[0, 15]}
-                                label={{ 
-                                  value: 'Books Added', 
-                                  angle: -90, 
-                                  position: 'insideLeft' 
-                                }}
-                              />
-                              <Tooltip content={<TimelineTooltip />} />
-                              <Legend />
-                              <Line  
-                                type="monotone" 
-                                dataKey="count" 
-                                name="Currently Reading" 
-                                stroke="#82ca9d" 
-                                activeDot={{ r: 8 }} 
-                              />
-                            </LineChart>
-                          </ResponsiveContainer>
+                        {finishedBooksTimeline.length > 0 ? (
+                          <>
+                            {/* Legend above chart */}
+                            <div className="flex mb-2 ml-2">
+                              <div className="flex items-center">
+                                <div className="w-4 h-4 bg-[#8884d8] mr-2"></div>
+                                <span className="text-sm text-[#3D2F2A]">Finished Books</span>
+                              </div>
+                            </div>
+                            
+                            <ResponsiveContainer width="100%" height="90%">
+                              <LineChart 
+                                data={finishedBooksTimeline}
+                                margin={{ top: 20, right: 30, left: 20, bottom: 25 }}
+                              >
+                                <XAxis 
+                                  dataKey="date" 
+                                  tickFormatter={formatMonthAbbreviation}
+                                  height={50}
+                                  label={{ 
+                                    value: 'Month', 
+                                    position: 'insideBottom', 
+                                    offset: -10
+                                  }}
+                                />
+                                <YAxis 
+                                  domain={[0, 15]}
+                                  label={{ 
+                                    value: 'Books', 
+                                    angle: -90, 
+                                    position: 'insideLeft',
+                                    style: { textAnchor: 'middle' },
+                                    offset: 0
+                                  }}
+                                />
+                                <Tooltip content={<TimelineTooltip />} />
+                                <Line 
+                                  type="monotone" 
+                                  dataKey="count" 
+                                  stroke="#8884d8" 
+                                  activeDot={{ r: 8 }}
+                                />
+                              </LineChart>
+                            </ResponsiveContainer>
+                          </>
                         ) : (
                           <div className="flex items-center justify-center h-full text-[#3D2F2A]">
-                            No currently reading data available. Add books to your currently reading shelf!
+                            No finished books data available. Mark some books as finished!
                           </div>
                         )}
                       </div>
