@@ -26,7 +26,7 @@ interface BookData {
   covers?: number[];
   authors?: string[];
   rating?: number;
-  genres?: string[]; // Adding genres
+  genres?: string[];
 }
 
 interface Review {
@@ -67,27 +67,8 @@ interface Friend {
   username?: string;
 }
 
-const CORE_GENRES = [
-  'Fiction',
-  'Non-Fiction',
-  'Fantasy',
-  'Mystery',
-  'Romance',
-  'Science Fiction',
-  'Biography',
-  'History',
-  'Young Adult',
-  "Children's",
-  'Horror',
-  'Poetry',
-  'Drama',
-  'Animals & Nature',
-  'Other'
-];
-
 const normalizeGenre = (rawGenre: string) => {
   const genreMap: Record<string, string> = {
-    // English terms
     'juvenile fiction': 'Young Adult',
     'bildungsroman': 'Coming of Age',
     'detective': 'Mystery',
@@ -120,7 +101,7 @@ const normalizeGenre = (rawGenre: string) => {
     'adventure stories': 'Adventure',
     'psychological fiction': 'Drama',
     
-    // Spanish translations
+    //spanish
     'Pece': 'Animals & Nature',
     'animales': 'Animals & Nature',
     'caseros': 'Animals & Nature',
@@ -132,7 +113,7 @@ const normalizeGenre = (rawGenre: string) => {
     'cuentos de animales': 'Animals & Nature',
     'aventura': 'Adventure',
 
-    // Common Open Library special categories
+    //common Open Library special categories
     'missing persons': 'Mystery',
     'stories in rhyme': 'Poetry',
     'journalists': 'Non-Fiction',
@@ -141,14 +122,12 @@ const normalizeGenre = (rawGenre: string) => {
   
   const cleanGenre = rawGenre
     .toLowerCase()
-    .replace(/[^a-z\s]/gi, '') // Remove special characters
+    .replace(/[^a-z\s]/gi, '')
     .trim();
 
-  // Find priority matches first
   const exactMatch = genreMap[cleanGenre];
   if (exactMatch) return exactMatch;
 
-  // Then check partial matches
   const partialMatch = Object.keys(genreMap).find(key => 
     cleanGenre.includes(key.toLowerCase())
   );
@@ -168,7 +147,7 @@ export default function BookDetails() {
     covers: [],
     authors: [],
     rating: 0,
-    genres: [] // Initialize with empty array
+    genres: []
   });
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -207,7 +186,6 @@ export default function BookDetails() {
         if (!res.ok) throw new Error("Failed to fetch book details.");
         const data = await res.json();
 
-        // Extract genres from Open Library subjects #############
         const genres = data.subjects
           ?.map((subject: string) => {
             const baseSubject = typeof subject === 'string' 
@@ -215,9 +193,9 @@ export default function BookDetails() {
               : 'Unknown';
             return normalizeGenre(baseSubject);
           })
-          .filter((genre: string) => genre !== 'Other') // Remove "Other" category
+          .filter((genre: string) => genre !== 'Other') 
           .filter((genre: string, index: number, self: string[]) => 
-            self.indexOf(genre) === index // Remove duplicates
+            self.indexOf(genre) === index
           ) || [];
 
         const ratingRes = await fetch(`https://openlibrary.org/works/${bookId}/ratings.json`);
@@ -473,7 +451,7 @@ export default function BookDetails() {
                 title={book.title}
                 author={book.authors?.[0] || "Unknown Author"}
                 coverUrl={coverImageUrl}
-                genres={book.genres || []} // Ensure this line exists and passes genres
+                genres={book.genres || []}
               />
             </div>
           </div>

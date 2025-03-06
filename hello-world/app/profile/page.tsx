@@ -5,9 +5,12 @@ import { PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip, Responsive
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/app/context/AuthContext';
 import { db } from "@/firebase";
-import { collection, query, Timestamp, onSnapshot, updateDoc, doc, getDocs, where } from "firebase/firestore";
+import { collection, Timestamp, onSnapshot, updateDoc, doc } from "firebase/firestore";
 import { Upload, Pencil, PieChart as PieChartIcon, LineChart as LineChartIcon, Book, BarChart as BarChartIcon } from "lucide-react";
 import dotenv from "dotenv";
+import Image from 'next/image';
+import { useCallback } from 'react';
+
 
 dotenv.config();
 
@@ -29,7 +32,7 @@ interface BookItem {
   dateAdded: Timestamp;
   shelfType?: string;
   dateFinished?: Timestamp | null;
-  genre?: string; // Changed from pgenre to genre to match your actual data structure
+  genre?: string;
 }
 
 interface GenreData {
@@ -47,6 +50,16 @@ interface WeeklyData {
   count: number;
 }
 
+interface TooltipProps {
+  active?: boolean;
+  payload?: Array<{ 
+    name: string;
+    value: number;
+    payload: GenreData | TimelineData | WeeklyData 
+  }>;
+  label?: string;
+}
+
 const Profile = () => {
   const { user } = useAuth();
   const router = useRouter();
@@ -59,7 +72,7 @@ const Profile = () => {
   const [preferredGenre, setPreferredGenre] = useState("#fantasy#romance#mystery");
   const [aboutMe, setAboutMe] = useState("Write about yourself!");
   
-  // States for chart data
+  //states for chart data
   const [genreDistribution, setGenreDistribution] = useState<GenreData[]>([]);
   const [finishedBooksTimeline, setFinishedBooksTimeline] = useState<TimelineData[]>([]);
   const [currentlyReadingTimeline, setCurrentlyReadingTimeline] = useState<TimelineData[]>([]);
@@ -69,14 +82,48 @@ const Profile = () => {
   const [activeSubTab, setActiveSubTab] = useState('monthly');
   const [booksLoaded, setBooksLoaded] = useState(false);
 
-  // COLORS for pie chart
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#8DD1E1', '#A4DE6C', '#D0ED57'];
 
-  // Month abbreviations array - Changed to 3-letter abbreviations
   const monthAbbreviations = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   
-  // Day abbreviations array
   const dayAbbreviations = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+
+  const processWeeklyData = useCallback((books: BookItem[]) => {
+
+    const weeklyData: Record<string, number> = {};
+    
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - mondayOffset);
+    monday.setHours(0, 0, 0, 0);
+    
+    for (let day = 0; day < 7; day++) {
+      const currentDay = new Date(monday);
+      currentDay.setDate(monday.getDate() + day);
+      weeklyData[dayAbbreviations[day]] = 0;
+    }
+    
+    books.forEach(book => {
+      const dateObj = book.dateFinished instanceof Timestamp ? 
+        book.dateFinished.toDate() : 
+        (book.dateAdded instanceof Timestamp ? book.dateAdded.toDate() : new Date(book.dateAdded));
+      
+      if (dateObj >= monday && dateObj < new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)) {
+        const day = dateObj.getDay();
+        const dayIndex = day === 0 ? 6 : day - 1;
+        weeklyData[dayAbbreviations[dayIndex]] = (weeklyData[dayAbbreviations[dayIndex]] || 0) + 1;
+      }
+    });
+    
+    return Object.entries(weeklyData)
+      .map(([day, count]) => ({ day, count }));
+  }, [dayAbbreviations]);
+
+
 
   // Redirect to login page if user is not authenticated
   useEffect(() => {
@@ -113,21 +160,17 @@ const Profile = () => {
   useEffect(() => {
     if (!user) return;
 
-    // Set up a real-time listener for books data
     const fetchBooks = async () => {
       try {
         const shelvesRef = collection(db, "users", user.uid, "shelves");
         
-        // Listen for changes to shelves collection
         const unsubscribe = onSnapshot(shelvesRef, (snapshot) => {
           const booksData: BookItem[] = [];
           
-          // Process each shelf document
           snapshot.docs.forEach((doc) => {
             const shelfData = doc.data();
             const shelfType = shelfData.shelfType;
             
-            // Only include 'currently-reading' and 'finished' shelves
             if (shelfType !== "currently-reading" && shelfType !== "finished") return;
             
             booksData.push({
@@ -136,14 +179,13 @@ const Profile = () => {
               title: shelfData.title || "Unknown Title",
               author: shelfData.author || "Unknown Author",
               coverUrl: shelfData.coverUrl || "",
-              genre: shelfData.genre || "", // Use shelfData's genre if available
+              genre: shelfData.genre || "", // use shelfData's genre
               dateAdded: shelfData.dateAdded || Timestamp.now(),
               dateFinished: shelfData.dateFinished || null,
               shelfType: shelfType
             });
           });
 
-          // Process data for charts
           processGenreDistribution(booksData);
           setFinishedBooksTimeline(processTimelineData(
             booksData.filter(book => book.shelfType === "finished"), 
@@ -154,7 +196,6 @@ const Profile = () => {
             false
           ));
           
-          // Process weekly data for new charts
           setFinishedBooksWeekly(processWeeklyData(
             booksData.filter(book => book.shelfType === "finished")
           ));
@@ -179,10 +220,10 @@ const Profile = () => {
         if (unsubscribe) unsubscribe();
       });
     };
-  }, [user]);
+  }, [user, processWeeklyData]);
 
 
-  // Process genre distribution for pie chart
+  //pie chart
   const processGenreDistribution = (books: BookItem[]) => {
     const genreCounts: Record<string, number> = {};
     const CORE_GENRES = [
@@ -201,14 +242,12 @@ const Profile = () => {
         ) || 'Unspecified';
       });
   
-      // Count only valid core genres
       coreGenres.forEach(genre => {
         if (genre !== 'Unspecified') {
           genreCounts[genre] = (genreCounts[genre] || 0) + 1;
         }
       });
   
-      // Only count as Unspecified if NO valid genres found
       if (coreGenres.length === 0 || coreGenres.every(g => g === 'Unspecified')) {
         genreCounts["Unspecified"] = (genreCounts["Unspecified"] || 0) + 1;
       }
@@ -222,25 +261,21 @@ const Profile = () => {
     setGenreDistribution(genreData);
   };
 
-  // Function to process monthly timeline data
+  //process month timeline
   const processTimelineData = (books: BookItem[], isFinished: boolean) => {
-    // Initialize monthly data with all 12 months
     const monthlyData: Record<string, number> = {};
     const currentYear = new Date().getFullYear();
     
-    // Create entries for all 12 months
     for (let month = 0; month < 12; month++) {
       const monthKey = `${currentYear}-${(month + 1).toString().padStart(2, '0')}`;
       monthlyData[monthKey] = 0;
     }
 
-    // Process books to populate monthly counts
     books.forEach(book => {
       const dateObj = isFinished && book.dateFinished ? 
         (book.dateFinished instanceof Timestamp ? book.dateFinished.toDate() : new Date(book.dateFinished)) :
         (book.dateAdded instanceof Timestamp ? book.dateAdded.toDate() : new Date(book.dateAdded));
       
-      // Only count books from the current year
       if (dateObj.getFullYear() === currentYear) {
         const month = dateObj.getMonth();
         const monthKey = `${currentYear}-${(month + 1).toString().padStart(2, '0')}`;
@@ -248,51 +283,11 @@ const Profile = () => {
       }
     });
 
-    // Convert to array format needed for chart
     return Object.entries(monthlyData)
       .map(([date, count]) => ({ date, count }))
       .sort((a, b) => a.date.localeCompare(b.date));
   };
 
-  // New function to process weekly data
-  const processWeeklyData = (books: BookItem[]) => {
-    // Initialize weekly data with all 7 days
-    const weeklyData: Record<string, number> = {};
-    
-    // Get the current date and the start of the week (Monday)
-    const now = new Date();
-    const dayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-    const mondayOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Calculate days to subtract to get to Monday
-    
-    const monday = new Date(now);
-    monday.setDate(now.getDate() - mondayOffset);
-    monday.setHours(0, 0, 0, 0);
-    
-    // Create entries for all 7 days of the week
-    for (let day = 0; day < 7; day++) {
-      const currentDay = new Date(monday);
-      currentDay.setDate(monday.getDate() + day);
-      weeklyData[dayAbbreviations[day]] = 0;
-    }
-    
-    // Process books to populate daily counts
-    books.forEach(book => {
-      const dateObj = book.dateFinished instanceof Timestamp ? 
-        book.dateFinished.toDate() : 
-        (book.dateAdded instanceof Timestamp ? book.dateAdded.toDate() : new Date(book.dateAdded));
-      
-      // Only count books from the current week
-      if (dateObj >= monday && dateObj < new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)) {
-        const day = dateObj.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-        const dayIndex = day === 0 ? 6 : day - 1; // Convert to our 0 = Monday, ..., 6 = Sunday format
-        weeklyData[dayAbbreviations[dayIndex]] = (weeklyData[dayAbbreviations[dayIndex]] || 0) + 1;
-      }
-    });
-    
-    // Convert to array format needed for chart
-    return Object.entries(weeklyData)
-      .map(([day, count]) => ({ day, count }));
-  };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -341,8 +336,8 @@ const Profile = () => {
     });
   };
 
-  // Custom tooltip component for the pie chart
-  const CustomTooltip = ({ active, payload }: any) => {
+  //pie chart
+  const CustomTooltip = ({ active, payload }: TooltipProps) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-[#DFDDCE] p-2 rounded border border-[#3D2F2A]">
@@ -354,13 +349,13 @@ const Profile = () => {
     return null;
   };
   
-  // Custom tooltip component for timeline charts
-  const TimelineTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      // Extract month from date (format: YYYY-MM)
-      const month = parseInt(label.split('-')[1]) - 1;
+  //timeline charts
+  const TimelineTooltip = ({ active, payload, label }: TooltipProps) => {
+    if (active && payload && payload.length && label) {
+      const monthNumber = label.split('-')[1] ?? '1';
+      const month = parseInt(monthNumber) - 1;
       const monthName = new Date(0, month).toLocaleString('default', { month: 'long' });
-      
+  
       return (
         <div className="bg-[#DFDDCE] p-2 rounded border border-[#3D2F2A]">
           <p className="font-bold">{monthName}</p>
@@ -371,8 +366,7 @@ const Profile = () => {
     return null;
   };
   
-  // Custom tooltip component for weekly charts
-  const WeeklyTooltip = ({ active, payload, label }: any) => {
+  const WeeklyTooltip = ({ active, payload, label }: TooltipProps) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-[#DFDDCE] p-2 rounded border border-[#3D2F2A]">
@@ -384,9 +378,8 @@ const Profile = () => {
     return null;
   };
 
-  // Format month abbreviation for x-axis
   const formatMonthAbbreviation = (dateStr: string) => {
-    const month = parseInt(dateStr.split('-')[1]) - 1; // Convert from 1-based to 0-based
+    const month = parseInt(dateStr.split('-')[1]) - 1;
     return monthAbbreviations[month];
   };
 
@@ -399,10 +392,13 @@ const Profile = () => {
             <h1 className="text-[#DFDDCE] text-4xl font-bold mb-8">Profile</h1>
             
             <div className="w-64 h-64 rounded-full overflow-hidden border-4 border-[#DFDDCE] mb-4">
-              <img
+              <Image
                 src={profilePicture}
                 alt="Profile"
+                width={256}
+                height={256}
                 className="w-full h-full object-cover"
+                priority
               />
             </div>
             
@@ -638,7 +634,7 @@ const Profile = () => {
                                   }}
                                 />
                                 <YAxis 
-                                  domain={[0, 25]} // Modified to go up to 25 books
+                                  domain={[0, 25]} // Y-axis = 25 books 
                                   label={{ 
                                     value: 'Books', 
                                     angle: -90, 
@@ -692,7 +688,7 @@ const Profile = () => {
                                   }}
                                 />
                                 <YAxis 
-                                  domain={[0, 10]} // Y-axis up to 10 books as requested
+                                  domain={[0, 10]} // Y-axis = 10 books
                                   label={{ 
                                     value: 'Books', 
                                     angle: -90, 
@@ -745,7 +741,7 @@ const Profile = () => {
                                     }}
                                   />
                                   <YAxis 
-                                    domain={[0, 25]} // Modified to go up to 25 books
+                                    domain={[0, 25]} // Y-axis = 25 books
                                     label={{ 
                                       value: 'Books', 
                                       angle: -90, 
@@ -799,7 +795,7 @@ const Profile = () => {
                                     }}
                                   />
                                   <YAxis 
-                                    domain={[0, 10]} // Y-axis up to 10 books as requested
+                                    domain={[0, 10]} // Y-axis = 10
                                     label={{ 
                                       value: 'Books', 
                                       angle: -90, 

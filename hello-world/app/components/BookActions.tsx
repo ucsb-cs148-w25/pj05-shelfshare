@@ -9,7 +9,7 @@ interface BookActionsProps {
   title: string;
   author: string;
   coverUrl: string;
-  genres?: string[]; // Adding genres as a prop
+  genres?: string[]; //genres as a prop
   onDelete?: () => void; // Optional callback for delete operation
   showDeleteOnly?: boolean; // Optional prop to show only delete button
 }
@@ -25,7 +25,7 @@ const BookActions = ({
   title,
   author,
   coverUrl,
-  genres, // Add this line
+  genres,
   onDelete,
   showDeleteOnly = false
 }: BookActionsProps) => {
@@ -33,32 +33,7 @@ const BookActions = ({
   const [isFavorite, setIsFavorite] = useState(false);
   const [customShelves, setCustomShelves] = useState<{id: string, name: string}[]>([]);
   const { user } = useAuth();
-  // const [genres, setGenres] = useState<string[]>([]);
 
-
-  // // Fetch book genres from Open Library when component mounts
-  // useEffect(() => {
-  //   const fetchGenres = async () => {
-  //     try {
-  //       const response = await fetch(`https://openlibrary.org/works/${bookId}.json`);
-  //       const data = await response.json();
-        
-  //       // Extract genres from subjects (first 3 subjects)
-  //       const subjects = data.subjects || [];
-  //       const extractedGenres = subjects
-  //         .filter((s: string) => typeof s === 'string')
-  //         .map((s: string) => s.split(' -- ')[0]) // Take main category before '--'
-  //         .slice(0, 3); // Limit to 3 genres
-        
-  //       setGenres(extractedGenres);
-  //     } catch (error) {
-  //       console.error("Error fetching genres:", error);
-  //       setGenres([]);
-  //     }
-  //   };
-
-  //   fetchGenres();
-  // }, [bookId]);
 
   useEffect(() => {
     const checkFavoriteStatus = async () => {
