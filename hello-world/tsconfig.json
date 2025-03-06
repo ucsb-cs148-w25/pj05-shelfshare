@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES5",
+    "target": "es2018",
     "types": ["jest", "@testing-library/jest-dom"],
     "lib": [
       "dom",
