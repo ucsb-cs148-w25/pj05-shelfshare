@@ -3,7 +3,7 @@
 import { useAuth } from '../context/AuthContext';
 import { useEffect, useState } from 'react';
 import { db } from "@/firebase";
-import { collection, query, where, onSnapshot, DocumentData } from "firebase/firestore";
+import { collection, query, where, onSnapshot, DocumentData, getDocs } from "firebase/firestore";
 import Image from 'next/image';
 
 interface Book {
@@ -32,10 +32,12 @@ export default function ForYou() {
     readNext: Book[];
     youMayLike: Book[];
     topBooks: Book[];
+    friendsBooks: Book[]; // Add this line
   }>({
     readNext: [],
     youMayLike: [],
-    topBooks: topBooksList, // Use the hardcoded list here
+    topBooks: topBooksList,
+    friendsBooks: [], // Initialize as empty
   });
 
   const [scrollPositions, setScrollPositions] = useState<{ [key: string]: number }>({});
@@ -64,6 +66,46 @@ export default function ForYou() {
     });
 
     return () => unsubscribe();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    // Fetch user's friends
+    const friendsQuery = query(collection(db, "users", user.uid, "friends"));
+
+    const unsubscribeFriends = onSnapshot(friendsQuery, async (friendsSnapshot) => {
+      const friendIds = friendsSnapshot.docs.map(doc => doc.id);
+
+      // Fetch books from each friend's "finished" shelf
+      const friendsBooksPromises = friendIds.map(async (friendId) => {
+        const friendShelfQuery = query(
+          collection(db, "users", friendId, "shelves"),
+          where("shelfType", "==", "finished")
+        );
+        const friendShelfSnapshot = await getDocs(friendShelfQuery);
+        return friendShelfSnapshot.docs.map(doc => {
+          const data = doc.data() as DocumentData;
+          return {
+            title: data.title || "Unknown Title",
+            author: data.author || "Unknown Author",
+            coverUrl: data.coverUrl || "",
+          };
+        });
+      });
+
+      const friendsBooks = (await Promise.all(friendsBooksPromises)).flat();
+
+      // Update recommendations state with friends' books
+      setRecommendations(prev => ({
+        ...prev,
+        friendsBooks: friendsBooks.slice(0, 10), // Limit to 10 books
+      }));
+    });
+
+    return () => {
+      unsubscribeFriends();
+    };
   }, [user]);
 
   async function generateRecommendations(books: Book[]) {
@@ -105,6 +147,7 @@ export default function ForYou() {
         readNext: recommendationsWithCovers,
         youMayLike: newGenresWithCovers,
         topBooks: topBooksList, // Use the hardcoded list here
+        friendsBooks: recommendations.friendsBooks, // Keep existing friends' books
       });
     } catch (error) {
       console.error('Error generating recommendations:', error);
@@ -116,6 +159,7 @@ export default function ForYou() {
       { type: 'readNext', books: recommendations.readNext },
       { type: 'youMayLike', books: recommendations.youMayLike },
       { type: 'topBooks', books: recommendations.topBooks },
+      { type: 'friendsBooks', books: recommendations.friendsBooks }, 
     ];
 
     sections.forEach(section => {
@@ -160,9 +204,10 @@ export default function ForYou() {
   return (
     <div className="bg-[#5A7463] min-h-screen p-8">
       <div className="max-w-6xl mx-auto space-y-8">
+        <Section title="Top books of the Year" books={recommendations.topBooks.slice(0, 10)} type="topBooks" scrollPositions={scrollPositions} maxScrolls={maxScrolls} scrollLeft={scrollLeft} scrollRight={scrollRight} />
         <Section title="Read Next" books={recommendations.readNext.slice(0, 10)} type="readNext" scrollPositions={scrollPositions} maxScrolls={maxScrolls} scrollLeft={scrollLeft} scrollRight={scrollRight} />
         <Section title="Try Something New" books={recommendations.youMayLike.slice(0, 10)} type="youMayLike" scrollPositions={scrollPositions} maxScrolls={maxScrolls} scrollLeft={scrollLeft} scrollRight={scrollRight} />
-        <Section title="Top books of the Year" books={recommendations.topBooks.slice(0, 10)} type="topBooks" scrollPositions={scrollPositions} maxScrolls={maxScrolls} scrollLeft={scrollLeft} scrollRight={scrollRight} />
+        <Section title="Books Your Friends Read" books={recommendations.friendsBooks.slice(0, 10)} type="friendsBooks" scrollPositions={scrollPositions} maxScrolls={maxScrolls} scrollLeft={scrollLeft} scrollRight={scrollRight} />
       </div>
     </div>
   );
@@ -275,7 +320,7 @@ function Section({ title, books, type, scrollPositions, maxScrolls, scrollLeft, 
             ))
           ) : (
             <div className="flex items-center justify-center w-full h-full text-custom-tan text-lg italic">
-              Add books to Finished reading to get recommendations
+              Add books to Finished reading to get personalized recommendations. Add friends to see their activity
             </div>
           )}
         </div>
