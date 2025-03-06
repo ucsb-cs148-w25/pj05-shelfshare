@@ -1,5 +1,3 @@
-// app/profile/page.tsx
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -65,6 +63,9 @@ const Profile = () => {
 
   // COLORS for pie chart
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D', '#FFC658', '#8DD1E1', '#A4DE6C', '#D0ED57'];
+
+  // Month abbreviations array
+  const monthAbbreviations = ['J', 'F', 'Ma', 'A', 'My', 'Jn', 'Jl', 'Au', 'S', 'O', 'N', 'D'];
 
   // Redirect to login page if user is not authenticated
   useEffect(() => {
@@ -162,7 +163,7 @@ const Profile = () => {
   }, [user]);
 
 
-  // Process genre distribution for pie chart ####################
+  // Process genre distribution for pie chart
   const processGenreDistribution = (books: BookItem[]) => {
     const genreCounts: Record<string, number> = {};
     const CORE_GENRES = [
@@ -202,49 +203,37 @@ const Profile = () => {
     setGenreDistribution(genreData);
   };
 
-  // New helper function for weekly timeline processing
-  const getWeekNumber = (d: Date) => {
-    const date = new Date(d);
-    date.setHours(0, 0, 0, 0);
-    date.setDate(date.getDate() + 4 - (date.getDay() || 7));
-    const yearStart = new Date(date.getFullYear(), 0, 1);
-    return Math.ceil(((date.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-  };
-
-
+  // New function to process monthly timeline data
   const processTimelineData = (books: BookItem[], isFinished: boolean) => {
-    const weeklyData: Record<string, number> = {};
-    const today = new Date();
-    const weeksToShow = 12;
-
-    // Create weekly buckets for the last 12 weeks
-    const weekKeys: string[] = [];
-    for (let i = weeksToShow - 1; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - (7 * i));
-      const weekNumber = getWeekNumber(date);
-      weekKeys.push(`${date.getFullYear()}-W${weekNumber.toString().padStart(2, '0')}`);
+    // Initialize monthly data with all 12 months
+    const monthlyData: Record<string, number> = {};
+    const currentYear = new Date().getFullYear();
+    
+    // Create entries for all 12 months
+    for (let month = 0; month < 12; month++) {
+      const monthKey = `${currentYear}-${(month + 1).toString().padStart(2, '0')}`;
+      monthlyData[monthKey] = 0;
     }
 
+    // Process books to populate monthly counts
     books.forEach(book => {
-      const date = isFinished && book.dateFinished ? 
+      const dateObj = isFinished && book.dateFinished ? 
         (book.dateFinished instanceof Timestamp ? book.dateFinished.toDate() : new Date(book.dateFinished)) :
         (book.dateAdded instanceof Timestamp ? book.dateAdded.toDate() : new Date(book.dateAdded));
       
-      const weekNumber = getWeekNumber(date);
-      const weekKey = `${date.getFullYear()}-W${weekNumber.toString().padStart(2, '0')}`;
-      
-      if (weekKeys.includes(weekKey)) {
-        weeklyData[weekKey] = (weeklyData[weekKey] || 0) + 1;
+      // Only count books from the current year
+      if (dateObj.getFullYear() === currentYear) {
+        const month = dateObj.getMonth();
+        const monthKey = `${currentYear}-${(month + 1).toString().padStart(2, '0')}`;
+        monthlyData[monthKey] = (monthlyData[monthKey] || 0) + 1;
       }
     });
 
-    return weekKeys.map(weekKey => ({
-      date: weekKey,
-      count: weeklyData[weekKey] || 0
-    }));
+    // Convert to array format needed for chart
+    return Object.entries(monthlyData)
+      .map(([date, count]) => ({ date, count }))
+      .sort((a, b) => a.date.localeCompare(b.date));
   };
-
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -309,9 +298,13 @@ const Profile = () => {
   // Custom tooltip component for timeline charts
   const TimelineTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
+      // Extract month from date (format: YYYY-MM)
+      const month = parseInt(label.split('-')[1]) - 1;
+      const monthName = new Date(0, month).toLocaleString('default', { month: 'long' });
+      
       return (
         <div className="bg-[#DFDDCE] p-2 rounded border border-[#3D2F2A]">
-          <p className="font-bold">{label}</p>
+          <p className="font-bold">{monthName}</p>
           <p>{`Books: ${payload[0].value}`}</p>
         </div>
       );
@@ -319,10 +312,10 @@ const Profile = () => {
     return null;
   };
 
-  // Helper function to format dates for display on x-axis
-  const formatDateForXAxis = (dateStr: string) => {
-    const [year, month] = dateStr.split('-');
-    return `${month}/${year.slice(2)}`;
+  // Format month initial for x-axis
+  const formatMonthInitial = (dateStr: string) => {
+    const month = parseInt(dateStr.split('-')[1]) - 1; // Convert from 1-based to 0-based
+    return monthAbbreviations[month];
   };
 
   return (
@@ -532,14 +525,15 @@ const Profile = () => {
                             <LineChart data={finishedBooksTimeline}>
                               <XAxis 
                                 dataKey="date" 
-                                tickFormatter={formatDateForXAxis}
+                                tickFormatter={formatMonthInitial}
                                 label={{ 
-                                  value: 'Week', 
+                                  value: 'Month', 
                                   position: 'bottom', 
                                   offset: 0 
                                 }}
                               />
                               <YAxis 
+                                domain={[0, 15]}
                                 label={{ 
                                   value: 'Books Added', 
                                   angle: -90, 
@@ -572,14 +566,15 @@ const Profile = () => {
                             <LineChart data={currentlyReadingTimeline}>
                               <XAxis 
                                 dataKey="date" 
-                                tickFormatter={formatDateForXAxis}
+                                tickFormatter={formatMonthInitial}
                                 label={{ 
-                                  value: 'Week', 
+                                  value: 'Month', 
                                   position: 'bottom', 
                                   offset: 0 
                                 }}
                               />
                               <YAxis 
+                                domain={[0, 15]}
                                 label={{ 
                                   value: 'Books Added', 
                                   angle: -90, 
