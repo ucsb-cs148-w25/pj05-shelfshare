@@ -137,13 +137,13 @@ export default function CreateClub() {
                 value={newChapterTitle}
                 onChange={(e) => setNewChapterTitle(e.target.value)}
                 placeholder="Chapter Title"
-                className="w-full px-4 py-2 rounded-lg bg-[#92A48A] text-[#3D2F2A]"
+                className="w-full px-4 py-2 rounded-lg bg-[#92A48A] text-[#3D2F2A] placeholder:text-[#3D2F2A]/55"
               />
               <DatePicker
                 selected={newChapterDeadline}
                 onChange={(date: Date | null) => setNewChapterDeadline(date)}
                 placeholderText="Deadline"
-                className="w-full px-4 py-2 rounded-lg bg-[#92A48A] text-[#3D2F2A]"
+                className="w-full px-4 py-2 rounded-lg bg-[#92A48A] text-[#3D2F2A] placeholder:text-[#3D2F2A]/55"
                 dateFormat="yyyy/MM/dd"
               />
               <button
