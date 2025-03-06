@@ -16,12 +16,12 @@ const nextConfig: NextConfig = {
         hostname: "lh3.googleusercontent.com",
       },
       {
-        protocol: 'https',
-        hostname: 'res.cloudinary.com',
+        protocol: "https",
+        hostname: "books.google.com",
       },
       {
-        protocol: "http",  // Allowing the http protocol for books.google.com
-        hostname: "books.google.com",  // Allow images from books.google.com
+        protocol: "http",
+        hostname: "books.google.com",
       },
     ],
   },

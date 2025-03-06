@@ -10,6 +10,7 @@ import Image from 'next/image';
 import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, doc, getDocs, writeBatch, FieldValue } from "firebase/firestore";
 import { useParams } from 'next/navigation';
 import BookActions from '@/app/components/BookActions';
+import FriendActivity from '@/app/components/FriendActivity';
 
 interface ProfileItem {
   email: string;
@@ -32,6 +33,7 @@ interface BookData {
 interface Review {
   userId: string;
   userName: string;
+  userProfilePic: string;
   id?: string;
   text: string;
   rating: number;
@@ -44,6 +46,7 @@ interface Review {
 interface ReviewData {
   userId: string;
   userName: string;
+  userProfilePic: string;
   text: string;
   rating: number;
   date: 
@@ -371,7 +374,8 @@ export default function BookDetails() {
     if (newReview.trim() && userRating > 0) {
       const reviewData = {
         userId: user.uid || "Unknown User",
-        userName: user.displayName || "Anonymous",
+        userName: username || "Anonymous",
+        userProfilePic: profilePicture || "/user-circle.png",
         text: newReview,
         rating: userRating,
         date: serverTimestamp(),
@@ -481,6 +485,9 @@ export default function BookDetails() {
               </p>
             </div>
 
+            {/* Friend Activity Section */}
+            {user && <FriendActivity bookId={bookId as string} />}
+
             <div className="mt-8">
               <h2 className="text-2xl font-semibold text-[#DFDDCE] mb-4">Leave A Review:</h2>
               <form onSubmit={handleSubmitReview} className="space-y-4">
@@ -505,21 +512,32 @@ export default function BookDetails() {
               <div className="mt-8 space-y-4">
                 <h3 className="text-xl font-semibold text-[#DFDDCE]">Reviews</h3>
                 {reviews.map((review) => (
+          
                   <div key={review.id} className="bg-[#847266] p-6 rounded-lg relative">
                     <div className="flex items-start space-x-4">
+                      <div className="w-12 h-12 rounded-full flex-shrink-0 overflow-hidden">
                       <Image 
-                        src={profilePicture}
-                        alt="Profile"
+                        src={review.userProfilePic || "/user-circle.png"}
+                        alt={`${review.userName}'s profile`}
                         width={24}
                         height={24}
-                        className="w-12 h-12 rounded-full flex-shrink-0"
+                        className="w-full h-full object-cover"
+                            unoptimized
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = "/upload-pic.png";
+                            }}
                       />
+                      </div>
                       <div className="flex-grow">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center space-x-2">
                             <span className="font-medium text-[#DFDDCE]">
-                              {username}
+                              {review.userName || "Anonymous"}
                             </span>
+                              {review.userId === user?.uid && (
+                                <span className="text-xs bg-[#3D2F2A] text-[#DFDDCE] px-2 py-0.5 rounded">You</span>
+                              )}
                           </div>
                           <span className="text-sm text-[#DFDDCE]">
                             {review.date?.seconds 
@@ -546,6 +564,8 @@ export default function BookDetails() {
       </div>
     </div>
   );
-}
 
+
+
+}
 

@@ -53,8 +53,8 @@ body {
   transition: color 0.2s ease-in-out;
 }
 
-.nav-link:hover {
-  color: #3D2F2A;
+.nav-link:not(.rounded-lg):hover {
+  color: #3D2F2A; /* Hover effect only for non-active links */
 }
 
 .navbar-container {
@@ -82,10 +82,10 @@ body {
   height: 2rem;
   padding: 0.5rem 1rem; 
   border-radius: 0.5rem; 
-  background-color: rgba(255, 255, 255, 0.9);
+  background-color: #DFDDCE;
   color: #3D2F2A;
   font-size: 1rem;
-  border: 1px solid #ccc; 
+  border: 1px solid #DFDDCE; 
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); 
   transition: width 0.2s ease-in-out;
 }
@@ -118,8 +118,6 @@ body {
   -ms-overflow-style: none; /* Hide scrollbar for IE and Edge */
   scrollbar-width: none; /* Hide scrollbar for Firefox */
 }
-
-/* globals.css */
 
 /* For WebKit-based browsers */
 ::-webkit-scrollbar {
