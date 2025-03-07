@@ -23,6 +23,10 @@ const nextConfig: NextConfig = {
         protocol: "http",
         hostname: "books.google.com",
       },
+      {
+        protocol: "https",
+        hostname: "via.placeholder.com",
+      },
     ],
   },
 };

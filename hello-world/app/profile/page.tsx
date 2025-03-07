@@ -9,7 +9,6 @@ import { db } from "@/firebase";
 import { collection, Timestamp, onSnapshot, updateDoc, doc, getDoc, setDoc } from "firebase/firestore";
 import { Upload, Check, X, Plus, Pencil, PieChart as PieChartIcon, LineChart as LineChartIcon, Book, BarChart as BarChartIcon } from "lucide-react";
 import dotenv from "dotenv";
-import Image from 'next/image';
 import { useCallback } from 'react';
 
 dotenv.config();
@@ -409,28 +408,8 @@ const Profile = () => {
       reader.onerror = error => reject(error);
     });
   };
+
   
-  const uploadToCloudinary = async (file: File) => {
-    if (!user) return;
-    const CLOUD_NAME = process.env.NEXT_PUBLIC_CLOUD_NAME;
-    const UPLOAD_PRESET = "shelfshare";
-    
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("upload_preset", UPLOAD_PRESET);
-
-    const response = await fetch(
-      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
-      {
-        method: "POST",
-        body: formData,
-      }
-    );
-
-    const data = await response.json();
-    return data.secure_url;
-  };
-
   // Fixed the any type issue
   const updateProfile = async (field: string, value: string | string[]) => {
     if (!user) return;
