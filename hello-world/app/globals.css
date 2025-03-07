@@ -92,7 +92,7 @@ body {
 
 .dropdown-menu {
   position: absolute; /* Ensures dropdown is placed over content */
-  background-color: #5a7463;
+  background-color: #DFDDCE;
   border: 1px solid #5a7463;
   border-radius: 0.5rem;
   display: flex;
@@ -102,13 +102,14 @@ body {
 
 .dropdown-item {
   padding: 0.75rem 1rem;
-  color: #DFDDCE;
+  color: #3D2F2A;
   text-decoration: none;
   transition: background-color 0.2s ease-in-out;
 }
 
 .dropdown-item:hover {
   color: #3D2F2A;
+  font-weight: bold;
 }
 
 .no-scrollbar::-webkit-scrollbar {

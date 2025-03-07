@@ -346,36 +346,56 @@ function Section({ title, books, type, scrollPositions, maxScrolls, scrollLeft, 
           className="relative bottom-1 flex space-x-5 overflow-x-auto no-scrollbar"
           style={{ width: 'calc(100% - 16px)', marginLeft: '8px', marginRight: '8px', paddingRight: '40px', paddingLeft: '40px' }}
         >
-          {books.length > 0 ? (
-            books.map((book, index) => (
-              <div 
-                key={index} 
-                className="flex-shrink-0 cursor-pointer relative group mt-4"
-                onClick={() => onBookClick(book.bookId)}
-              >
-                <Image
-                  src={book.coverUrl}
-                  alt={book.title}
-                  width={128}
-                  height={144}
-                  className="w-[150px] h-[250px] rounded-lg object-cover bg-custom-brown"
-                />
-                
-                {/* Frequency badge for friends' favorites - optional display */}
-                {showFrequency && book.frequency && book.frequency > 1 && (
-                  <div className="absolute -top-3 -right-3 bg-[#3D2F2A] text-custom-tan rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
-                    {book.frequency}
-                  </div>
-                )}
+          {/* Books Container */}
+          <div
+            id={`scroll-container-${type}`}
+            className="relative bottom-1 flex space-x-5 overflow-x-auto no-scrollbar"
+            style={{ width: 'calc(100% - 16px)', marginLeft: '8px', marginRight: '8px', paddingRight: '40px', paddingLeft: '40px' }}
+          >
+            {books.length > 0 ? (
+              books.map((book, index) => (
+                <div 
+                  key={index} 
+                  className="flex-shrink-0 cursor-pointer relative group mt-4"
+                  onClick={() => onBookClick(book.bookId)}
+                >
+                  <Image
+                    src={book.coverUrl}
+                    alt={book.title}
+                    width={128}
+                    height={144}
+                    className="w-[150px] h-[250px] rounded-lg object-cover bg-custom-brown"
+                    onError={(e) => {
+                      // Fallback if image fails to load
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                      target.parentElement!.innerHTML += `
+                        <div class="w-[150px] h-[250px] rounded-lg bg-custom-brown flex items-center justify-center p-2">
+                          <div class="text-center text-custom-tan">
+                            <p class="font-bold">${book.title}</p>
+                            <p class="text-xs">${book.author}</p>
+                          </div>
+                        </div>
+                      `;
+                    }}
+                  />
+
+                  {/* Frequency badge for friends' favorites - optional display */}
+                  {showFrequency && book.frequency && book.frequency > 1 && (
+                    <div className="absolute -top-3 -right-3 bg-[#3D2F2A] text-custom-tan rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
+                      {book.frequency}
+                    </div>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="flex items-center justify-center w-full h-full text-custom-tan text-lg italic">
+                {type === 'friendsFavorites' 
+                  ? "Add friends to see their favorite books" 
+                  : "Add books to Finished reading to get personalized recommendations"}
               </div>
-            ))
-          ) : (
-            <div className="flex items-center justify-center w-full h-full text-custom-tan text-lg italic">
-              {type === 'friendsFavorites' 
-                ? "Add friends to see their favorite books" 
-                : "Add books to Finished reading to get personalized recommendations"}
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
