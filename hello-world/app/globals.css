@@ -98,6 +98,7 @@ body {
   display: flex;
   flex-direction: column;
   z-index: 50; /* Ensures dropdown appears above other content */
+  width: 95px;
 }
 
 .dropdown-item {
