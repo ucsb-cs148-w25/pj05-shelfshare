@@ -56,8 +56,8 @@ const Navbar: React.FC = () => {
     const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [currentPage, setCurrentPage] = useState(1);
-    const resultsPerPage = 10;
-    const maxPages = 2; // Limit to 2 pages as requested
+    const resultsPerPage = 7; // Changed from 10 to 7
+    const maxPages = 4; // Changed from 2 to 4
 
     const { openDropdown } = state;
     const searchCache = useRef(new Map<string, SearchResult[]>());
@@ -164,7 +164,7 @@ const Navbar: React.FC = () => {
                 return 0;
             });
 
-            // Limit to total results for all pages (20 results for 2 pages of 10)
+            // Limit to total results for all pages (28 results for 4 pages of 7)
             filteredResults = filteredResults.slice(0, maxPages * resultsPerPage);
 
             // Update cache
@@ -261,7 +261,7 @@ const Navbar: React.FC = () => {
                 {/* Search results dropdown */}
                 {searchResults.length > 0 && (
                     <div className="absolute top-full left-0 right-0 bg-white shadow-lg rounded-md mt-1 z-50 border border-gray-200 search-results-dropdown">
-                        {/* Results */}
+                        {/* Results - kept at original size */}
                         {currentResults.map((result) => (
                             <Link
                             key={result.key}
