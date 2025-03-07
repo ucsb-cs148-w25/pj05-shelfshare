@@ -9,7 +9,7 @@ Daily Scrum
 * Bella Ward [X]
 * Sungchae Park [x]
 * Towela Phiri [x] - Virtual
-* Niyati Mummidivarapu [X] - Cirtual
+* Niyati Mummidivarapu [X] - Virtual
 * Srinidhi Sathish [X]
 
 ### Notes:
