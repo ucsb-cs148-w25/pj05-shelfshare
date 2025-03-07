@@ -1,4 +1,4 @@
-# Team Meeting 24: Lecture 16 , 03/07
+# Team Meeting 24: Lab09 , 03/07
 
 ### Type of Meeting
 Daily Scrum
