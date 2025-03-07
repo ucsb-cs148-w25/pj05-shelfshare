@@ -13,6 +13,7 @@ interface Book {
   cover_i?: number;
   rating?: number | null;
   first_publish_year?: number;
+  genre?: string; 
 }
 
 interface StarRatingProps {
@@ -33,14 +34,12 @@ export default function Browse() {
   const [books, setBooks] = useState<Book[]>([]);
   const [filteredBooks, setFilteredBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  // Change to array of selected genres
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [filterMessage, setFilterMessage] = useState<string>('');
   const [minYear, setMinYear] = useState<string>('');
   const [maxYear, setMaxYear] = useState<string>('');
   const [showTrending, setShowTrending] = useState<boolean>(true); 
 
-  // State for rating filter
   const [minRating, setMinRating] = useState<string>('');
   const [maxRating, setMaxRating] = useState<string>('');
 
@@ -110,6 +109,7 @@ export default function Browse() {
           author_name: book.author_name || [],
           cover_i: book.cover_i || null,
           first_publish_year: book.first_publish_year,
+          genre: 'Popular', // Set genre for trending books
         }));
       } else if (subjects && subjects.length > 0) {
         // Get books for the first subject that has more to fetch
@@ -132,6 +132,7 @@ export default function Browse() {
           author_name: book.authors?.map((a) => a.name) || [],
           cover_i: book.cover_id || null,
           first_publish_year: book.first_publish_year,
+          genre: subjects[0].charAt(0).toUpperCase() + subjects[0].slice(1), // Capitalize the genre
         }));
       }
       
@@ -185,6 +186,7 @@ export default function Browse() {
         author_name: book.author_name || [],
         cover_i: book.cover_i || null,
         first_publish_year: book.first_publish_year,
+        genre: 'Popular', // Set genre for trending books
       }));
       
       const booksWithRatings = await Promise.all(
@@ -256,17 +258,17 @@ export default function Browse() {
           author_name: book.authors?.map((a) => a.name) || [],
           cover_i: book.cover_id || null,
           first_publish_year: book.first_publish_year,
+          genre: subject.charAt(0).toUpperCase() + subject.slice(1), // Capitalize the genre
         }));
       });
       
       // Wait for all genre fetches to complete
       const genreResults = await Promise.all(genrePromises);
       
-      // Combine all books and remove duplicates by key
-      let combinedBooks: Book[] = [];
+      const combinedBooks: Book[] = [];
       const bookKeys = new Set();
       
-      genreResults.forEach(books => {
+      genreResults.forEach((books) => {
         books.forEach((book: Book) => {
           if (!bookKeys.has(book.key)) {
             bookKeys.add(book.key);
@@ -283,7 +285,6 @@ export default function Browse() {
         return;
       }
       
-      // Get ratings for all books
       const booksWithRatings = await Promise.all(
         combinedBooks.map(async (book) => {
           try {
@@ -316,7 +317,6 @@ export default function Browse() {
     }
   };
 
-  // This effect handles authentication redirect
   useEffect(() => {
     if (!user) {
       router.push('/');
@@ -325,7 +325,7 @@ export default function Browse() {
   
   useEffect(() => {
     const fetchData = async () => {
-      if (!user) return; // Don't fetch if user isn't authenticated
+      if (!user) return; 
       
       console.log("Data fetch effect triggered:", { showTrending, selectedGenres });
       
@@ -342,14 +342,12 @@ export default function Browse() {
   }, [showTrending, selectedGenres, fetchRandomBooks, user]);
 
   const applyFilters = async () => {
-    // Parse rating inputs
     let min = parseFloat(minRating);
     let max = parseFloat(maxRating);
     if (isNaN(min) || min < 0) min = 0;
     if (isNaN(max) || max > 5) max = 5;
     if (min > max) [min, max] = [max, min];
     
-    // Parse year inputs
     let minPublishYear = parseInt(minYear);
     let maxPublishYear = parseInt(maxYear);
     const currentYear = new Date().getFullYear();
@@ -357,12 +355,9 @@ export default function Browse() {
     if (isNaN(maxPublishYear)) maxPublishYear = currentYear;
     if (minPublishYear > maxPublishYear) [minPublishYear, maxPublishYear] = [maxPublishYear, minPublishYear];
   
-    // Clear any previous messages
     setFilterMessage('');
     
-    // Apply filters to current set of books
     let filtered = books.filter(book => {
-      // Check rating criteria
       const bookRating = typeof book.rating === 'number' ? book.rating : parseFloat(book.rating as unknown as string);
       const ratingMatch = isNaN(min) || (
         !isNaN(bookRating) && 
@@ -370,7 +365,6 @@ export default function Browse() {
         (isNaN(max) || bookRating <= max)
       );
       
-      // Check year criteria - only if year filter is actually provided
       let yearMatch = true;
       if (minYear || maxYear) {
         yearMatch = book.first_publish_year !== undefined && 
@@ -378,11 +372,9 @@ export default function Browse() {
                    book.first_publish_year <= maxPublishYear;
       }
       
-      // Book must match both criteria
       return ratingMatch && yearMatch;
     });
     
-    // Same logic for fetching more books if needed
     if (filtered.length < 20 && (selectedGenres.length > 0 || showTrending)) {
       setLoading(true);
       
@@ -393,7 +385,6 @@ export default function Browse() {
       while (filtered.length < 20 && attempts < maxAttempts) {
         attempts++;
         
-        // Fetch more books
         const moreBooks = await fetchMoreBooks(selectedGenres, currentBooks);
         
         if (moreBooks.length === currentBooks.length) {
@@ -402,7 +393,6 @@ export default function Browse() {
         
         currentBooks = moreBooks;
         
-        // Apply both filters to the expanded set
         filtered = currentBooks.filter(book => {
           const bookRating = typeof book.rating === 'number' ? book.rating : parseFloat(book.rating as unknown as string);
           const ratingMatch = isNaN(min) || (
@@ -434,33 +424,26 @@ export default function Browse() {
     setFilteredBooks(filtered);
   };
 
-  // Modified to handle multiple genre selection
   const toggleGenre = (genre: string) => {
     console.log(`Toggling genre: ${genre}`);
     
-    // If already showing trending, switch to genre mode
     if (showTrending) {
       setShowTrending(false);
       setSelectedGenres([genre]);
       return;
     }
     
-    // Check if genre is already selected
     if (selectedGenres.includes(genre)) {
-      // Remove it from the selection
       const updatedGenres = selectedGenres.filter(g => g !== genre);
       setSelectedGenres(updatedGenres);
       
-      // If no genres left, switch back to trending
       if (updatedGenres.length === 0) {
         setShowTrending(true);
       }
     } else {
-      // Add it to selection if under the limit
       if (selectedGenres.length < 3) {
         setSelectedGenres([...selectedGenres, genre]);
       } else {
-        // Replace the oldest selection (first in array)
         const updatedGenres = [...selectedGenres.slice(1), genre];
         setSelectedGenres(updatedGenres);
         setFilterMessage('Maximum 3 genres can be selected at once.');
@@ -610,7 +593,14 @@ export default function Browse() {
                     </p>
                   
                     <div className="mt-auto">
-                      <StarRating rating={book.rating || 0} />
+                      <div className="flex items-center gap-4">
+                        <StarRating rating={book.rating || 0} />
+                        {book.genre !== 'Popular' && (
+                        <span className="px-3 py-1 bg-[#DFDDCE] text-[#3D2F2A] text-sm font-bold rounded-[15px] inline-block">
+                          {book.genre || 'General'}
+                        </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
