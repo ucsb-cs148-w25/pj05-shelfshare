@@ -13,6 +13,7 @@ interface Book {
   cover_i?: number;
   rating?: number | null;
   first_publish_year?: number;
+  genre?: string; 
 }
 
 interface StarRatingProps {
@@ -33,13 +34,12 @@ export default function Browse() {
   const [books, setBooks] = useState<Book[]>([]);
   const [filteredBooks, setFilteredBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
   const [filterMessage, setFilterMessage] = useState<string>('');
   const [minYear, setMinYear] = useState<string>('');
   const [maxYear, setMaxYear] = useState<string>('');
   const [showTrending, setShowTrending] = useState<boolean>(true); 
 
-  // State for rating filter
   const [minRating, setMinRating] = useState<string>('');
   const [maxRating, setMaxRating] = useState<string>('');
 
@@ -79,14 +79,14 @@ export default function Browse() {
     try {
       const randomGenres = ['fiction', 'nonfiction', 'fantasy', 'mystery', 'history']; 
       const randomGenre = randomGenres[Math.floor(Math.random() * randomGenres.length)];
-      await fetchBooksBySubject(randomGenre);
+      await fetchBooksBySubject([randomGenre]);
     } catch (error) {
       console.error('Error fetching random books:', error);
       setLoading(false);
     }
   }, []);
 
-  const fetchMoreBooks = async (subject: string | null, currentBooks: Book[]) => {
+  const fetchMoreBooks = async (subjects: string[] | null, currentBooks: Book[]) => {
     try {
       let newBookList: Book[] = [];
       
@@ -109,14 +109,15 @@ export default function Browse() {
           author_name: book.author_name || [],
           cover_i: book.cover_i || null,
           first_publish_year: book.first_publish_year,
+          genre: 'Popular', // Set genre for trending books
         }));
-      } else if (subject) {
-        // Original code for fetching by subject
-        const formattedSubject = subject.toLowerCase().replace(/\s+/g, '-');
+      } else if (subjects && subjects.length > 0) {
+        // Get books for the first subject that has more to fetch
+        const formattedSubject = subjects[0].toLowerCase().replace(/\s+/g, '-');
         const res = await fetch(
           `https://openlibrary.org/subjects/${formattedSubject}.json?limit=50&offset=${currentBooks.length}`
         );
-        if (!res.ok) throw new Error('Failed to fetch more books');
+        if (!res.ok) throw new Error(`Failed to fetch more books for ${formattedSubject}`);
     
         const data = await res.json();
         newBookList = data.works.map((book: { 
@@ -131,6 +132,7 @@ export default function Browse() {
           author_name: book.authors?.map((a) => a.name) || [],
           cover_i: book.cover_id || null,
           first_publish_year: book.first_publish_year,
+          genre: subjects[0].charAt(0).toUpperCase() + subjects[0].slice(1), // Capitalize the genre
         }));
       }
       
@@ -184,6 +186,7 @@ export default function Browse() {
         author_name: book.author_name || [],
         cover_i: book.cover_i || null,
         first_publish_year: book.first_publish_year,
+        genre: 'Popular', // Set genre for trending books
       }));
       
       const booksWithRatings = await Promise.all(
@@ -215,50 +218,75 @@ export default function Browse() {
     }
   };
 
-  const fetchBooksBySubject = async (subject: string) => {
+  // Modified to handle multiple subjects
+  const fetchBooksBySubject = async (subjects: string[]) => {
     setLoading(true);
     try {
-      console.log(`Fetching books for subject: ${subject}`);
-      const formattedSubject = subject.toLowerCase().replace(/\s+/g, '-');
+      console.log(`Fetching books for subjects: ${subjects.join(', ')}`);
       
-      const res = await fetch(
-        `https://openlibrary.org/subjects/${formattedSubject}.json?limit=50`
-      );
+      // Fetch books for each selected genre
+      const genrePromises = subjects.map(async (subject) => {
+        const formattedSubject = subject.toLowerCase().replace(/\s+/g, '-');
+        
+        const res = await fetch(
+          `https://openlibrary.org/subjects/${formattedSubject}.json?limit=20`
+        );
+        
+        if (!res.ok) {
+          console.error(`Failed to fetch books for ${subject}, status: ${res.status}`);
+          return [];
+        }
+    
+        const data = await res.json();
+        console.log(`${subject} data received:`, data.works?.length || 0, "books");
+        
+        // Check if there are works in the response
+        if (!data.works || data.works.length === 0) {
+          console.warn(`No works found for subject: ${subject}`);
+          return [];
+        }
+        
+        return data.works.map((book: { 
+          key: string;
+          title: string;
+          authors?: { name: string }[];
+          cover_id?: number;
+          first_publish_year?: number;
+        }) => ({
+          key: book.key.replace('/works/', ''),
+          title: book.title,
+          author_name: book.authors?.map((a) => a.name) || [],
+          cover_i: book.cover_id || null,
+          first_publish_year: book.first_publish_year,
+          genre: subject.charAt(0).toUpperCase() + subject.slice(1), // Capitalize the genre
+        }));
+      });
       
-      if (!res.ok) {
-        console.error(`Failed to fetch books for ${subject}, status: ${res.status}`);
-        throw new Error(`Failed to fetch books for ${subject}`);
-      }
-  
-      const data = await res.json();
-      console.log(`${subject} data received:`, data.works?.length || 0, "books");
+      // Wait for all genre fetches to complete
+      const genreResults = await Promise.all(genrePromises);
       
-      // Check if there are works in the response
-      if (!data.works || data.works.length === 0) {
-        console.warn(`No works found for subject: ${subject}`);
+      const combinedBooks: Book[] = [];
+      const bookKeys = new Set();
+      
+      genreResults.forEach((books) => {
+        books.forEach((book: Book) => {
+          if (!bookKeys.has(book.key)) {
+            bookKeys.add(book.key);
+            combinedBooks.push(book);
+          }
+        });
+      });
+      
+      if (combinedBooks.length === 0) {
         setBooks([]);
         setFilteredBooks([]);
-        setFilterMessage(`No books found for ${subject}`);
+        setFilterMessage(`No books found for the selected genres`);
         setLoading(false);
         return;
       }
       
-      const bookList: Book[] = data.works.map((book: { 
-        key: string;
-        title: string;
-        authors?: { name: string }[];
-        cover_id?: number;
-        first_publish_year?: number;
-      }) => ({
-        key: book.key.replace('/works/', ''),
-        title: book.title,
-        author_name: book.authors?.map((a) => a.name) || [],
-        cover_i: book.cover_id || null,
-        first_publish_year: book.first_publish_year,
-      }));
-      
       const booksWithRatings = await Promise.all(
-        bookList.map(async (book) => {
+        combinedBooks.map(async (book) => {
           try {
             const ratingRes = await fetch(
               `https://openlibrary.org/works/${book.key}/ratings.json`
@@ -283,13 +311,12 @@ export default function Browse() {
       console.error('Error fetching books by subject:', error);
       setBooks([]);
       setFilteredBooks([]);
-      setFilterMessage(`Error fetching books for ${subject}`);
+      setFilterMessage(`Error fetching books for selected genres`);
     } finally {
       setLoading(false);
     }
   };
 
-  // This effect handles authentication redirect
   useEffect(() => {
     if (!user) {
       router.push('/');
@@ -298,31 +325,29 @@ export default function Browse() {
   
   useEffect(() => {
     const fetchData = async () => {
-      if (!user) return; // Don't fetch if user isn't authenticated
+      if (!user) return; 
       
-      console.log("Data fetch effect triggered:", { showTrending, selectedGenre });
+      console.log("Data fetch effect triggered:", { showTrending, selectedGenres });
       
       if (showTrending) {
         await fetchTrendingBooks();
-      } else if (selectedGenre) {
-        await fetchBooksBySubject(selectedGenre);
+      } else if (selectedGenres.length > 0) {
+        await fetchBooksBySubject(selectedGenres);
       } else {
         await fetchRandomBooks();
       }
     };
     
     fetchData();
-  }, [showTrending, selectedGenre, fetchRandomBooks, user]);
+  }, [showTrending, selectedGenres, fetchRandomBooks, user]);
 
   const applyFilters = async () => {
-    // Parse rating inputs
     let min = parseFloat(minRating);
     let max = parseFloat(maxRating);
     if (isNaN(min) || min < 0) min = 0;
     if (isNaN(max) || max > 5) max = 5;
     if (min > max) [min, max] = [max, min];
     
-    // Parse year inputs
     let minPublishYear = parseInt(minYear);
     let maxPublishYear = parseInt(maxYear);
     const currentYear = new Date().getFullYear();
@@ -330,12 +355,9 @@ export default function Browse() {
     if (isNaN(maxPublishYear)) maxPublishYear = currentYear;
     if (minPublishYear > maxPublishYear) [minPublishYear, maxPublishYear] = [maxPublishYear, minPublishYear];
   
-    // Clear any previous messages
     setFilterMessage('');
     
-    // Apply filters to current set of books
     let filtered = books.filter(book => {
-      // Check rating criteria
       const bookRating = typeof book.rating === 'number' ? book.rating : parseFloat(book.rating as unknown as string);
       const ratingMatch = isNaN(min) || (
         !isNaN(bookRating) && 
@@ -343,7 +365,6 @@ export default function Browse() {
         (isNaN(max) || bookRating <= max)
       );
       
-      // Check year criteria - only if year filter is actually provided
       let yearMatch = true;
       if (minYear || maxYear) {
         yearMatch = book.first_publish_year !== undefined && 
@@ -351,12 +372,10 @@ export default function Browse() {
                    book.first_publish_year <= maxPublishYear;
       }
       
-      // Book must match both criteria
       return ratingMatch && yearMatch;
     });
     
-    // Same logic for fetching more books if needed
-    if (filtered.length < 20 && (selectedGenre || showTrending)) {
+    if (filtered.length < 20 && (selectedGenres.length > 0 || showTrending)) {
       setLoading(true);
       
       let currentBooks = [...books];
@@ -366,8 +385,7 @@ export default function Browse() {
       while (filtered.length < 20 && attempts < maxAttempts) {
         attempts++;
         
-        // Fetch more books
-        const moreBooks = await fetchMoreBooks(selectedGenre, currentBooks);
+        const moreBooks = await fetchMoreBooks(selectedGenres, currentBooks);
         
         if (moreBooks.length === currentBooks.length) {
           break;
@@ -375,7 +393,6 @@ export default function Browse() {
         
         currentBooks = moreBooks;
         
-        // Apply both filters to the expanded set
         filtered = currentBooks.filter(book => {
           const bookRating = typeof book.rating === 'number' ? book.rating : parseFloat(book.rating as unknown as string);
           const ratingMatch = isNaN(min) || (
@@ -407,14 +424,31 @@ export default function Browse() {
     setFilteredBooks(filtered);
   };
 
-  const selectGenre = (genre: string) => {
-    console.log(`Selecting genre: ${genre}`);
-    if (selectedGenre === genre && !showTrending) {
+  const toggleGenre = (genre: string) => {
+    console.log(`Toggling genre: ${genre}`);
+    
+    if (showTrending) {
+      setShowTrending(false);
+      setSelectedGenres([genre]);
       return;
     }
     
-    setShowTrending(false);
-    setSelectedGenre(genre);
+    if (selectedGenres.includes(genre)) {
+      const updatedGenres = selectedGenres.filter(g => g !== genre);
+      setSelectedGenres(updatedGenres);
+      
+      if (updatedGenres.length === 0) {
+        setShowTrending(true);
+      }
+    } else {
+      if (selectedGenres.length < 3) {
+        setSelectedGenres([...selectedGenres, genre]);
+      } else {
+        const updatedGenres = [...selectedGenres.slice(1), genre];
+        setSelectedGenres(updatedGenres);
+        setFilterMessage('Maximum 3 genres can be selected at once.');
+      }
+    }
   };
 
   const selectTrending = () => {
@@ -423,7 +457,7 @@ export default function Browse() {
       return;
     }
     
-    setSelectedGenre(null);
+    setSelectedGenres([]);
     setShowTrending(true);
   };
 
@@ -440,32 +474,35 @@ export default function Browse() {
       <div className="flex flex-col items-center space-y-4">
         <div className="flex items-center space-x-4 overflow-x-auto pb-2 max-w-full">
           <span className="text-lg font-bold text-[#DFDDCE] whitespace-nowrap">Genre</span>
-          <div className="flex space-x-4 font-bold">
+          <div className="flex flex-wrap justify-center gap-2">
             <button
               onClick={selectTrending}
-              className={`px-4 py-2 rounded-[15px] shadow-md transition-colors whitespace-nowrap ${
-                showTrending
-                  ? 'bg-[#3D2F2A] text-[#DFDDCE]'
-                  : 'bg-[#DFDDCE] text-[#3D2F2A]'
-              }`}
+              className={`px-4 py-2 rounded-[15px] shadow-md font-bold transition-colors whitespace-nowrap 
+                ${showTrending ? 'bg-[#3D2F2A] text-[#DFDDCE]' : 'bg-[#DFDDCE] text-[#3D2F2A]'} 
+                hover:bg-[#3D2F2A] hover:text-[#DFDDCE]`}
             >
               Popular
             </button>
+            
             {genres.map((genre) => (
-            <button
-              key={genre}
-              onClick={() => selectGenre(genre.toLowerCase())}
-              className={`px-4 py-2 rounded-[15px] shadow-md transition-colors whitespace-nowrap ${
-                selectedGenre === genre.toLowerCase() && !showTrending
-                  ? 'bg-[#3D2F2A] text-[#DFDDCE]'
-                  : 'bg-[#DFDDCE] text-[#3D2F2A]'
-              }`}
-            >
-              {genre}
-            </button>
-          ))}
+              <button
+                key={genre}
+                onClick={() => toggleGenre(genre.toLowerCase())}
+                className={`px-4 py-2 font-bold rounded-[15px] shadow-md transition-colors whitespace-nowrap 
+                  ${
+                    selectedGenres.includes(genre.toLowerCase()) && !showTrending
+                      ? 'bg-[#3D2F2A] text-[#DFDDCE]'
+                      : 'bg-[#DFDDCE] text-[#3D2F2A]'
+                  } 
+                  hover:bg-[#3D2F2A] hover:text-[#DFDDCE]`}
+              >
+                {genre}
+              </button>
+            ))}
           </div>
         </div>
+        
+        
       </div>
 
       <div className="flex mt-6 gap-6">
@@ -556,7 +593,14 @@ export default function Browse() {
                     </p>
                   
                     <div className="mt-auto">
-                      <StarRating rating={book.rating || 0} />
+                      <div className="flex items-center gap-4">
+                        <StarRating rating={book.rating || 0} />
+                        {book.genre !== 'Popular' && (
+                        <span className="px-3 py-1 bg-[#DFDDCE] text-[#3D2F2A] text-sm font-bold rounded-[15px] inline-block">
+                          {book.genre || 'General'}
+                        </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
