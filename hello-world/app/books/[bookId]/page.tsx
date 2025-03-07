@@ -27,6 +27,7 @@ interface BookData {
   covers?: number[];
   authors?: string[];
   rating?: number;
+  genres?: string[];
 }
 
 interface Review {
@@ -69,11 +70,88 @@ interface Friend {
   username?: string;
 }
 
+const normalizeGenre = (rawGenre: string) => {
+  const genreMap: Record<string, string> = {
+    'juvenile fiction': 'Young Adult',
+    'bildungsroman': 'Coming of Age',
+    'detective': 'Mystery',
+    'mystery': 'Mystery',
+    'historical fiction': 'Historical Fiction',
+    'science fiction': 'Sci-Fi',
+    'speculative fiction': 'Sci-Fi/Fantasy',
+    'suspense': 'Thriller',
+    'thriller': 'Thriller',
+    'fiction': 'Fiction',
+    'nonfiction': 'Non-Fiction',
+    'fantasy': 'Fantasy',
+    'romance': 'Romance',
+    'biography': 'Biography',
+    'history': 'History',
+    'young adult': 'Young Adult',
+    'children': "Children's",
+    'kids': "Children's",
+    'horror': 'Horror',
+    'poetry': 'Poetry',
+    'drama': 'Drama',
+    'animals': 'Animals & Nature',
+    'nature': 'Animals & Nature',
+    'time travel': 'Sci-Fi',
+    'detective stories': 'Mystery',
+    'picture books': "Children's",
+    'social life and customs': 'History',
+    'romantic suspense fiction': 'Romance',
+    'short stories': 'Fiction',
+    'adventure stories': 'Adventure',
+    'psychological fiction': 'Drama',
+    
+    //spanish
+    'Pece': 'Animals & Nature',
+    'animales': 'Animals & Nature',
+    'caseros': 'Animals & Nature',
+    'historias juveniles': 'Young Adult',
+    'ficción juvenil': 'Young Adult',
+    'cuentos infantiles': "Children's",
+    'literatura juvenil': 'Young Adult',
+    'novela policíaca': 'Mystery',
+    'cuentos de animales': 'Animals & Nature',
+    'aventura': 'Adventure',
+
+    //common Open Library special categories
+    'missing persons': 'Mystery',
+    'stories in rhyme': 'Poetry',
+    'journalists': 'Non-Fiction',
+    'unspoken': 'Drama'
+  };
+  
+  const cleanGenre = rawGenre
+    .toLowerCase()
+    .replace(/[^a-z\s]/gi, '')
+    .trim();
+
+  const exactMatch = genreMap[cleanGenre];
+  if (exactMatch) return exactMatch;
+
+  const partialMatch = Object.keys(genreMap).find(key => 
+    cleanGenre.includes(key.toLowerCase())
+  );
+
+  return partialMatch ? genreMap[partialMatch] : 'Other';
+};
+
+
+
 export default function BookDetails() {
   const { bookId } = useParams<{ bookId: string }>();
   const { user } = useAuth();
 
-  const [book, setBook] = useState<BookData | null>(null);
+  const [book, setBook] = useState<BookData | null>({
+    title: '',
+    description: '',
+    covers: [],
+    authors: [],
+    rating: 0,
+    genres: []
+  });
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -111,6 +189,18 @@ export default function BookDetails() {
         if (!res.ok) throw new Error("Failed to fetch book details.");
         const data = await res.json();
 
+        const genres = data.subjects
+          ?.map((subject: string) => {
+            const baseSubject = typeof subject === 'string' 
+              ? subject.split(' -- ')[0] 
+              : 'Unknown';
+            return normalizeGenre(baseSubject);
+          })
+          .filter((genre: string) => genre !== 'Other') 
+          .filter((genre: string, index: number, self: string[]) => 
+            self.indexOf(genre) === index
+          ) || [];
+
         const ratingRes = await fetch(`https://openlibrary.org/works/${bookId}/ratings.json`);
         let rating = 0;
         if (ratingRes.ok) {
@@ -136,6 +226,7 @@ export default function BookDetails() {
           description: cleanDescription,
           rating,
           authors,
+          genres,
         });
       } catch (err: unknown) {
         if (err instanceof Error) {
@@ -364,6 +455,7 @@ export default function BookDetails() {
                 title={book.title}
                 author={book.authors?.[0] || "Unknown Author"}
                 coverUrl={coverImageUrl}
+                genres={book.genres || []}
               />
             </div>
           </div>

@@ -16,12 +16,12 @@ const nextConfig: NextConfig = {
         hostname: "lh3.googleusercontent.com",
       },
       {
-        protocol: "https", // Add support for https
-        hostname: "books.google.com", // Google Books
+        protocol: "https",
+        hostname: "books.google.com",
       },
       {
-        protocol: "http", // Add support for http as well
-        hostname: "books.google.com", // Google Books
+        protocol: "http",
+        hostname: "books.google.com",
       },
     ],
   },
