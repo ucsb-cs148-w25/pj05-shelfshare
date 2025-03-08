@@ -96,7 +96,7 @@ const Navbar: React.FC = () => {
             const authorData = await authorResponse.json();
 
             // Process title search results
-            let titleResults: SearchResult[] = titleData.docs
+            const titleResults: SearchResult[] = titleData.docs
                 .filter((doc: SearchResult) => doc.language?.includes("eng"))
                 .map((result: SearchResult) => ({
                     key: result.key,
@@ -108,7 +108,7 @@ const Navbar: React.FC = () => {
                 }));
 
             // Process author search results
-            let authorResults: SearchResult[] = authorData.docs
+            const authorResults: SearchResult[] = authorData.docs
                 .filter((doc: SearchResult) => doc.language?.includes("eng"))
                 .map((result: SearchResult) => ({
                     key: result.key,
