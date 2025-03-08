@@ -23,7 +23,7 @@ interface ProfileItem {
 
 interface BookData {
   title: string;
-  description?: string | { value: string };
+  description?: string;
   covers?: number[];
   authors?: string[];
   rating?: number;
@@ -85,6 +85,26 @@ export default function BookDetails() {
   const [username, setUsername] = useState("username");
   const [userFriends, setUserFriends] = useState<Friend[]>([]);
 
+  // Function to clean description text by removing HTML tags and URLs
+  const cleanDescriptionText = (description: string | { value: string } | undefined): string => {
+    // Default text if no description is available
+    if (!description) return "No description available.";
+    
+    // Extract the string value from the description object if needed
+    const descriptionText = typeof description === "string" 
+      ? description 
+      : description.value || "No description available.";
+    
+    // Remove HTML tags
+    const withoutHtml = descriptionText.replace(/<\/?[^>]+(>|$)/g, " ");
+    
+    // Remove URLs (http:// or https:// followed by non-whitespace characters)
+    const withoutUrls = withoutHtml.replace(/https?:\/\/\S+/g, "");
+    
+    // Clean up extra whitespace (multiple spaces, line breaks)
+    return withoutUrls.replace(/\s+/g, " ").trim();
+  };
+
   useEffect(() => {
     if (!user) return;
 
@@ -118,10 +138,8 @@ export default function BookDetails() {
           rating = ratingData.summary?.average || 0;
         }
 
-        const cleanDescription =
-          typeof data.description === "string"
-            ? data.description
-            : data.description?.value || "No description available.";
+        // Use the new cleaning function
+        const cleanDescription = cleanDescriptionText(data.description);
 
         const authors = await Promise.all(
           (data.authors || []).map(async (author: Author) => {
@@ -333,10 +351,7 @@ export default function BookDetails() {
     );
   }
 
-  const description =
-    typeof book.description === 'string'
-      ? book.description
-      : book.description?.value || 'No description available.';
+  const description = book.description || 'No description available.';
 
   const coverId = book.covers && book.covers[0];
   const coverImageUrl = coverId && coverId > 0
@@ -373,7 +388,7 @@ export default function BookDetails() {
               <h1 className="text-4xl font-bold text-[#DFDDCE]">{book.title}</h1>
               {book.authors?.length ? (
                 <p className="text-[#DFDDCE] text-lg mt-2">
-                  By: {book.authors.join(', ')}
+                  By: {book.authors[0]}
                 </p>
               ) : (
                 <p className="text-[#DFDDCE] text-lg mt-2">Author unknown</p>
@@ -472,8 +487,4 @@ export default function BookDetails() {
       </div>
     </div>
   );
-
-
-
 }
-
