@@ -10,7 +10,8 @@ For this project, I worked mainly on the search bar, API integration and usage, 
 - asdf
 
 # Srin 
-- asdf
+In this project, some of my contributions were developing the UI for the product, implementing the functionality and design for the browse page, and implementing the design for the home page. In the first weeks, I took all the group's ideas for our product and created a hand-drawn design with all the main features and pages, from the navigation bar structure and general page contents/designs to the color schemes. As a group, we then discussed the features we wanted to keep and the changes we wanted to make to the layout, design, functionality, and presentation. After, I created the Figma design for the main pages, including the login, home, browse, and My Shelf page, which served as a template for the pages going forward. I then created the frontend templates for the home and browse pages to populate later on. After that, I mainly worked on implementing the backend functionality for the browse page. I originally started by creating the ability to query the API for the book results based on the selected genre, showing around 20 books, with each book’s title, author, year published, and rating, presented in a card format. Then I added the Filter Box to filter books by rating and year published as well as the ability to see Trending books as well, which can be seen by selecting the “Popular” tag. After my team’s feedback, I also made UI changes to fix the sizing to be consistent across all devices. Coming into this course, I wasn’t very familiar with Git, so early on, I did not commit as I developed. I also worked on linking the For You page recommendations to their respective book page, as well as implementing the Reading Now shelf on the home page. Moving forward, I will be implementing a Search By Author feature on the browse page as well. I also worked on the unit testing lab and the design document.
+
 
 # Niyati
 - asdf
