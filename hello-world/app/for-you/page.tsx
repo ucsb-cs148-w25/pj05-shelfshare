@@ -1,8 +1,8 @@
-// for-you/page.tsx
 'use client';
 
 import { useAuth } from '../context/AuthContext';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { db } from "@/firebase";
 import { collection, query, where, onSnapshot, DocumentData } from "firebase/firestore";
 
@@ -14,17 +14,89 @@ interface Book {
 
 // Hardcoded list of top 10 books
 const topBooksList: Book[] = [
-  { title: "The Great Gatsby", author: "F. Scott Fitzgerald", coverUrl: "https://covers.openlibrary.org/b/olid/OL22864904M-M.jpg" },
-  { title: "To Kill a Mockingbird", author: "Harper Lee", coverUrl: "https://covers.openlibrary.org/b/olid/OL8050340M-M.jpg" },
-  { title: "1984", author: "George Orwell", coverUrl: "https://covers.openlibrary.org/b/olid/23745689M-M.jpg" },
-  { title: "Pride and Prejudice", author: "Jane Austen", coverUrl: "https://covers.openlibrary.org/b/olid/OL34974914M-M.jpg" },
-  { title: "The Catcher in the Rye", author: "J.D. Salinger", coverUrl: "https://covers.openlibrary.org/b/olid/OL24288435M-M.jpg" },
-  { title: "The Hobbit", author: "J.R.R. Tolkien", coverUrl: "https://covers.openlibrary.org/b/olid/OL27320742M-M.jpg" },
-  { title: "Fahrenheit 451", author: "Ray Bradbury", coverUrl: "https://covers.openlibrary.org/b/olid/OL24963144M-M.jpg" },
-  { title: "Moby-Dick", author: "Herman Melville", coverUrl: "https://covers.openlibrary.org/b/olid/OL24963144M-M.jpg" },
-  { title: "War and Peace", author: "Leo Tolstoy", coverUrl: "https://covers.openlibrary.org/b/olid/OL24963144M-M.jpg" },
-  { title: "The Odyssey", author: "Homer", coverUrl: "https://covers.openlibrary.org/b/olid/OL24963144M-M.jpg" },
+  { title: "ALl Fours", author: "Miranda July", coverUrl: "https://covers.openlibrary.org/b/olid/OL51098015M-M.jpg"},
+  { title: "Good Material", author: "Dolly Alderton", coverUrl: "https://covers.openlibrary.org/b/olid/OL50718238M-M.jpg"},
+  { title: "James", author: "Percival Everett", coverUrl: "https://covers.openlibrary.org/b/olid/OL51613391M-M.jpg"},
+  { title: "You Dreamed of Empires", author: "Álvaro Enrigue", coverUrl: "https://covers.openlibrary.org/b/olid/OL50709435M-M.jpg"},
+  { title: "Cold Crematorium", author: "József Debreczeni", coverUrl: "https://covers.openlibrary.org/b/olid/OL51083358M-M.jpg"},
+  { title: "Everyone Who Is Gone Is Here", author: " Jonathan Blitzer", coverUrl: "https://covers.openlibrary.org/b/olid/OL50728881M-M.jpg"},
+  { title: "I Heard Her Call My Name", author: "Lucy Sante", coverUrl: "https://covers.openlibrary.org/b/olid/OL51100380M-M.jpg"},
+  { title: "Reagan: His Life and Legend", author: "Max Boot", coverUrl: "https://covers.openlibrary.org/b/olid/OL51133455M-M.jpg"},
+  { title: "1984", author: "George Orwell", coverUrl: "https://covers.openlibrary.org/b/olid/OL36632156M-M.jpg"},
+  { title: "Fahrenheit 451", author: "Ray Bradbury", coverUrl: "https://covers.openlibrary.org/b/olid/OL49348365M-M.jpg"},
 ];
+
+// Function to search for a book key using the Open Library API
+async function getBookKey(title: string, author: string): Promise<string | null> {
+  try {
+    // lenient search without exact matches
+    let query = encodeURIComponent(`${title} ${author}`);
+    let response = await fetch(`https://openlibrary.org/search.json?q=${query}&limit=10`);
+    
+    if (!response.ok) {
+      console.error('Error searching for book:', response.statusText);
+      return null;
+    }
+    
+    let data = await response.json();
+    
+    // find the best match
+    if (data.docs && data.docs.length > 0) {
+      // find exact match
+      const exactMatch = data.docs.find((book: Book) => 
+          book.title && book.author && 
+          book.title.toLowerCase() === title.toLowerCase() && 
+          (book.author.toLowerCase().includes(author.toLowerCase()) || 
+          author.toLowerCase().includes(book.author.toLowerCase()))
+      );
+      
+      if (exactMatch && exactMatch.key) {
+        return exactMatch.key.replace('/works/', '');
+      }
+      
+      // with author that partially matches
+      for (const book of data.docs) {
+        if (book.title && book.author_name && book.key) {
+          const titleSimilarity = title.toLowerCase().includes(book.title.toLowerCase()) || 
+                                 book.title.toLowerCase().includes(title.toLowerCase());
+                                 
+          const authorMatch = book.author_name.some((name: string) => 
+            author.toLowerCase().includes(name.toLowerCase()) || 
+            name.toLowerCase().includes(author.toLowerCase())
+          );
+          
+          if (titleSimilarity && authorMatch) {
+            return book.key.replace('/works/', '');
+          }
+        }
+      }
+      
+      // first result (fallback)
+      if (data.docs[0].key) {
+        return data.docs[0].key.replace('/works/', '');
+      }
+    }
+    
+    // title only
+    query = encodeURIComponent(`title:${title}`);
+    response = await fetch(`https://openlibrary.org/search.json?q=${query}&limit=5`);
+    
+    if (!response.ok) {
+      return null;
+    }
+    
+    data = await response.json();
+    
+    if (data.docs && data.docs.length > 0 && data.docs[0].key) {
+      return data.docs[0].key.replace('/works/', '');
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error searching for book:', error);
+    return null;
+  }
+}
 
 export default function ForYou() {
   const { user } = useAuth();
@@ -37,6 +109,7 @@ export default function ForYou() {
     youMayLike: [],
     topBooks: topBooksList, // Use the hardcoded list here
   });
+  const [isLoading, setIsLoading] = useState<{ [key: string]: boolean }>({});
 
   useEffect(() => {
     if (!user) return;
@@ -112,9 +185,18 @@ export default function ForYou() {
 
   return (
     <div className="min-h-screen bg-custom-green font-['Outfit', sans-serif]">
-      <Section title="Read Next" books={recommendations.readNext.slice(0, 10)} />
-      <Section title="Try Something New" books={recommendations.youMayLike.slice(0, 10)} />
-      <Section title="Top books of the Year" books={recommendations.topBooks.slice(0, 2)} />
+      <Section 
+        title="Read Next" 
+        books={recommendations.readNext.slice(0, 10)} 
+      />
+      <Section 
+        title="Try Something New" 
+        books={recommendations.youMayLike.slice(0, 10)} 
+      />
+      <Section 
+        title="Top books of the Year" 
+        books={recommendations.topBooks.slice(0, 7)} 
+      />
     </div>
   );
 }
@@ -125,8 +207,10 @@ interface SectionProps {
 }
 
 function Section({ title, books }: SectionProps) {
+  const router = useRouter();
   const [scrollPosition, setScrollPosition] = useState(0);
   const [maxScroll, setMaxScroll] = useState(0);
+  const [loadingBooks, setLoadingBooks] = useState<{ [key: string]: boolean }>({});
 
   const scrollLeft = () => {
     const container = document.getElementById(`scroll-container-${title}`);
@@ -156,6 +240,34 @@ function Section({ title, books }: SectionProps) {
       return () => container.removeEventListener('scroll', handleScroll);
     }
   }, [title]);
+
+  const handleBookClick = async (book: { title: string; author: string }) => {
+    // Create a unique key for this book based on title and author
+    const bookKey = `${book.title}-${book.author}`;
+    
+    // Set loading state for this book
+    setLoadingBooks(prev => ({ ...prev, [bookKey]: true }));
+    
+    try {
+      // Search for the book key using Open Library API
+      const key = await getBookKey(book.title, book.author);
+      
+      if (key) {
+        // Navigate to the book page
+        router.push(`/books/${key}`);
+      } else {
+        // Handle case where key wasn't found
+        console.error(`Book key not found for ${book.title} by ${book.author}`);
+        // You could add a toast notification here to inform the user
+        alert(`Sorry, we couldn't find the details for "${book.title}"`);
+      }
+    } catch (error) {
+      console.error('Error navigating to book:', error);
+    } finally {
+      // Clear loading state for this book
+      setLoadingBooks(prev => ({ ...prev, [bookKey]: false }));
+    }
+  };
 
   return (
     <div className="flex flex-col items-center mt-12 w-full">
@@ -213,36 +325,50 @@ function Section({ title, books }: SectionProps) {
             style={{ width: 'calc(100% - 85px)', marginLeft: '32px', marginRight: '32px' }}
           >
             {books.length > 0 ? (
-              books.map((book, index) => (
-                <div
-                  key={index}
-                  className="bg-custom-brown w-[150px] h-[250px] rounded-lg flex items-center justify-center text-white text-sm p-2 relative flex-shrink-0"
-                  style={{ 
-                    backgroundImage: `url(${book.coverUrl})`, 
-                    backgroundSize: 'cover', 
-                    backgroundPosition: 'center' 
-                  }}
-                  onError={(e) => {
-                    // Fallback to showing title and author if the cover image fails to load
-                    const target = e.target as HTMLDivElement;
-                    target.style.backgroundImage = 'none';
-                    target.innerHTML = `
-                      <div class="text-center">
-                        <p class="font-bold">${book.title}</p>
-                        <p class="text-xs">${book.author}</p>
+              books.map((book, index) => {
+                const bookKey = `${book.title}-${book.author}`;
+                const isLoading = loadingBooks[bookKey];
+                
+                return (
+                  <div
+                    key={index}
+                    className="bg-custom-brown w-[150px] h-[250px] rounded-lg flex items-center justify-center text-white text-sm p-2 relative flex-shrink-0 cursor-pointer transition-transform hover:scale-105"
+                    style={{ 
+                      backgroundImage: `url(${book.coverUrl})`, 
+                      backgroundSize: 'cover', 
+                      backgroundPosition: 'center',
+                      opacity: isLoading ? 0.6 : 1
+                    }}
+                    onClick={() => handleBookClick(book)}
+                    onError={(e) => {
+                      // Fallback to showing title and author if the cover image fails to load
+                      const target = e.target as HTMLDivElement;
+                      target.style.backgroundImage = 'none';
+                      target.innerHTML = `
+                        <div class="text-center">
+                          <p class="font-bold">${book.title}</p>
+                          <p class="text-xs">${book.author}</p>
+                        </div>
+                      `;
+                    }}
+                  >
+                    {/* Loading indicator */}
+                    {isLoading && (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
                       </div>
-                    `;
-                  }}
-                >
-                  {/* Show title and author if coverUrl is missing */}
-                  {!book.coverUrl && (
-                    <div className="text-center">
-                      <p className="font-bold">{book.title}</p>
-                      <p className="text-xs">{book.author}</p>
-                    </div>
-                  )}
-                </div>
-              ))
+                    )}
+                    
+                    {/* Show title and author if coverUrl is missing */}
+                    {!book.coverUrl && (
+                      <div className="text-center">
+                        <p className="font-bold">{book.title}</p>
+                        <p className="text-xs">{book.author}</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })
             ) : (
               <p className="text-white">Loading...</p>
             )}
