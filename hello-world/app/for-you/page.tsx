@@ -14,16 +14,16 @@ interface Book {
 
 // Hardcoded list of top 10 books
 const topBooksList: Book[] = [
-  { title: "ALl Fours", author: "Miranda July", coverUrl: "https://covers.openlibrary.org/b/olid/OL51098015M-M.jpg"},
-  { title: "Good Material", author: "Dolly Alderton", coverUrl: "https://covers.openlibrary.org/b/olid/OL50718238M-M.jpg"},
-  { title: "James", author: "Percival Everett", coverUrl: "https://covers.openlibrary.org/b/olid/OL51613391M-M.jpg"},
-  { title: "You Dreamed of Empires", author: "Álvaro Enrigue", coverUrl: "https://covers.openlibrary.org/b/olid/OL50709435M-M.jpg"},
-  { title: "Cold Crematorium", author: "József Debreczeni", coverUrl: "https://covers.openlibrary.org/b/olid/OL51083358M-M.jpg"},
-  { title: "Everyone Who Is Gone Is Here", author: " Jonathan Blitzer", coverUrl: "https://covers.openlibrary.org/b/olid/OL50728881M-M.jpg"},
-  { title: "I Heard Her Call My Name", author: "Lucy Sante", coverUrl: "https://covers.openlibrary.org/b/olid/OL51100380M-M.jpg"},
-  { title: "Reagan: His Life and Legend", author: "Max Boot", coverUrl: "https://covers.openlibrary.org/b/olid/OL51133455M-M.jpg"},
-  { title: "1984", author: "George Orwell", coverUrl: "https://covers.openlibrary.org/b/olid/OL36632156M-M.jpg"},
-  { title: "Fahrenheit 451", author: "Ray Bradbury", coverUrl: "https://covers.openlibrary.org/b/olid/OL49348365M-M.jpg"},
+  { title: "The Great Gatsby", author: "F. Scott Fitzgerald", coverUrl: "https://covers.openlibrary.org/b/olid/OL26491060M-M.jpg" },
+  { title: "To Kill a Mockingbird", author: "Harper Lee", coverUrl: "https://covers.openlibrary.org/b/olid/OL37027463M-M.jpg" },
+  { title: "1984", author: "George Orwell", coverUrl: "https://covers.openlibrary.org/b/olid/OL1168083W-M.jpg" },
+  { title: "Pride and Prejudice", author: "Jane Austen", coverUrl: "https://covers.openlibrary.org/b/olid/OL34974914M-M.jpg" },
+  { title: "The Catcher in the Rye", author: "J.D. Salinger", coverUrl: "https://covers.openlibrary.org/b/olid/OL24288435M-M.jpg" },
+  { title: "The Hobbit", author: "J.R.R. Tolkien", coverUrl: "https://covers.openlibrary.org/b/olid/OL27320742M-M.jpg" },
+  { title: "Fahrenheit 451", author: "Ray Bradbury", coverUrl: "https://covers.openlibrary.org/b/olid/OL24963144M-M.jpg" },
+  { title: "Moby-Dick", author: "Herman Melville", coverUrl: "https://covers.openlibrary.org/b/olid/OL24963144M-M.jpg" },
+  { title: "War and Peace", author: "Leo Tolstoy", coverUrl: "https://covers.openlibrary.org/b/olid/OL24963144M-M.jpg" },
+  { title: "The Odyssey", author: "Homer", coverUrl: "https://covers.openlibrary.org/b/olid/OL24963144M-M.jpg" },
 ];
 
 // Function to search for a book key using the Open Library API
@@ -185,18 +185,9 @@ export default function ForYou() {
 
   return (
     <div className="min-h-screen bg-custom-green font-['Outfit', sans-serif]">
-      <Section 
-        title="Read Next" 
-        books={recommendations.readNext.slice(0, 10)} 
-      />
-      <Section 
-        title="Try Something New" 
-        books={recommendations.youMayLike.slice(0, 10)} 
-      />
-      <Section 
-        title="Top books of the Year" 
-        books={recommendations.topBooks.slice(0, 7)} 
-      />
+      <Section title="Read Next" books={recommendations.readNext.slice(0, 10)} />
+      <Section title="Try Something New" books={recommendations.youMayLike.slice(0, 10)} />
+      <Section title="Top books of the Year" books={recommendations.topBooks.slice(0, 10)} />
     </div>
   );
 }
