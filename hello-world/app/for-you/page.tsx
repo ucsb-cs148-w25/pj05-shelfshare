@@ -109,7 +109,6 @@ export default function ForYou() {
     youMayLike: [],
     topBooks: topBooksList, // Use the hardcoded list here
   });
-  const [isLoading, setIsLoading] = useState<{ [key: string]: boolean }>({});
 
   useEffect(() => {
     if (!user) return;
