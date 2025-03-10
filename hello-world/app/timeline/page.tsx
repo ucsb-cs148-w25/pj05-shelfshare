@@ -102,7 +102,7 @@ const FriendActivityPage: React.FC = () => {
                   <h3 className="text-lg font-semibold">{notification.senderName}</h3>
                   <p className="text-custom-brown font-medium">
                     Reviewed <span className="italic">{notification.bookTitle}</span> {" "}
-                    and rated it {notification.rating} stars
+                    and rated it {notification.rating} {notification.rating === 1 ? "star" : "stars"}
                   </p>
                   <p className="text-custom-brown mt-1">{notification.reviewText}</p>
                   <p className="text-xs text-custom-brown opacity-70 mt-2">
