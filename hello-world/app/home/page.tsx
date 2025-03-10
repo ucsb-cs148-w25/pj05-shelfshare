@@ -32,6 +32,18 @@ interface dataLibrary {
   }
 }
 
+interface TrackReccomendation {
+  title: string;
+  artist: string;
+  reason:string;
+}
+
+interface PlaylistData{
+  playlistName: string;
+  description: string;
+  tracks: TrackReccomendation[];
+}
+
 export default function Home() {
   const { user } = useAuth();
   const router = useRouter();
@@ -46,12 +58,42 @@ export default function Home() {
   const [isEditingGoal, setIsEditingGoal] = useState(false);
   const [spotifyConnected, setSpotifyConnected] = useState(false);
 
+  // New states for book playlist recommendation
+  const [bookTitle, setBookTitle] = useState('');
+  const [isGeneratingPlaylist, setIsGeneratingPlaylist] = useState(false);
+  const [playlistData, setPlaylistData] = useState<PlaylistData | null>(null);
+  const [showPlaylistForm, setShowPlaylistForm] = useState(false);
+
   // Redirect to login page if user is not authenticated
   useEffect(() => {
     if (!user) {
       router.push('/');
     }
   }, [user, router]);
+
+  // In your Home.tsx component, add a check for Spotify connection status
+  useEffect(() => {
+    const checkSpotifyConnection = async () => {
+      if (!user) return;
+
+      try {
+        // Fetch the user document to check for Spotify token
+        const userRef = doc(db, "users", user.uid);
+        const userDoc = await getDoc(userRef);
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          // Check if user has a Spotify token
+          setSpotifyConnected(!!userData.spotifyToken);
+        }
+      } catch (error) {
+        console.error("Error checking Spotify connection:", error);
+      }
+    };
+
+    checkSpotifyConnection();
+  }, [user]);
+
 
   // Fetch the reading goal and books read count
   useEffect(() => {
@@ -107,6 +149,93 @@ export default function Home() {
   }
 
   const progressPercentage = Math.min((booksRead / (readingGoal || 1)) * 100, 100); // Cap progress at 100%
+
+  // New function to handle generating a playlist
+  const generatePlaylist = async () => {
+    if (!bookTitle.trim()) return;
+    
+    setIsGeneratingPlaylist(true);
+    
+    try {
+      const response = await fetch('/api/ai-recommend/generate-playlist', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          bookTitle,
+          // You could add these as optional inputs:
+          // bookAuthor, 
+          // bookGenre,
+          // mood
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate playlist');
+      }
+      
+      const data = await response.json();
+      setPlaylistData(data);
+      
+    } catch (error) {
+      console.error('Error generating playlist:', error);
+    } finally {
+      setIsGeneratingPlaylist(false);
+    }
+  };
+
+
+  const createSpotifyPlaylist = async () => {
+    if (!playlistData || !user) return;
+  
+    try {
+      // Fetch the user's Spotify token from Firestore
+      const userRef = doc(db, "users", user.uid);
+      const userDoc = await getDoc(userRef);
+  
+      if (!userDoc.exists()) {
+        throw new Error("User data not found");
+      }
+  
+      const userData = userDoc.data();
+      const accessToken = userData.spotifyToken;
+      const idToken = await user.getIdToken();
+  
+      if (!accessToken) {
+        throw new Error("Spotify access token missing. Please reconnect Spotify.");
+      }
+  
+      // Send the playlist data to your API to create it in Spotify
+      const response = await fetch('/api/ai-recommend/create-spotify-playlist', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          playlistData, 
+          accessToken, 
+          userId: user.uid ,
+          idToken,
+        }),
+      });
+  
+      if (!response.ok) {
+        throw new Error('Failed to create Spotify playlist');
+      }
+  
+      const data = await response.json();
+  
+      if (data.playlistUrl) {
+        window.open(data.playlistUrl, '_blank');
+      }
+    } catch (error) {
+      console.error('Error creating Spotify playlist:', error);
+    }
+  };
+  
+  
+
 
   const handleSpotifyLogin = () => {
     const CLIENT_ID = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
@@ -339,12 +468,82 @@ export default function Home() {
             <div className="bg-[#DFDDCE] p-4 rounded-lg shadow-lg mt-2">
               {spotifyConnected ? (
                 <div>
-                  <p className="text-lg font-bold text-[#3D2F2A]">
-                    ✅ Your Spotify account is connected
-                  </p>
-                  <p className="text-[#3D2F2A] mt-2">
-                    Track your audiobooks and share your reading playlists with friends.
-                  </p>
+                  <div className="mb-4">
+                    <p className="text-lg font-bold text-[#3D2F2A]">
+                      ✅ Your Spotify account is connected
+                    </p>
+                    <p className="text-[#3D2F2A] mt-2">
+                      Track your audiobooks and share your reading playlists with friends.
+                    </p>
+                    
+                    {/* Toggle for playlist recommendation form */}
+                    <button
+                      className="mt-4 px-4 py-2 bg-[#3D2F2A] text-[#DFDDCE] rounded-lg font-bold"
+                      onClick={() => setShowPlaylistForm(!showPlaylistForm)}
+                    >
+                      {showPlaylistForm ? 'Hide Playlist Generator' : 'Get AI Reading Playlist'}
+                    </button>
+                  </div>
+                  
+                  {/* AI Reading Playlist Generator */}
+                  {showPlaylistForm && (
+                    <div className="mt-4 p-4 bg-[#847266] rounded-lg">
+                      <h3 className="text-lg font-bold text-[#DFDDCE] mb-2">Reading Playlist Generator</h3>
+                      <input
+                        type="text"
+                        className="p-2 border rounded-lg w-full mb-2 text-[#3D2F2A]"
+                        placeholder="Enter book title"
+                        value={bookTitle}
+                        onChange={(e) => setBookTitle(e.target.value)}
+                      />
+                      <button
+                        className="px-4 py-2 bg-[#3D2F2A] text-[#DFDDCE] rounded-lg font-bold w-full"
+                        onClick={generatePlaylist}
+                        disabled={isGeneratingPlaylist || !bookTitle.trim()}
+                      >
+                        {isGeneratingPlaylist ? 'Generating...' : 'Generate Playlist'}
+                      </button>
+                      
+                      {/* Display playlist recommendations */}
+                      {playlistData && (
+                        <div className="mt-4 bg-[#DFDDCE] p-3 rounded-lg text-[#3D2F2A]">
+                          <h3 className="text-xl font-bold">{playlistData.playlistName}</h3>
+                          <p className="text-sm mb-3">{playlistData.description}</p>
+                          
+                          <div className="max-h-60 overflow-y-auto pr-2">
+                            {playlistData.tracks.map((track, index) => (
+                              <div key={index} className="mb-2 pb-2 border-b border-[#847266]">
+                                <p className="font-bold">{track.title} - {track.artist}</p>
+                                <p className="text-sm">{track.reason}</p>
+                              </div>
+                            ))}
+                          </div>
+                          
+                          <button
+                            className="mt-3 px-4 py-2 bg-[#1DB954] text-white rounded-lg font-bold flex items-center justify-center w-full"
+                            onClick={createSpotifyPlaylist}
+                          >
+                            <span className="mr-2">Create in Spotify</span>
+                            <svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512">
+                              <path fill="currentColor" d="M248 8C111.1 8 0 119.1 0 256s111.1 248 248 248 248-111.1 248-248S384.9 8 248 8zm100.7 364.9c-4.2 0-6.8-1.3-10.7-3.6-62.4-37.6-135-39.2-206.7-24.5-3.9 1-9 2.6-11.9 2.6-9.7 0-15.8-7.7-15.8-15.8 0-10.3 6.1-15.2 13.6-16.8 81.9-18.1 165.6-16.5 237 30.6 6.1 3.9 9.7 7.4 9.7 16.5s-7.1 15.4-15.2 15.4zm26.9-65.6c-5.2 0-8.7-2.3-12.3-4.2-62.5-37-155.7-51.9-238.6-29.4-4.8 1.3-7.4 2.6-11.9 2.6-10.7 0-19.4-8.7-19.4-19.4s5.2-17.8 15.5-20.7c27.8-7.8 56.2-13.6 97.8-13.6 64.9 0 127.6 16.1 177 45.5 8.1 4.8 11.3 11 11.3 19.7-.1 10.8-8.5 19.5-19.4 19.5z"/>
+                            </svg>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {!showPlaylistForm && (
+                    <button
+                      className="mt-2 px-4 py-2 bg-[#1DB954] text-white rounded-lg font-bold flex items-center"
+                      onClick={() => router.push('/create-playlist')}
+                    >
+                      <span className="mr-2">Create Reading Playlist</span>
+                      <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512">
+                        <path fill="currentColor" d="M248 8C111.1 8 0 119.1 0 256s111.1 248 248 248 248-111.1 248-248S384.9 8 248 8zm100.7 364.9c-4.2 0-6.8-1.3-10.7-3.6-62.4-37.6-135-39.2-206.7-24.5-3.9 1-9 2.6-11.9 2.6-9.7 0-15.8-7.7-15.8-15.8 0-10.3 6.1-15.2 13.6-16.8 81.9-18.1 165.6-16.5 237 30.6 6.1 3.9 9.7 7.4 9.7 16.5s-7.1 15.4-15.2 15.4zm26.9-65.6c-5.2 0-8.7-2.3-12.3-4.2-62.5-37-155.7-51.9-238.6-29.4-4.8 1.3-7.4 2.6-11.9 2.6-10.7 0-19.4-8.7-19.4-19.4s5.2-17.8 15.5-20.7c27.8-7.8 56.2-13.6 97.8-13.6 64.9 0 127.6 16.1 177 45.5 8.1 4.8 11.3 11 11.3 19.7-.1 10.8-8.5 19.5-19.4 19.5z"/>
+                      </svg>
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div>
@@ -354,6 +553,7 @@ export default function Home() {
                   <ul className="list-disc ml-5 my-2 text-[#3D2F2A]">
                     <li>Track your audiobooks</li>
                     <li>Create reading playlists</li>
+                    <li>Get AI song recommendations for your books</li>
                     <li>Share music with reading buddies</li>
                   </ul>
                   <button
@@ -362,7 +562,7 @@ export default function Home() {
                   >
                     <span className="mr-2">Connect with Spotify</span>
                     <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512">
-                      <path fill="currentColor" d="M248 8C111.1 8 0 119.1 0 256s111.1 248 248 248 248-111.1 248-248S384.9 8 248 8zm100.7 364.9c-4.2 0-6.8-1.3-10.7-3.6-62.4-37.6-135-39.2-206.7-24.5-3.9 1-9 2.6-11.9 2.6-9.7 0-15.8-7.7-15.8-15.8 0-10.3 6.1-15.2 13.6-16.8 81.9-18.1 165.6-16.5 237 30.6 6.1 3.9 9.7 7.4 9.7 16.5s-7.1 15.4-15.2 15.4zm26.9-65.6c-5.2 0-8.7-2.3-12.3-4.2-62.5-37-155.7-51.9-238.6-29.4-4.8 1.3-7.4 2.6-11.9 2.6-10.7 0-19.4-8.7-19.4-19.4s5.2-17.8 15.5-20.7c27.8-7.8 56.2-13.6 97.8-13.6 64.9 0 127.6 16.1 177 45.5 8.1 4.8 11.3 11 11.3 19.7-.1 10.8-8.5 19.5-19.4 19.5zm31-76.2c-5.2 0-8.4-1.3-12.9-3.9-71.2-42.5-198.5-52.7-280.9-29.7-3.6 1-8.1 2.6-12.9 2.6-13.2 0-23.3-10.3-23.3-23.6 0-13.6 8.4-21.3 17.4-23.9 35.2-10.3 74.6-15.2 117.5-15.2 73 0 149.5 15.2 205.4 47.8 7.8 4.5 12.9 10.7 12.9 22.6 0 13.6-11 23.3-23.2 23.3z"/>
+                      <path fill="currentColor" d="M248 8C111.1 8 0 119.1 0 256s111.1 248 248 248 248-111.1 248-248S384.9 8 248 8zm100.7 364.9c-4.2 0-6.8-1.3-10.7-3.6-62.4-37.6-135-39.2-206.7-24.5-3.9 1-9 2.6-11.9 2.6-9.7 0-15.8-7.7-15.8-15.8 0-10.3 6.1-15.2 13.6-16.8 81.9-18.1 165.6-16.5 237 30.6 6.1 3.9 9.7 7.4 9.7 16.5s-7.1 15.4-15.2 15.4zm26.9-65.6c-5.2 0-8.7-2.3-12.3-4.2-62.5-37-155.7-51.9-238.6-29.4-4.8 1.3-7.4 2.6-11.9 2.6-10.7 0-19.4-8.7-19.4-19.4s5.2-17.8 15.5-20.7c27.8-7.8 56.2-13.6 97.8-13.6 64.9 0 127.6 16.1 177 45.5 8.1 4.8 11.3 11 11.3 19.7-.1 10.8-8.5 19.5-19.4 19.5z"/>
                     </svg>
                   </button>
                 </div>
