@@ -201,12 +201,12 @@ export default function BookDetails() {
             self.indexOf(genre) === index
           ) || [];
 
-        const ratingRes = await fetch(`https://openlibrary.org/works/${bookId}/ratings.json`);
-        let rating = 0;
-        if (ratingRes.ok) {
-          const ratingData = await ratingRes.json();
-          rating = ratingData.summary?.average || 0;
-        }
+          const ratingRes = await fetch(`https://openlibrary.org/works/${bookId}/ratings.json`);
+          let rating = 0;
+          if (ratingRes.ok) {
+            const ratingData = await ratingRes.json();
+            rating = ratingData.summary?.average || 0;
+          }
 
         const cleanDescription =
           typeof data.description === "string"
@@ -289,6 +289,9 @@ export default function BookDetails() {
   }
 
   const StarRating: React.FC<StarRatingProps> = ({ rating, maxStars = 5, isInput = false }) => {
+    // Round the rating for visual display purposes only
+    const displayRating = Math.round(rating * 2) / 2; // Rounds to nearest 0.5
+    
     return (
       <div className="flex space-x-1">
         {[...Array(maxStars)].map((_, index) => (
@@ -310,9 +313,9 @@ export default function BookDetails() {
           >
             <span 
               className={`text-2xl ${isInput ? 'cursor-pointer' : 'cursor-default'} ${
-                index + 1 <= rating 
+                index + 1 <= displayRating 
                   ? "text-[#3D2F2A]" 
-                  : index + 0.5 === rating 
+                  : index + 0.5 === displayRating 
                   ? "relative overflow-hidden inline before:content-['★'] before:absolute before:text-[#3D2F2A] before:overflow-hidden before:w-[50%] text-[#DFDDCE]" 
                   : "text-[#DFDDCE]"
               }`}
@@ -564,8 +567,5 @@ export default function BookDetails() {
       </div>
     </div>
   );
-
-
-
 }
 
