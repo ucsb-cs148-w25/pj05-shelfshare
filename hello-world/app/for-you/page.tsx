@@ -4,26 +4,29 @@ import { useAuth } from '../context/AuthContext';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { db } from "@/firebase";
-import { collection, query, where, onSnapshot, DocumentData } from "firebase/firestore";
+import { collection, query, where, onSnapshot, DocumentData, getDocs } from "firebase/firestore";
+import Image from 'next/image';
 
 interface Book {
   title: string;
   author: string;
   coverUrl: string;
+  bookId?: string;
+  frequency?: number; // Add frequency field to track duplicates
 }
 
 // Hardcoded list of top 10 books
 const topBooksList: Book[] = [
-  { title: "The Great Gatsby", author: "F. Scott Fitzgerald", coverUrl: "https://covers.openlibrary.org/b/olid/OL26491060M-M.jpg" },
-  { title: "To Kill a Mockingbird", author: "Harper Lee", coverUrl: "https://covers.openlibrary.org/b/olid/OL37027463M-M.jpg" },
-  { title: "1984", author: "George Orwell", coverUrl: "https://covers.openlibrary.org/b/olid/OL1168083W-M.jpg" },
-  { title: "Pride and Prejudice", author: "Jane Austen", coverUrl: "https://covers.openlibrary.org/b/olid/OL34974914M-M.jpg" },
-  { title: "The Catcher in the Rye", author: "J.D. Salinger", coverUrl: "https://covers.openlibrary.org/b/olid/OL24288435M-M.jpg" },
-  { title: "The Hobbit", author: "J.R.R. Tolkien", coverUrl: "https://covers.openlibrary.org/b/olid/OL27320742M-M.jpg" },
-  { title: "Fahrenheit 451", author: "Ray Bradbury", coverUrl: "https://covers.openlibrary.org/b/olid/OL24963144M-M.jpg" },
-  { title: "Moby-Dick", author: "Herman Melville", coverUrl: "https://covers.openlibrary.org/b/olid/OL24963144M-M.jpg" },
-  { title: "War and Peace", author: "Leo Tolstoy", coverUrl: "https://covers.openlibrary.org/b/olid/OL24963144M-M.jpg" },
-  { title: "The Odyssey", author: "Homer", coverUrl: "https://covers.openlibrary.org/b/olid/OL24963144M-M.jpg" },
+  { title: "ALl Fours", author: "Miranda July", coverUrl: "https://covers.openlibrary.org/b/olid/OL51098015M-M.jpg", bookId: "OL37827700W" },
+  { title: "Good Material", author: "Dolly Alderton", coverUrl: "https://covers.openlibrary.org/b/olid/OL50718238M-M.jpg", bookId: "OL35714854W" },
+  { title: "James", author: "Percival Everett", coverUrl: "https://covers.openlibrary.org/b/olid/OL51613391M-M.jpg", bookId: "OL36506504W" },
+  { title: "You Dreamed of Empires", author: "Álvaro Enrigue", coverUrl: "https://covers.openlibrary.org/b/olid/OL50709435M-M.jpg", bookId: "OL35720233W" },
+  { title: "Cold Crematorium", author: "József Debreczeni", coverUrl: "https://covers.openlibrary.org/b/olid/OL51083358M-M.jpg", bookId: "OL31473516W" },
+  { title: "Everyone Who Is Gone Is Here", author: " Jonathan Blitzer", coverUrl: "https://covers.openlibrary.org/b/olid/OL50728881M-M.jpg", bookId: "OL37572496W" },
+  { title: "I Heard Her Call My Name", author: "Lucy Sante", coverUrl: "https://covers.openlibrary.org/b/olid/OL51100380M-M.jpg", bookId: "OL37568416W" },
+  { title: "Reagan: His Life and Legend", author: "Max Boot", coverUrl: "https://covers.openlibrary.org/b/olid/OL51133455M-M.jpg", bookId: "OL37878585W" },
+  { title: "1984", author: "George Orwell", coverUrl: "https://covers.openlibrary.org/b/olid/OL36632156M-M.jpg", bookId: "OL1168083W" },
+  { title: "Fahrenheit 451", author: "Ray Bradbury", coverUrl: "https://covers.openlibrary.org/b/olid/OL49348365M-M.jpg", bookId: "OL103123W" },
 ];
 
 // Function to search for a book key using the Open Library API
@@ -100,15 +103,21 @@ async function getBookKey(title: string, author: string): Promise<string | null>
 
 export default function ForYou() {
   const { user } = useAuth();
+  const router = useRouter();
   const [recommendations, setRecommendations] = useState<{
     readNext: Book[];
     youMayLike: Book[];
     topBooks: Book[];
+    friendsFavorites: Book[];
   }>({
     readNext: [],
     youMayLike: [],
-    topBooks: topBooksList, // Use the hardcoded list here
+    topBooks: topBooksList,
+    friendsFavorites: [],
   });
+
+  const [scrollPositions, setScrollPositions] = useState<{ [key: string]: number }>({});
+  const [maxScrolls, setMaxScrolls] = useState<{ [key: string]: number }>({});
 
   useEffect(() => {
     if (!user) return;
@@ -135,12 +144,76 @@ export default function ForYou() {
     return () => unsubscribe();
   }, [user]);
 
+  useEffect(() => {
+    if (!user) return;
+
+    // Fetch user's friends
+    const friendsQuery = query(collection(db, "users", user.uid, "friends"));
+
+    const unsubscribeFriends = onSnapshot(friendsQuery, async (friendsSnapshot) => {
+      const friendIds = friendsSnapshot.docs.map(doc => doc.id);
+
+      // Fetch favorite books from each friend
+      const friendsFavoritesPromises = friendIds.map(async (friendId) => {
+        const friendFavoritesQuery = query(
+          collection(db, "users", friendId, "favorites")
+        );
+        const friendFavoritesSnapshot = await getDocs(friendFavoritesQuery);
+        return friendFavoritesSnapshot.docs.map(doc => {
+          const data = doc.data() as DocumentData;
+          return {
+            title: data.title || "Unknown Title",
+            author: data.author || "Unknown Author",
+            coverUrl: data.coverUrl || "",
+            bookId: data.bookId || "",
+          };
+        });
+      });
+
+      const allFriendsFavorites = (await Promise.all(friendsFavoritesPromises)).flat();
+
+      // Count occurrences of each book based on title and author
+      const bookOccurrences = new Map<string, Book & { frequency: number }>();
+      
+      allFriendsFavorites.forEach(book => {
+        const bookKey = `${book.title}|${book.author}`;
+        if (bookOccurrences.has(bookKey)) {
+          const existingBook = bookOccurrences.get(bookKey)!;
+          existingBook.frequency += 1;
+        } else {
+          bookOccurrences.set(bookKey, { ...book, frequency: 1 });
+        }
+      });
+
+      // Convert to array, sort by frequency (highest first), then by title
+      const uniqueSortedBooks = Array.from(bookOccurrences.values())
+        .sort((a, b) => {
+          // First sort by frequency (descending)
+          if (b.frequency !== a.frequency) {
+            return b.frequency - a.frequency;
+          }
+          // Then sort alphabetically by title if frequencies are equal
+          return a.title.localeCompare(b.title);
+        });
+
+      // Update recommendations state with sorted friends' favorite books
+      setRecommendations(prev => ({
+        ...prev,
+        friendsFavorites: uniqueSortedBooks.slice(0, 10), // Limit to 10 books
+      }));
+    });
+
+    return () => {
+      unsubscribeFriends();
+    };
+  }, [user]);
+
   async function generateRecommendations(books: Book[]) {
     try {
       console.log("Sending request to /api/ai-recommend with payload:", {
         books: books.map(book => ({ title: book.title, author: book.author }))
       });
-
+  
       const response = await fetch('/api/ai-recommend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -148,95 +221,94 @@ export default function ForYou() {
           books: books.map(book => ({ title: book.title, author: book.author }))
         }),
       });
-
+  
       console.log("Response status:", response.status);
-
+  
       if (!response.ok) {
         const errorResponse = await response.text();
         console.error("Error response from API:", errorResponse);
         throw new Error(`Network response was not ok: ${response.statusText}`);
       }
-
+  
       const data = await response.json();
       console.log("AI Recommendations Response:", data);
-
+  
       const fetchCovers = async (books: { title: string, author: string }[]) => {
         return books.map(book => ({
           ...book,
           coverUrl: `https://covers.openlibrary.org/b/title/${encodeURIComponent(book.title)}-M.jpg`,
         }));
       };
-
+  
       const recommendationsWithCovers = await fetchCovers(data.recommendations || []);
       const newGenresWithCovers = await fetchCovers(data.newGenres || []);
-
-      setRecommendations({
+  
+      setRecommendations(prev => ({
+        ...prev,
         readNext: recommendationsWithCovers,
         youMayLike: newGenresWithCovers,
         topBooks: topBooksList, // Use the hardcoded list here
-      });
+      }));
     } catch (error) {
       console.error('Error generating recommendations:', error);
     }
   }
 
-  if (!user) return null;
+  useEffect(() => {
+    const sections = [
+      { type: 'readNext', books: recommendations.readNext },
+      { type: 'youMayLike', books: recommendations.youMayLike },
+      { type: 'topBooks', books: recommendations.topBooks },
+      { type: 'friendsFavorites', books: recommendations.friendsFavorites }, 
+    ];
 
-  return (
-    <div className="min-h-screen bg-custom-green font-['Outfit', sans-serif]">
-      <Section title="Read Next" books={recommendations.readNext.slice(0, 10)} />
-      <Section title="Try Something New" books={recommendations.youMayLike.slice(0, 10)} />
-      <Section title="Top books of the Year" books={recommendations.topBooks.slice(0, 10)} />
-    </div>
-  );
-}
+    sections.forEach(section => {
+      const container = document.getElementById(`scroll-container-${section.type}`);
+      if (container) {
+        const handleScroll = () => {
+          setScrollPositions(prev => ({
+            ...prev,
+            [section.type]: container.scrollLeft
+          }));
+          setMaxScrolls(prev => ({
+            ...prev,
+            [section.type]: container.scrollWidth - container.clientWidth
+          }));
+        };
 
-interface SectionProps {
-  title: string;
-  books: { title: string; author: string; coverUrl: string }[];
-}
+        // Initialize scroll positions
+        handleScroll();
+        
+        container.addEventListener('scroll', handleScroll);
+        return () => container.removeEventListener('scroll', handleScroll);
+      }
+    });
+  }, [recommendations]);
 
-function Section({ title, books }: SectionProps) {
-  const router = useRouter();
-  const [scrollPosition, setScrollPosition] = useState(0);
-  const [maxScroll, setMaxScroll] = useState(0);
-  const [loadingBooks, setLoadingBooks] = useState<{ [key: string]: boolean }>({});
-
-  const scrollLeft = () => {
-    const container = document.getElementById(`scroll-container-${title}`);
+  const scrollLeft = (sectionType: string) => {
+    const container = document.getElementById(`scroll-container-${sectionType}`);
     if (container) {
       container.scrollBy({ left: -170, behavior: 'smooth' }); // Scroll by one book width
-      setScrollPosition(container.scrollLeft);
     }
   };
 
-  const scrollRight = () => {
-    const container = document.getElementById(`scroll-container-${title}`);
+  const scrollRight = (sectionType: string) => {
+    const container = document.getElementById(`scroll-container-${sectionType}`);
     if (container) {
       container.scrollBy({ left: 170, behavior: 'smooth' }); // Scroll by one book width
-      setScrollPosition(container.scrollLeft);
     }
   };
 
-  useEffect(() => {
-    const container = document.getElementById(`scroll-container-${title}`);
-    if (container) {
-      const handleScroll = () => {
-        setScrollPosition(container.scrollLeft);
-        setMaxScroll(container.scrollWidth - container.clientWidth);
-      };
-
-      container.addEventListener('scroll', handleScroll);
-      return () => container.removeEventListener('scroll', handleScroll);
+  // Combined function to handle book clicks with loading state and find bookId if needed
+  const handleBookClick = async (book: Book) => {
+    if (book.bookId) {
+      // If bookId is already available, navigate directly
+      router.push(`/books/${book.bookId}`);
+      return;
     }
-  }, [title]);
-
-  const handleBookClick = async (book: { title: string; author: string }) => {
+    
     // Create a unique key for this book based on title and author
     const bookKey = `${book.title}-${book.author}`;
-    
-    // Set loading state for this book
-    setLoadingBooks(prev => ({ ...prev, [bookKey]: true }));
     
     try {
       // Search for the book key using Open Library API
@@ -248,121 +320,206 @@ function Section({ title, books }: SectionProps) {
       } else {
         // Handle case where key wasn't found
         console.error(`Book key not found for ${book.title} by ${book.author}`);
-        // You could add a toast notification here to inform the user
         alert(`Sorry, we couldn't find the details for "${book.title}"`);
       }
     } catch (error) {
       console.error('Error navigating to book:', error);
-    } finally {
-      // Clear loading state for this book
-      setLoadingBooks(prev => ({ ...prev, [bookKey]: false }));
     }
   };
 
+  if (!user) return null;
+
   return (
-    <div className="flex flex-col items-center mt-12 w-full">
-      <div className="relative w-full">
-        {/* Section Title */}
-        <div
-          className="font-bold items-center text-3xl mt-6"
-          style={{ color: '#DFDDCE', fontFamily: 'Outfit, sans-serif', marginLeft: 'calc((100% - 1030px) / 2)' }}
+    <div className="min-h-screen bg-custom-green font-['Outfit', sans-serif]">
+      <div className="max-w-6xl mx-auto space-y-8">
+        <Section 
+          title="Top books of the Year" 
+          books={recommendations.topBooks.slice(0, 10)} 
+          type="topBooks" 
+          scrollPositions={scrollPositions} 
+          maxScrolls={maxScrolls} 
+          scrollLeft={scrollLeft} 
+          scrollRight={scrollRight} 
+          onBookClick={handleBookClick} 
+        />
+        <Section 
+          title="Read Next" 
+          books={recommendations.readNext.slice(0, 10)} 
+          type="readNext" 
+          scrollPositions={scrollPositions} 
+          maxScrolls={maxScrolls} 
+          scrollLeft={scrollLeft} 
+          scrollRight={scrollRight} 
+          onBookClick={handleBookClick} 
+        />
+        <Section 
+          title="Try Something New" 
+          books={recommendations.youMayLike.slice(0, 10)} 
+          type="youMayLike" 
+          scrollPositions={scrollPositions} 
+          maxScrolls={maxScrolls} 
+          scrollLeft={scrollLeft} 
+          scrollRight={scrollRight} 
+          onBookClick={handleBookClick} 
+        />
+        <Section 
+          title="Your Friends' Favorites" 
+          books={recommendations.friendsFavorites.slice(0, 10)} 
+          type="friendsFavorites" 
+          scrollPositions={scrollPositions} 
+          maxScrolls={maxScrolls} 
+          scrollLeft={scrollLeft} 
+          scrollRight={scrollRight}
+          onBookClick={handleBookClick}
+          showFrequency={true}
+        />
+      </div>
+    </div>
+  );
+}
+
+interface SectionProps {
+  title: string;
+  books: Book[];
+  type: string;
+  scrollPositions: { [key: string]: number };
+  maxScrolls: { [key: string]: number };
+  scrollLeft: (sectionType: string) => void;
+  scrollRight: (sectionType: string) => void;
+  onBookClick: (book: Book) => void;
+  showFrequency?: boolean;
+}
+
+function Section({ title, books, type, scrollPositions, maxScrolls, scrollLeft, scrollRight, onBookClick, showFrequency }: SectionProps) {
+  const [loadingBooks, setLoadingBooks] = useState<{ [key: string]: boolean }>({});
+
+  const leftShadowStyle: React.CSSProperties = {
+    position: 'absolute',
+    left: '30px',
+    top: '0',
+    height: '100%',
+    width: '40px',
+    background: 'linear-gradient(to right, #3D2F2A, rgba(90, 57, 44, 0))',
+    pointerEvents: 'none',
+    zIndex: 5,
+    transition: 'opacity 0.3s ease',
+  };
+
+  const rightShadowStyle: React.CSSProperties = {
+    position: 'absolute',
+    right: '35px',
+    top: '0',
+    height: '100%',
+    width: '40px',
+    background: 'linear-gradient(to left, #3D2F2A, rgba(90, 57, 44, 0))',
+    pointerEvents: 'none',
+    zIndex: 5,
+    transition: 'opacity 0.3s ease',
+  };
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-custom-tan text-2xl font-bold">{title}</h2>
+      </div>
+      <div className="relative bg-light-brown border-t-8 border-b-8 border-[#3D2F2A] h-72">
+        {/* Left Scroll Button */}
+        <button
+          onClick={() => scrollLeft(type)}
+          className={`absolute left-0 top-0 h-full w-8 flex items-center justify-center bg-custom-brown text-custom-tan z-10 hover:bg-[#2E221E] transition-colors ${
+            !scrollPositions[type] || scrollPositions[type] <= 0 ? 'opacity-50' : ''
+          }`}
+          style={{ borderRight: '2px solid #3D2F2A' }}
+          disabled={!scrollPositions[type] || scrollPositions[type] <= 0}
         >
-          {title}
-        </div>
+          &lt;
+        </button>
 
-        {/* Shelf Background */}
-        <div
-          className="relative w-[1030px] h-[300px] mt-2 mx-auto"
-          style={{ backgroundColor: '#847266', borderTop: '10px solid #3D2F2A', borderBottom: '10px solid #3D2F2A' }}
+        {/* Left Shadow */}
+        {scrollPositions[type] > 5 && (
+          <div style={{ ...leftShadowStyle, opacity: scrollPositions[type] > 0 ? 1 : 0 }}></div>
+        )}
+
+        {/* Right Shadow */}
+        {maxScrolls[type] > 0 && scrollPositions[type] < maxScrolls[type] - 5 && (
+          <div style={{ ...rightShadowStyle, opacity: scrollPositions[type] < maxScrolls[type] ? 1 : 0 }}></div>
+        )}
+
+        {/* Right Scroll Button */}
+        <button
+          onClick={() => scrollRight(type)}
+          className={`absolute right-0 top-0 h-full w-8 flex items-center justify-center bg-custom-brown text-custom-tan z-10 hover:bg-[#2E221E] transition-colors ${
+            !maxScrolls[type] || !scrollPositions[type] || scrollPositions[type] >= maxScrolls[type] ? 'opacity-50' : ''
+          }`}
+          style={{ borderLeft: '2px solid #3D2F2A' }}
+          disabled={!maxScrolls[type] || !scrollPositions[type] || scrollPositions[type] >= maxScrolls[type]}
         >
-          {/* Background Bar for Scroll Buttons */}
-          <div
-            className="absolute left-0 top-0 h-full w-8 bg-custom-brown z-0"
-            style={{ borderRight: '2px solid #847266' }}
-          />
-          <div
-            className="absolute right-0 top-0 h-full w-8 bg-custom-brown z-0"
-            style={{ borderLeft: '2px solid #847266' }}
-          />
+          &gt;
+        </button>
 
-          {/* Scroll Buttons */}
-          <button
-            onClick={scrollLeft}
-            className={`absolute left-0 top-0 h-full w-8 flex items-center justify-center bg-custom-brown text-white z-10 hover:bg-[#2E221E] transition-colors ${
-              scrollPosition <= 0 ? '' : ''
-            }`}
-            style={{ borderRight: '2px solid #847266' }}
-            disabled={scrollPosition <= 0}
-          >
-            &lt;
-          </button>
-
-          <button
-            onClick={scrollRight}
-            className={`absolute right-0 top-0 h-full w-8 flex items-center justify-center bg-custom-brown text-white z-10 hover:bg-[#2E221E] transition-colors ${
-              scrollPosition >= maxScroll ? '' : ''
-            }`}
-            style={{ borderLeft: '2px solid #847266' }}
-            disabled={scrollPosition >= maxScroll}
-          >
-            &gt;
-          </button>
-
-          {/* Books Display with Horizontal Scroll */}
-          <div
-            id={`scroll-container-${title}`}
-            className="relative top-4 left-3 flex space-x-5 overflow-x-auto no-scrollbar"
-            style={{ width: 'calc(100% - 85px)', marginLeft: '32px', marginRight: '32px' }}
-          >
-            {books.length > 0 ? (
-              books.map((book, index) => {
-                const bookKey = `${book.title}-${book.author}`;
-                const isLoading = loadingBooks[bookKey];
-                
-                return (
-                  <div
-                    key={index}
-                    className="bg-custom-brown w-[150px] h-[250px] rounded-lg flex items-center justify-center text-white text-sm p-2 relative flex-shrink-0 cursor-pointer transition-transform hover:scale-105"
-                    style={{ 
-                      backgroundImage: `url(${book.coverUrl})`, 
-                      backgroundSize: 'cover', 
-                      backgroundPosition: 'center',
-                      opacity: isLoading ? 0.6 : 1
-                    }}
-                    onClick={() => handleBookClick(book)}
-                    onError={(e) => {
-                      // Fallback to showing title and author if the cover image fails to load
-                      const target = e.target as HTMLDivElement;
-                      target.style.backgroundImage = 'none';
-                      target.innerHTML = `
-                        <div class="text-center">
-                          <p class="font-bold">${book.title}</p>
-                          <p class="text-xs">${book.author}</p>
-                        </div>
-                      `;
-                    }}
-                  >
+        {/* Books Container */}
+        <div
+          id={`scroll-container-${type}`}
+          className="relative bottom-1 flex space-x-5 overflow-x-auto no-scrollbar"
+          style={{ width: 'calc(100% - 16px)', marginLeft: '8px', marginRight: '8px', paddingRight: '40px', paddingLeft: '40px' }}
+        >
+          {books.length > 0 ? (
+            books.map((book, index) => {
+              const bookKey = `${book.title}-${book.author}`;
+              const isLoading = loadingBooks[bookKey];
+              
+              return (
+                <div 
+                  key={index} 
+                  className="flex-shrink-0 cursor-pointer relative group mt-4"
+                  onClick={() => onBookClick(book)}
+                >
+                  <div className="relative">
+                    <Image
+                      src={book.coverUrl}
+                      alt={book.title}
+                      width={128}
+                      height={144}
+                      className="w-[150px] h-[250px] rounded-lg object-cover bg-custom-brown transition-transform duration-300 ease-in-out hover:scale-110"
+                      onError={(e) => {
+                        // Fallback if image fails to load
+                        const target = e.target as HTMLImageElement;
+                        target.style.display = 'none';
+                        target.parentElement!.innerHTML += `
+                          <div class="w-[150px] h-[250px] rounded-lg bg-custom-brown flex items-center justify-center p-2">
+                            <div class="text-center text-custom-tan">
+                              <p class="font-bold">${book.title}</p>
+                              <p class="text-xs">${book.author}</p>
+                            </div>
+                          </div>
+                        `;
+                      }}
+                    />
+                    
                     {/* Loading indicator */}
                     {isLoading && (
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-                      </div>
-                    )}
-                    
-                    {/* Show title and author if coverUrl is missing */}
-                    {!book.coverUrl && (
-                      <div className="text-center">
-                        <p className="font-bold">{book.title}</p>
-                        <p className="text-xs">{book.author}</p>
+                      <div className="absolute inset-0 flex items-center justify-center bg-custom-brown bg-opacity-70 rounded-lg">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-custom-tan"></div>
                       </div>
                     )}
                   </div>
-                );
-              })
-            ) : (
-              <p className="text-white">Loading...</p>
-            )}
-          </div>
+
+                  {/* Frequency badge for friends' favorites - optional display */}
+                  {showFrequency && book.frequency && book.frequency > 1 && (
+                    <div className="absolute -top-3 -right-3 bg-[#3D2F2A] text-custom-tan rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold">
+                      {book.frequency}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          ) : (
+            <div className="flex items-center justify-center w-full h-full text-custom-tan text-lg italic">
+              {type === 'friendsFavorites' 
+                ? "Add friends to see their favorite books" 
+                : "Add books to Finished reading to get personalized recommendations"}
+            </div>
+          )}
         </div>
       </div>
     </div>
