@@ -13,6 +13,7 @@ import {
   removeFriend
 } from "../context/friends";
 import { Trash2 } from 'lucide-react';
+import Link from "next/link";
 
 import Profile_Screen from "./profileScreen";
 
@@ -298,6 +299,9 @@ const Friends = () => {
                   {!showFriendProfile[u.id] && (friends.some(f => f.id === u.id) ? (
                     <div className="flex gap-2 items-center">
                       <span className="text-gray-600">Friend</span>
+                      <Link href={`/friend-profile?id=${u.id}`} className="bg-[#5a7463] text-white px-3 py-1 rounded-lg hover:bg-[#4a6453] transition text-sm mr-2">
+                        View Profile
+                      </Link>
                       <button
                         onClick={() => handleRemoveFriend(u.id)}
                         className="bg-[#847266] text-white px-3 py-1 rounded-lg hover:bg-red-700 transition text-sm"
