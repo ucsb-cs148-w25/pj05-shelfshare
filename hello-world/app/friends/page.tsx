@@ -17,6 +17,15 @@ import Link from "next/link";
 
 import Profile_Screen from "./profileScreen";
 
+interface ProfileItem {
+  email: string;
+  aboutMe: string;
+  pgenre: string;
+  profilePicUrl: string;
+  uid: string;
+  username: string;
+}
+
 const Friends = () => {
   const { user } = useAuth();
   const router = useRouter();
@@ -30,8 +39,7 @@ const Friends = () => {
   const [showSearchResults, setShowSearchResults] = useState(false);
 
   const [showFriendProfile, setShowFriendProfile] = useState<Record<string, boolean>>({});
-
-  
+  const [profiles, setProfiles] = useState<Record<string, ProfileItem>>({});
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -49,6 +57,19 @@ const Friends = () => {
     const usersQuery = query(collection(db, "users"));
     const unsubscribeUsers = onSnapshot(usersQuery, (snapshot) => {
       setUsers(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+    });
+
+    // Fetch profiles for all users
+    const profilesQuery = query(collection(db, "profile"));
+    const unsubscribeProfiles = onSnapshot(profilesQuery, (snapshot) => {
+      const profilesData = snapshot.docs.reduce((acc, doc) => {
+        const profileData = doc.data() as ProfileItem;
+        return {
+          ...acc,
+          [profileData.uid]: profileData,
+        };
+      }, {});
+      setProfiles(profilesData);
     });
 
     const unsubscribeUsersProfile = onSnapshot(usersQuery, (snapshot) => {
@@ -105,6 +126,7 @@ const Friends = () => {
       unsubscribeRequests();
       unsubscribeFriends();
       unsubscribeSentRequests();
+      unsubscribeProfiles();
     };
   }, [user]);
 
@@ -115,8 +137,14 @@ const Friends = () => {
 
   // Filter users based on search input
   const filteredUsers = users
-    .filter((u) => u.id !== user?.uid)
-    .filter((u) => u.name?.toLowerCase().includes(search.toLowerCase()));
+  .filter((u) => u.id !== user?.uid)
+  .filter((u) => {
+    const userName = u.name?.toLowerCase() || '';
+    const profileUsername = profiles[u.id]?.username?.toLowerCase() || '';
+    return userName.includes(search.toLowerCase()) || 
+           profileUsername.includes(search.toLowerCase());
+  });
+
 
   const handleAcceptRequest = async (requestId: string) => {
     if (!user) return;
@@ -187,7 +215,7 @@ const Friends = () => {
     return (
       <button
         onClick={() => sendFriendRequest(user!.uid, request.id)}
-        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
       >
         Add Friend
       </button>
@@ -210,6 +238,15 @@ const Friends = () => {
     );
   };
   
+  // Component to display user name and username
+  const UserDisplay = ({ userId, name }: { userId: string, name: string }) => (
+    <div className="flex flex-col">
+      <span className="text-gray-800">{name || "Unknown User"}</span>
+      {profiles[userId]?.username && (
+        <span className="text-xs text-gray-500">@{profiles[userId].username}</span>
+      )}
+    </div>
+  );
 
   if (!user) return null;
 
@@ -226,7 +263,7 @@ const Friends = () => {
             value={search}
             onChange={(e) => {setSearch(e.target.value);
               resetAllProfiles();}}
-            className="w-full p-3 border rounded-lg text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full p-3 border rounded-lg text-gray-700 focus:outline-none focus:ring-4 focus:ring-[#DFDDCE]"
           />
           {search && (
             <button
@@ -249,11 +286,16 @@ const Friends = () => {
           ) : (
             <ul className="grid gap-4">
               {filteredUsers.map((u) => (
-                <li key={u.id} className="flex justify-between items-center bg-white p-3 rounded-lg shadow-sm">
-                  <button onClick={() => handleFriendProfile(u.id)} className="text-gray-800 hover:bg-gray-300 rounded ml-1 mr-1">{u.name || "Unknown User"}</button>
+                <li key={u.id} className="flex justify-between items-center bg-[#DFDDCE] p-3 rounded-lg shadow-sm">
+                  <button 
+                    onClick={() => handleFriendProfile(u.id)} 
+                    className="text-left hover:bg-gray-300 rounded p-1"
+                  >
+                    <UserDisplay userId={u.id} name={u.name} />
+                  </button> 
                   {showFriendProfile[u.id] && (
-                  <Profile_Screen friendUid={u.id}/>
-                )}
+                    <Profile_Screen friendUid={u.id}/>
+                  )}
                   {!showFriendProfile[u.id] && (friends.some(f => f.id === u.id) ? (
                     <div className="flex gap-2 items-center">
                       <span className="text-gray-600">Friend</span>
@@ -262,7 +304,7 @@ const Friends = () => {
                       </Link>
                       <button
                         onClick={() => handleRemoveFriend(u.id)}
-                        className="bg-[#3D2F2A] text-white px-3 py-1 rounded-lg hover:bg-red-700 transition text-sm"
+                        className="bg-[#847266] text-white px-3 py-1 rounded-lg hover:bg-red-700 transition text-sm"
                       >
                         <Trash2 className="w-4 h-4 mr-1" />
                       </button>
@@ -270,14 +312,14 @@ const Friends = () => {
                   ) : sentRequests.includes(u.id) ? (
                     <button
                       onClick={() => handleUnsendRequest(u.id)}
-                      className="bg-[#DFDDCE] text-[#3D2F2A] px-4 py-2 rounded-lg "
+                      className="bg-[#847266] text-white px-4 py-2 rounded-lg "
                     >
                       Cancel Request
                     </button>
                   ) : (
                     <button
                       onClick={() => sendFriendRequest(user.uid, u.id)}
-                      className="bg-[#847266] text-white px-4 py-2 rounded-lg hover:bg-[#847266] transition"
+                      className="bg-[#847266] text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
                     >
                       Add Friend
                     </button>
@@ -295,11 +337,16 @@ const Friends = () => {
           <h2 className="text-lg font-semibold text-[#DFDDCE] mb-3">Friend Requests</h2>
           <ul className="grid gap-4">
             {friendRequests.map((request) => (
-              <li key={request.id} className="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
-                <button onClick={() => handleFriendProfile(request.id)} className="text-gray-800 hover:bg-gray-300 rounded ml-1 mr-1">{request.name || "Unknown User"}</button>
-                  {!showFriendProfile[request.id] ? getFriendRequestButton(request) : (
-                    <Profile_Screen friendUid={request.id} />
-                  )}
+              <li key={request.id} className="flex justify-between items-center bg-[#DFDDCE] p-3 rounded-lg">
+                <button 
+                  onClick={() => handleFriendProfile(request.id)} 
+                  className="text-left hover:bg-gray-300 rounded p-1"
+                >
+                  <UserDisplay userId={request.id} name={request.name} />
+                </button>
+                {!showFriendProfile[request.id] ? getFriendRequestButton(request) : (
+                  <Profile_Screen friendUid={request.id} />
+                )}
               </li>
             ))}
           </ul>
@@ -312,23 +359,25 @@ const Friends = () => {
           <h2 className="text-lg font-semibold text-[#DFDDCE] mb-3">My Friends</h2>
           <ul className="grid gap-4">
             {friends.map((friend) => (
-              <li key={friend.id} className="flex justify-between items-center bg-gray-100 p-3 rounded-lg">
-                <button onClick={() => handleFriendProfile(friend.id)}
-                  className="text-gray-800 hover:bg-gray-300 rounded ml-1 mr-1">{friend.name}</button>
-                {!showFriendProfile[friend.id] ? (
+              <li key={friend.id} className="flex justify-between items-center bg-[#DFDDCE] p-3 rounded-lg">
+                <button 
+                  onClick={() => handleFriendProfile(friend.id)}
+                  className="text-left hover:bg-gray-300 rounded p-1"
+                >
+                  <UserDisplay userId={friend.id} name={friend.name} />
+                </button>
+                {!showFriendProfile[friend.id] && (
                   <div className="flex gap-2 items-center">
                     <span className="text-gray-600">Friend</span>
-                    <Link href={`/friend-profile?id=${friend.id}`} className="bg-[#5a7463] text-white px-3 py-1 rounded-lg hover:bg-[#4a6453] transition text-sm mr-2">
-                      View Profile
-                    </Link>
                     <button
                       onClick={() => handleRemoveFriend(friend.id)}
-                      className="bg-[#3D2F2A] text-white px-3 py-1 rounded-lg hover:bg-red-700 transition text-sm"
+                      className="bg-[#847266] text-white px-3 py-1 rounded-lg hover:bg-red-700 transition text-sm"
                     >
-                      <Trash2 className="w-4 h-4 mr-1" />
+                      <Trash2 className="w-4 h-4 mr-1" /> {/*Unfriend */}
                     </button>
                   </div>
-                ) : (
+                )}
+                {showFriendProfile[friend.id] && (
                   <Profile_Screen friendUid={friend.id}/>
                 )}
               </li>
