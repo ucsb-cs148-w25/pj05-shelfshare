@@ -4,7 +4,19 @@ import { useAuth } from '@/app/context/AuthContext';
 import { db } from '@/firebase';
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, doc, deleteDoc } from 'firebase/firestore';
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  query,
+  onSnapshot,
+  orderBy,
+  doc,
+  deleteDoc,
+  updateDoc,
+  arrayUnion,
+  getDoc,
+} from 'firebase/firestore';
 import { useParams, useRouter } from 'next/navigation';
 
 interface ClubData {
@@ -15,6 +27,7 @@ interface ClubData {
   imageUrl: string;
   chapters?: { title: string; deadline: string }[];
   creatorId?: string; // Add creatorId to ClubData
+  members?: string[]; // Add members array to ClubData
 }
 
 interface DiscussionMessage {
@@ -42,6 +55,9 @@ export default function ClubDetails() {
 
   const [profilePicture, setProfilePicture] = useState('upload-pic.png');
   const [username, setUsername] = useState('username');
+
+  const [friends, setFriends] = useState<string[]>([]); // State to store the user's friends list
+  const [selectedFriend, setSelectedFriend] = useState<string>(''); // State to store the selected friend to add
 
   // Fetch club details from Firestore
   useEffect(() => {
@@ -101,6 +117,26 @@ export default function ClubDetails() {
     };
   }, [clubId, user]);
 
+  // Fetch the user's friends list
+  useEffect(() => {
+    if (!user) return;
+
+    const fetchFriends = async () => {
+      try {
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setFriends(userData.friends || []);
+        }
+      } catch (err) {
+        console.error('Error fetching friends list:', err);
+      }
+    };
+
+    fetchFriends();
+  }, [user]);
+
   // Function to post a new discussion message
   const handleSubmitMessage = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -129,13 +165,29 @@ export default function ClubDetails() {
   // Function to delete the club
   const handleDeleteClub = async () => {
     if (!clubId || !user || club?.creatorId !== user.uid) return;
-  
+
     try {
       await deleteDoc(doc(db, 'clubs', clubId));
       router.push('/clubs'); // Redirect to the book club page
     } catch (error) {
       console.error('Error deleting club:', error);
       alert('Failed to delete club.');
+    }
+  };
+
+  // Function to add a friend to the club
+  const handleAddFriendToClub = async () => {
+    if (!selectedFriend || !clubId || !user) return;
+
+    try {
+      const clubDocRef = doc(db, 'clubs', clubId);
+      await updateDoc(clubDocRef, {
+        members: arrayUnion(selectedFriend),
+      });
+      alert('Friend added to the club successfully!');
+    } catch (error) {
+      console.error('Error adding friend to club:', error);
+      alert('Failed to add friend to club.');
     }
   };
 
@@ -187,8 +239,33 @@ export default function ClubDetails() {
               )}
             </div>
 
+            {/* Add Friend to Club Section */}
+            {club.creatorId === user?.uid && (
+              <div>
+                <h2 className="text-2xl font-semibold text-[#3D2F2A] mb-4">Add Friend to Club</h2>
+                <select
+                  value={selectedFriend}
+                  onChange={(e) => setSelectedFriend(e.target.value)}
+                  className="w-full p-2 bg-[#847266] text-[#DFDDCE] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3D2F2A]"
+                >
+                  <option value="">Select a friend</option>
+                  {friends.map((friendId) => (
+                    <option key={friendId} value={friendId}>
+                      {friendId}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  onClick={handleAddFriendToClub}
+                  className="bg-[#3D2F2A] text-[#DFDDCE] px-6 py-2 rounded-lg mt-2 hover:bg-[#847266] transition-colors"
+                >
+                  Add Friend to Club
+                </button>
+              </div>
+            )}
+
             <div className="space-y-4">
-            <h2 className="text-2xl font-semibold text-[#3D2F2A] mb-4"> Description: </h2>
+              <h2 className="text-2xl font-semibold text-[#3D2F2A] mb-4">Description</h2>
               <p className="text-[#3D2F2A] leading-relaxed">{club.description}</p>
             </div>
 
