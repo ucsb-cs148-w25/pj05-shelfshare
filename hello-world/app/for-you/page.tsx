@@ -364,7 +364,7 @@ function Section({ title, books, type, scrollPositions, maxScrolls, scrollLeft, 
                     alt={book.title}
                     width={128}
                     height={144}
-                    className="w-[150px] h-[250px] rounded-lg object-cover bg-custom-brown"
+                    className="w-[150px] h-[250px] rounded-lg object-cover bg-custom-brown transition-transform duration-300 ease-in-out hover:scale-110"
                     onError={(e) => {
                       // Fallback if image fails to load
                       const target = e.target as HTMLImageElement;
