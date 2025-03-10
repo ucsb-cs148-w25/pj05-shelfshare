@@ -307,8 +307,6 @@ export default function ForYou() {
       return;
     }
     
-    // Create a unique key for this book based on title and author
-    const bookKey = `${book.title}-${book.author}`;
     
     try {
       // Search for the book key using Open Library API
@@ -391,7 +389,7 @@ interface SectionProps {
 }
 
 function Section({ title, books, type, scrollPositions, maxScrolls, scrollLeft, scrollRight, onBookClick, showFrequency }: SectionProps) {
-  const [loadingBooks, setLoadingBooks] = useState<{ [key: string]: boolean }>({});
+  const [loadingBooks] = useState<{ [key: string]: boolean }>({});
 
   const leftShadowStyle: React.CSSProperties = {
     position: 'absolute',
