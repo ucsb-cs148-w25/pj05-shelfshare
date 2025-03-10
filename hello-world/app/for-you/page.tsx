@@ -405,7 +405,7 @@ function Section({ title, books, type, scrollPositions, maxScrolls, scrollLeft, 
 
   const rightShadowStyle: React.CSSProperties = {
     position: 'absolute',
-    right: '35px',
+    right: '30px',
     top: '0',
     height: '100%',
     width: '40px',
@@ -425,9 +425,9 @@ function Section({ title, books, type, scrollPositions, maxScrolls, scrollLeft, 
         <button
           onClick={() => scrollLeft(type)}
           className={`absolute left-0 top-0 h-full w-8 flex items-center justify-center bg-custom-brown text-custom-tan z-10 hover:bg-[#2E221E] transition-colors ${
-            !scrollPositions[type] || scrollPositions[type] <= 0 ? 'opacity-50' : ''
+            !scrollPositions[type] || scrollPositions[type] <= 0 ? '' : ''
           }`}
-          style={{ borderRight: '2px solid #3D2F2A' }}
+          style={{ borderRight: 'solid #3D2F2A' }}
           disabled={!scrollPositions[type] || scrollPositions[type] <= 0}
         >
           &lt;
@@ -447,9 +447,9 @@ function Section({ title, books, type, scrollPositions, maxScrolls, scrollLeft, 
         <button
           onClick={() => scrollRight(type)}
           className={`absolute right-0 top-0 h-full w-8 flex items-center justify-center bg-custom-brown text-custom-tan z-10 hover:bg-[#2E221E] transition-colors ${
-            !maxScrolls[type] || !scrollPositions[type] || scrollPositions[type] >= maxScrolls[type] ? 'opacity-50' : ''
+            !maxScrolls[type] || !scrollPositions[type] || scrollPositions[type] >= maxScrolls[type] ? '' : ''
           }`}
-          style={{ borderLeft: '2px solid #3D2F2A' }}
+          style={{ borderLeft: 'solid #3D2F2A' }}
           disabled={!maxScrolls[type] || !scrollPositions[type] || scrollPositions[type] >= maxScrolls[type]}
         >
           &gt;
@@ -458,8 +458,8 @@ function Section({ title, books, type, scrollPositions, maxScrolls, scrollLeft, 
         {/* Books Container */}
         <div
           id={`scroll-container-${type}`}
-          className="relative bottom-1 flex space-x-5 overflow-x-auto no-scrollbar"
-          style={{ width: 'calc(100% - 16px)', marginLeft: '8px', marginRight: '8px', paddingRight: '40px', paddingLeft: '40px' }}
+          className="relative flex space-x-5 overflow-x-auto overflow-y-hidden no-scrollbar h-full"
+          style={{ width: 'calc(100% - 16px)', marginLeft: '8px', marginRight: '8px', paddingRight: '40px', paddingLeft: '40px'}}
         >
           {books.length > 0 ? (
             books.map((book, index) => {
