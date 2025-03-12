@@ -79,6 +79,8 @@ export default function ClubDetails() {
   const [inviteLoading, setInviteLoading] = useState<boolean>(false);
   const [inviteSuccess, setInviteSuccess] = useState<boolean>(false);
 
+  const [isSearchingNewBook, setIsSearchingNewBook] = useState<boolean>(false);
+
   // Fetch club details from Firestore
   useEffect(() => {
     if (!clubId) return;
@@ -207,6 +209,28 @@ export default function ClubDetails() {
     }
   };
 
+  // Assuming you have a function to handle book selection
+  const handleBookSelection = async (book: any) => {
+    if (!clubId || !user || club?.creatorId !== user.uid) return;
+
+    try {
+      const clubDocRef = doc(db, 'clubs', clubId);
+      await updateDoc(clubDocRef, {
+        book: {
+          key: book.key,
+          title: book.title,
+          author: book.author_name?.join(', ') || 'Unknown author',
+          coverId: book.cover_i
+        }
+      });
+      setIsSearchingNewBook(false); // Reset searching state
+      alert('New book selected successfully!');
+    } catch (error) {
+      console.error('Error selecting new book:', error);
+      alert('Failed to select new book.');
+    }
+  };
+
   // Function to delete the club
   const handleDeleteClub = async () => {
     if (!clubId || !user || club?.creatorId !== user.uid) return;
@@ -292,7 +316,7 @@ export default function ClubDetails() {
   // Function to move current book to previous books
   const handleMarkBookAsRead = async () => {
     if (!clubId || !user || club?.creatorId !== user.uid || !club?.book) return;
-
+  
     try {
       const clubDocRef = doc(db, 'clubs', clubId);
       const currentBook = club.book;
@@ -312,6 +336,7 @@ export default function ClubDetails() {
         book: null // Clear current book
       });
       
+      setIsSearchingNewBook(true); // Set searching state to true
       alert('Book marked as read and moved to previous books!');
     } catch (error) {
       console.error('Error marking book as read:', error);
@@ -394,7 +419,7 @@ export default function ClubDetails() {
                   </div>
                 </div>
               </div>
-            ) : club.creatorId === user?.uid && (
+            ) : (
               <div className="mt-6 p-4 bg-[#847266] rounded-lg shadow-lg">
                 <h2 className="text-xl font-semibold text-[#DFDDCE] mb-3">
                   Current Book
@@ -404,7 +429,22 @@ export default function ClubDetails() {
                   onClick={() => router.push('/books')}
                   className="mt-2 bg-[#3D2F2A] text-[#DFDDCE] px-4 py-2 rounded-lg hover:bg-[#5A7463] transition-colors"
                 >
-                  Select a Book
+                  Search for a New Book
+                </button>
+              </div>
+            )}
+
+            {isSearchingNewBook && (
+              <div className="mt-6 p-4 bg-[#847266] rounded-lg shadow-lg">
+                <h2 className="text-xl font-semibold text-[#DFDDCE] mb-3">
+                  Search for a New Book
+                </h2>
+                <p className="text-[#DFDDCE]">You've finished reading the current book. Start searching for a new one!</p>
+                <button
+                  onClick={() => router.push('/books')}
+                  className="mt-2 bg-[#3D2F2A] text-[#DFDDCE] px-4 py-2 rounded-lg hover:bg-[#5A7463] transition-colors"
+                >
+                  Search for a New Book
                 </button>
               </div>
             )}
