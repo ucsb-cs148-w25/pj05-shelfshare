@@ -13,7 +13,7 @@ export default function SpotifyCallback() {
     async function handleSpotifyCallback() {
       if (!user) {
         setStatus('Please log in to connect Spotify');
-        setTimeout(() => router.push('/'), 3000);
+        setTimeout(() => router.push('/home'), 3000);
         return;
       }
 
@@ -38,10 +38,12 @@ export default function SpotifyCallback() {
         const data = await response.json();
         console.log('Received Spotify token:', data);
 
+        // In spotify-callback.js
         localStorage.setItem('spotify_access_token', data.access_token);
         localStorage.setItem('spotify_refresh_token', data.refresh_token);
         localStorage.setItem('spotify_token_expiry', (Date.now() + data.expires_in * 1000).toString());
-
+        // Add this line to let Home component know we're in auth process
+        sessionStorage.setItem('auth_in_progress', 'true');
         alert("Successfully connected to Spotify!");
         setTimeout(() => router.push('/home'), 2000);
       } catch (error) {

@@ -63,42 +63,75 @@ export default function Home() {
   const [isGeneratingPlaylist, setIsGeneratingPlaylist] = useState(false);
   const [playlistData, setPlaylistData] = useState<PlaylistData | null>(null);
   const [showPlaylistForm, setShowPlaylistForm] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   // Redirect to login page if user is not authenticated
-  useEffect(() => {
-    if (!user) {
-      router.push('/');
-    }
-  }, [user, router]);
+  // useEffect(() => {
+  //   if (!user) {
+  //     router.push('/');
+  //   }
+  // }, [user, router]);
 
-  // In your Home.tsx component, add a check for Spotify connection status
+
+  
+ // First useEffect - handle initial auth check and Spotify connection status
   useEffect(() => {
-    const checkSpotifyConnection = () => {
-      const accessToken = localStorage.getItem('spotify_access_token');
-      const tokenExpiry = localStorage.getItem('spotify_token_expiry');
+  // Check if authentication is in progress from the callback
+  const authInProgress = sessionStorage.getItem('auth_in_progress') === 'true';
   
-      if (accessToken && tokenExpiry && parseInt(tokenExpiry) > Date.now()) {
-        console.log("Spotify token is still valid.");
-        setSpotifyConnected(true);
-      } else {
-        console.log("Spotify token expired or missing. Logging out.");
-        // If token expired, clear local storage
-        localStorage.removeItem('spotify_access_token');
-        localStorage.removeItem('spotify_refresh_token');
-        localStorage.removeItem('spotify_token_expiry');
+  if (authInProgress) {
+    // Clear the flag after we've handled it
+    sessionStorage.removeItem('auth_in_progress');
+    setIsAuthenticating(true);
+  }
   
-        setSpotifyConnected(false);
-        alert("Your Spotify session has expired. Please log in again.");
+  const checkSpotifyConnection = async () => {
+    if (authInProgress) {
+      setIsAuthenticating(true);
+    }
+  
+    const accessToken = localStorage.getItem('spotify_access_token');
+    const tokenExpiry = localStorage.getItem('spotify_token_expiry');
+  
+    if (accessToken && tokenExpiry && parseInt(tokenExpiry) > Date.now()) {
+      console.log("✅ Spotify token is still valid.");
+      setSpotifyConnected(true);
+      setIsAuthenticating(false);
+    } else {
+      console.log("⏳ Spotify token expired or missing. Waiting for re-authentication...");
+      setSpotifyConnected(false);
+  
+      // Remove expired tokens
+      localStorage.removeItem('spotify_access_token');
+      localStorage.removeItem('spotify_refresh_token');
+      localStorage.removeItem('spotify_token_expiry');
+  
+      if (!authInProgress) {
+        setTimeout(() => {
+          setIsAuthenticating(false);
+          if (user) { // Only show alert if user is logged in
+            alert("Your Spotify session has expired. Please log in again.");
+          }
+        }, 3000);
       }
-    };
+    }
+  };
   
-    checkSpotifyConnection();
-    
-    // Check every 60 seconds for expiration
-    const intervalId = setInterval(checkSpotifyConnection, 60000);
-    
-    return () => clearInterval(intervalId);
-  }, []);
+  checkSpotifyConnection();
+  const intervalId = setInterval(checkSpotifyConnection, 60000); // Recheck every 60 seconds
+  
+  return () => clearInterval(intervalId);
+}, [user]); // Only depend on user, not on router or isAuthenticating
+
+// Second useEffect - handle redirects to login page
+useEffect(() => {
+  const authInProgress = sessionStorage.getItem('auth_in_progress') === 'true';
+  
+  if (!user && !isAuthenticating && !authInProgress) {
+    console.log("Redirecting to ShelfShare login...");
+    router.push('/');
+  }
+}, [user, router, isAuthenticating]);
 
   // Fetch the reading goal and books read count
   useEffect(() => {
@@ -270,9 +303,21 @@ export default function Home() {
     return text;
   }
 
-  if (!user) {
-    return null; // Avoid rendering anything while redirecting
+  // Show a loading message while authenticating
+  if (isAuthenticating) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-xl font-bold" 
+           style={{ color: '#DFDDCE', backgroundColor: '#5A7463', fontFamily: 'Outfit, sans-serif' }}>
+        ⏳ Wait while we connect your Spotify...
+      </div>
+    );
   }
+
+// Redirect to login page if user is not authenticated and not in the middle of Spotify authentication
+if (!user && !isAuthenticating) {
+  router.push('/');
+  return null; // Prevent rendering during redirect
+}
 
   const fetchCoordinates = async (zipCode: string) => {
     setIsLoaded(false);
@@ -546,6 +591,7 @@ export default function Home() {
                     <li>Create reading playlists</li>
                     <li>Get AI song recommendations for your books</li>
                     <li>Share music with reading buddies</li>
+                    
                   </ul>
                   <button
                     className="mt-2 px-4 py-2 bg-[#1DB954] text-white rounded-lg font-bold flex items-center"
