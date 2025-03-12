@@ -14,7 +14,6 @@ import {
   doc,
   deleteDoc,
   updateDoc,
-  arrayUnion,
   getDoc,
 } from 'firebase/firestore';
 import { useParams, useRouter } from 'next/navigation';
@@ -26,8 +25,21 @@ interface ClubData {
   memberCount: number;
   imageUrl: string;
   chapters?: { title: string; deadline: string }[];
-  creatorId?: string; // Add creatorId to ClubData
-  members?: string[]; // Add members array to ClubData
+  creatorId?: string; 
+  members?: string[];
+  book?: {
+    key: string;
+    title: string;
+    author: string;
+    coverId?: number;
+  };
+  previousBooks?: {
+    key: string;
+    title: string;
+    author: string;
+    coverId?: number;
+    completedDate?: string; // Date when the book was completed
+  }[];
 }
 
 interface DiscussionMessage {
@@ -39,6 +51,12 @@ interface DiscussionMessage {
     seconds: number;
     nanoseconds: number;
   } | null;
+}
+
+interface FriendData {
+  id: string;
+  username: string;
+  profilePicUrl?: string;
 }
 
 export default function ClubDetails() {
@@ -56,8 +74,10 @@ export default function ClubDetails() {
   const [profilePicture, setProfilePicture] = useState('upload-pic.png');
   const [username, setUsername] = useState('username');
 
-  const [friends, setFriends] = useState<string[]>([]); // State to store the user's friends list
-  const [selectedFriend, setSelectedFriend] = useState<string>(''); // State to store the selected friend to add
+  const [friends, setFriends] = useState<FriendData[]>([]); // Store friend data objects
+  const [selectedFriend, setSelectedFriend] = useState<string>('');
+  const [inviteLoading, setInviteLoading] = useState<boolean>(false);
+  const [inviteSuccess, setInviteSuccess] = useState<boolean>(false);
 
   // Fetch club details from Firestore
   useEffect(() => {
@@ -117,17 +137,42 @@ export default function ClubDetails() {
     };
   }, [clubId, user]);
 
-  // Fetch the user's friends list
+  // Fetch the user's friends list with profile data
   useEffect(() => {
     if (!user) return;
 
     const fetchFriends = async () => {
       try {
+        // Get user's friend IDs
         const userDocRef = doc(db, 'users', user.uid);
         const userDoc = await getDoc(userDocRef);
+        
         if (userDoc.exists()) {
           const userData = userDoc.data();
-          setFriends(userData.friends || []);
+          const friendIds = userData.friends || [];
+          
+          // If club members exist, filter out friends who are already members
+          const currentMembers = club?.members || [];
+          const nonMemberFriendIds = friendIds.filter(id => !currentMembers.includes(id));
+          
+          // Fetch friend profile data
+          const friendsData: FriendData[] = [];
+          
+          for (const friendId of nonMemberFriendIds) {
+            const profileRef = doc(db, 'profile', friendId);
+            const profileDoc = await getDoc(profileRef);
+            
+            if (profileDoc.exists()) {
+              const profileData = profileDoc.data();
+              friendsData.push({
+                id: friendId,
+                username: profileData.username || 'Unknown User',
+                profilePicUrl: profileData.profilePicUrl || 'upload-pic.png'
+              });
+            }
+          }
+          
+          setFriends(friendsData);
         }
       } catch (err) {
         console.error('Error fetching friends list:', err);
@@ -135,7 +180,7 @@ export default function ClubDetails() {
     };
 
     fetchFriends();
-  }, [user]);
+  }, [user, club?.members]);
 
   // Function to post a new discussion message
   const handleSubmitMessage = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -175,19 +220,102 @@ export default function ClubDetails() {
     }
   };
 
-  // Function to add a friend to the club
-  const handleAddFriendToClub = async () => {
-    if (!selectedFriend || !clubId || !user) return;
+  // Function to invite a friend to the club
+  const handleInviteFriend = async () => {
+    if (!selectedFriend || !clubId || !user || !club) {
+      return;
+    }
+
+    setInviteLoading(true);
+    setInviteSuccess(false);
+
+    try {
+      // Create a notification in the friend's notifications collection
+      const friendNotificationsRef = collection(db, 'users', selectedFriend, 'notifications');
+      await addDoc(friendNotificationsRef, {
+        type: 'club_invitation',
+        clubId: clubId,
+        clubName: club.name,
+        senderId: user.uid,
+        senderName: username || user.displayName || 'A friend',
+        status: 'pending',
+        createdAt: serverTimestamp(),
+        read: false
+      });
+
+      setInviteSuccess(true);
+      setSelectedFriend('');
+      
+      // Wait 3 seconds and reset success message
+      setTimeout(() => {
+        setInviteSuccess(false);
+      }, 3000);
+    } catch (error) {
+      console.error('Error inviting friend to club:', error);
+      alert('Failed to send invitation.');
+    } finally {
+      setInviteLoading(false);
+    }
+  };
+
+  // Function to accept invitation and add member to club
+  /* 
+  const handleAddMemberToClub = async (memberId: string) => {
+    if (!clubId || !club) return;
+
+    try {
+      // Update club document to add the member
+      const clubDocRef = doc(db, 'clubs', clubId);
+      
+      // Create a new members array if it doesn't exist
+      const updatedMembers = club.members ? [...club.members, memberId] : [memberId];
+      
+      await updateDoc(clubDocRef, {
+        members: updatedMembers,
+        memberCount: (club.memberCount || 0) + 1
+      });
+      
+      // Could add logic here to track that the invitation was accepted
+    } catch (error) {
+      console.error('Error adding member to club:', error);
+      alert('Failed to add member to club.');
+    }
+  };
+  */
+
+  // Function to navigate to book page
+  const handleBookClick = (bookKey: string) => {
+    const bookId = bookKey.split('/').pop();
+    router.push(`/books/${bookId}`);
+  };
+
+  // Function to move current book to previous books
+  const handleMarkBookAsRead = async () => {
+    if (!clubId || !user || club?.creatorId !== user.uid || !club?.book) return;
 
     try {
       const clubDocRef = doc(db, 'clubs', clubId);
+      const currentBook = club.book;
+      const currentDate = new Date().toISOString();
+      
+      // Add current book to previous books with completed date
+      const previousBook = {
+        ...currentBook,
+        completedDate: currentDate
+      };
+      
+      // Create new previousBooks array if it doesn't exist
+      const previousBooks = club.previousBooks || [];
+      
       await updateDoc(clubDocRef, {
-        members: arrayUnion(selectedFriend),
+        previousBooks: [...previousBooks, previousBook],
+        book: null // Clear current book
       });
-      alert('Friend added to the club successfully!');
+      
+      alert('Book marked as read and moved to previous books!');
     } catch (error) {
-      console.error('Error adding friend to club:', error);
-      alert('Failed to add friend to club.');
+      console.error('Error marking book as read:', error);
+      alert('Failed to mark book as read.');
     }
   };
 
@@ -221,6 +349,108 @@ export default function ClubDetails() {
                 className="object-cover"
               />
             </div>
+            
+            {/* Book Display Section */}
+            {club.book ? (
+              <div className="mt-6 p-4 bg-[#847266] rounded-lg shadow-lg">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-xl font-semibold text-[#DFDDCE] mb-3">
+                    Current Book
+                  </h2>
+                  {club.creatorId === user?.uid && (
+                    <button
+                      onClick={handleMarkBookAsRead}
+                      className="text-sm bg-[#3D2F2A] text-[#DFDDCE] px-2 py-1 rounded hover:bg-[#5A7463] transition-colors"
+                    >
+                      Mark as Read
+                    </button>
+                  )}
+                </div>
+                <div 
+                  className="flex items-center cursor-pointer hover:bg-[#3D2F2A]/30 p-2 rounded-lg transition-colors"
+                  onClick={() => handleBookClick(club.book!.key)}
+                >
+                  {club.book.coverId ? (
+                    <img
+                      src={`https://covers.openlibrary.org/b/id/${club.book.coverId}-M.jpg`}
+                      alt={club.book.title}
+                      className="w-16 h-20 object-cover rounded shadow-md"
+                    />
+                  ) : (
+                    <div className="w-16 h-20 bg-[#3D2F2A] flex items-center justify-center text-[#DFDDCE] rounded shadow-md">
+                      No Cover
+                    </div>
+                  )}
+                  <div className="ml-4">
+                    <h3 className="text-lg font-semibold text-[#DFDDCE] hover:underline">
+                      {club.book.title}
+                    </h3>
+                    <p className="text-[#DFDDCE]/80">
+                      {club.book.author || 'Unknown author'}
+                    </p>
+                    <span className="text-sm text-[#DFDDCE]/60 mt-1 block">
+                      Click to view book details
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : club.creatorId === user?.uid && (
+              <div className="mt-6 p-4 bg-[#847266] rounded-lg shadow-lg">
+                <h2 className="text-xl font-semibold text-[#DFDDCE] mb-3">
+                  Current Book
+                </h2>
+                <p className="text-[#DFDDCE]">No book selected for this club yet</p>
+                <button
+                  onClick={() => router.push('/books')}
+                  className="mt-2 bg-[#3D2F2A] text-[#DFDDCE] px-4 py-2 rounded-lg hover:bg-[#5A7463] transition-colors"
+                >
+                  Select a Book
+                </button>
+              </div>
+            )}
+            
+            {/* Previously Read Books Section */}
+            {club.previousBooks && club.previousBooks.length > 0 && (
+              <div className="mt-6 p-4 bg-[#847266] rounded-lg shadow-lg">
+                <h2 className="text-xl font-semibold text-[#DFDDCE] mb-3">
+                  Previously Read Books
+                </h2>
+                <div className="space-y-4 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+                  {club.previousBooks.map((book, index) => (
+                    <div 
+                      key={index}
+                      className="flex items-center cursor-pointer hover:bg-[#3D2F2A]/30 p-2 rounded-lg transition-colors"
+                      onClick={() => handleBookClick(book.key)}
+                    >
+                      {book.coverId ? (
+                        <img
+                          src={`https://covers.openlibrary.org/b/id/${book.coverId}-M.jpg`}
+                          alt={book.title}
+                          className="w-12 h-16 object-cover rounded shadow-md"
+                        />
+                      ) : (
+                        <div className="w-12 h-16 bg-[#3D2F2A] flex items-center justify-center text-[#DFDDCE] rounded shadow-md text-xs">
+                          No Cover
+                        </div>
+                      )}
+                      <div className="ml-3">
+                        <h3 className="text-md font-semibold text-[#DFDDCE] hover:underline">
+                          {book.title}
+                        </h3>
+                        <p className="text-sm text-[#DFDDCE]/80">
+                          {book.author || 'Unknown author'}
+                        </p>
+                        {book.completedDate && (
+                          <span className="text-xs text-[#DFDDCE]/60">
+                            Completed: {new Date(book.completedDate).toLocaleDateString()}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex-grow space-y-6">
@@ -239,28 +469,59 @@ export default function ClubDetails() {
               )}
             </div>
 
-            {/* Add Friend to Club Section */}
+            {/* Invite Friend to Club Section */}
             {club.creatorId === user?.uid && (
-              <div>
-                <h2 className="text-2xl font-semibold text-[#3D2F2A] mb-4">Add Friend to Club</h2>
-                <select
-                  value={selectedFriend}
-                  onChange={(e) => setSelectedFriend(e.target.value)}
-                  className="w-full p-2 bg-[#847266] text-[#DFDDCE] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3D2F2A]"
-                >
-                  <option value="">Select a friend</option>
-                  {friends.map((friendId) => (
-                    <option key={friendId} value={friendId}>
-                      {friendId}
-                    </option>
-                  ))}
-                </select>
-                <button
-                  onClick={handleAddFriendToClub}
-                  className="bg-[#3D2F2A] text-[#DFDDCE] px-6 py-2 rounded-lg mt-2 hover:bg-[#847266] transition-colors"
-                >
-                  Add Friend to Club
-                </button>
+              <div className="p-4 bg-[#DFDDCE]/20 rounded-lg">
+                <h2 className="text-2xl font-semibold text-[#3D2F2A] mb-4">Invite Friend to Club</h2>
+                
+                {friends.length > 0 ? (
+                  <>
+                    <div className="space-y-4">
+                      <label htmlFor="friend-select" className="block text-[#3D2F2A] font-medium">
+                        Select a friend to invite:
+                      </label>
+                      <select
+                        id="friend-select"
+                        value={selectedFriend}
+                        onChange={(e) => setSelectedFriend(e.target.value)}
+                        className="w-full p-3 bg-[#847266] text-[#DFDDCE] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3D2F2A]"
+                      >
+                        <option value="">Choose a friend</option>
+                        {friends.map((friend) => (
+                          <option key={friend.id} value={friend.id}>
+                            {friend.username}
+                          </option>
+                        ))}
+                      </select>
+                      
+                      {inviteSuccess && (
+                        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mt-4">
+                          Invitation sent successfully!
+                        </div>
+                      )}
+                      
+                      <button
+                        onClick={handleInviteFriend}
+                        disabled={!selectedFriend || inviteLoading}
+                        className={`w-full bg-[#3D2F2A] text-[#DFDDCE] px-6 py-3 rounded-lg mt-2 hover:bg-[#847266] transition-colors ${
+                          !selectedFriend || inviteLoading ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
+                      >
+                        {inviteLoading ? 'Sending...' : 'Send Invitation'}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="bg-[#847266] p-4 rounded-lg text-[#DFDDCE]">
+                    <p>You don't have any friends to invite, or all your friends are already members.</p>
+                    <button
+                      onClick={() => router.push('/friends')}
+                      className="mt-3 bg-[#3D2F2A] text-[#DFDDCE] px-4 py-2 rounded-lg hover:bg-[#5A7463] transition-colors"
+                    >
+                      Go to Friends Page
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
@@ -304,38 +565,42 @@ export default function ClubDetails() {
 
               <div className="mt-8 space-y-4">
                 <h3 className="text-xl font-semibold text-[#3D2F2A]">Discussion</h3>
-                {discussionMessages.map((message) => (
-                  <div key={message.id} className="bg-[#847266] p-6 rounded-lg relative">
-                    <div className="flex items-start space-x-4">
-                      <Image
-                        src={profilePicture}
-                        alt="Profile"
-                        width={24}
-                        height={24}
-                        className="w-12 h-12 rounded-full flex-shrink-0"
-                      />
-                      <div className="flex-grow">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center space-x-2">
-                            <span className="font-medium text-[#DFDDCE]">
-                              {username}
+                {discussionMessages.length > 0 ? (
+                  discussionMessages.map((message) => (
+                    <div key={message.id} className="bg-[#847266] p-6 rounded-lg relative">
+                      <div className="flex items-start space-x-4">
+                        <Image
+                          src={profilePicture}
+                          alt="Profile"
+                          width={24}
+                          height={24}
+                          className="w-12 h-12 rounded-full flex-shrink-0"
+                        />
+                        <div className="flex-grow">
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center space-x-2">
+                              <span className="font-medium text-[#DFDDCE]">
+                                {username}
+                              </span>
+                            </div>
+                            <span className="text-sm text-[#DFDDCE]">
+                              {message.date?.seconds
+                                ? new Date(message.date.seconds * 1000).toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric',
+                                  })
+                                : 'Just now'}
                             </span>
                           </div>
-                          <span className="text-sm text-[#DFDDCE]">
-                            {message.date?.seconds
-                              ? new Date(message.date.seconds * 1000).toLocaleDateString('en-US', {
-                                  month: 'short',
-                                  day: 'numeric',
-                                  year: 'numeric',
-                                })
-                              : 'Just now'}
-                          </span>
+                          <p className="text-[#DFDDCE]">{message.text}</p>
                         </div>
-                        <p className="text-[#DFDDCE]">{message.text}</p>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-[#3D2F2A] italic">No messages yet. Be the first to start the discussion!</p>
+                )}
               </div>
             </div>
           </div>
