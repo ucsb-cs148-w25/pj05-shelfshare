@@ -2,21 +2,11 @@
 
 import { useAuth } from '@/app/context/AuthContext';
 import { db } from '@/firebase';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
-import {
-  collection,
-  addDoc,
-  serverTimestamp,
-  query,
-  onSnapshot,
-  orderBy,
-  doc,
-  deleteDoc,
-  updateDoc,
-  getDoc,
-} from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, doc, deleteDoc, updateDoc, getDoc, getDocs} from 'firebase/firestore';
 import { useParams, useRouter } from 'next/navigation';
+import debounce from 'lodash/debounce';
 
 interface ClubData {
   id: string;
@@ -59,6 +49,15 @@ interface FriendData {
   profilePicUrl?: string;
 }
 
+interface SearchResult {
+  key: string;
+  title: string;
+  author_name?: string[];
+  cover_i?: number;
+  language?: string[];
+  edition_count?: number;
+}
+
 export default function ClubDetails() {
   const { clubId } = useParams<{ clubId: string }>();
   const { user } = useAuth();
@@ -80,6 +79,11 @@ export default function ClubDetails() {
   const [inviteSuccess, setInviteSuccess] = useState<boolean>(false);
 
   const [isSearchingNewBook, setIsSearchingNewBook] = useState<boolean>(false);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState<boolean>(false);
+  const [showResults, setShowResults] = useState<boolean>(false);
+  const searchCache = useRef(new Map<string, SearchResult[]>());
 
   // Fetch club details from Firestore
   useEffect(() => {
@@ -145,37 +149,49 @@ export default function ClubDetails() {
 
     const fetchFriends = async () => {
       try {
-        // Get user's friend IDs
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
-        
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          const friendIds = userData.friends || [];
-          
-          // If club members exist, filter out friends who are already members
-          const currentMembers = club?.members || [];
-          const nonMemberFriendIds = friendIds.filter(id => !currentMembers.includes(id));
-          
-          // Fetch friend profile data
-          const friendsData: FriendData[] = [];
-          
-          for (const friendId of nonMemberFriendIds) {
-            const profileRef = doc(db, 'profile', friendId);
-            const profileDoc = await getDoc(profileRef);
-            
-            if (profileDoc.exists()) {
-              const profileData = profileDoc.data();
-              friendsData.push({
-                id: friendId,
-                username: profileData.username || 'Unknown User',
-                profilePicUrl: profileData.profilePicUrl || 'upload-pic.png'
-              });
-            }
+        // Reference to the user's friends subcollection
+        const friendsCollectionRef = collection(db, 'users', user.uid, 'friends');
+
+        // Fetch all documents in the friends subcollection
+        const friendsSnapshot = await getDocs(friendsCollectionRef);
+
+        // Extract friend IDs from the documents
+        const friendIds: string[] = [];
+        friendsSnapshot.forEach((doc) => {
+          const friendData = doc.data();
+          if (friendData.id) { // Assuming each friend document has an `id` field
+            friendIds.push(friendData.id);
           }
-          
-          setFriends(friendsData);
+        });
+
+        console.log("Friend IDs:", friendIds); // Debug log
+
+        // If club members exist, filter out friends who are already members
+        const currentMembers: string[] = club?.members || [];
+        const nonMemberFriendIds = friendIds.filter((id: string) => !currentMembers.includes(id));
+
+        console.log("Non-member Friend IDs:", nonMemberFriendIds); // Debug log
+
+        // Fetch friend profile data from the `profile` collection
+        const friendsData: FriendData[] = [];
+        for (const friendId of nonMemberFriendIds) {
+          const profileRef = doc(db, 'profile', friendId);
+          const profileDoc = await getDoc(profileRef);
+
+          if (profileDoc.exists()) {
+            const profileData = profileDoc.data();
+            friendsData.push({
+              id: friendId,
+              username: profileData.username || 'Unknown User',
+              profilePicUrl: profileData.profilePicUrl || 'upload-pic.png',
+            });
+          } else {
+            console.log(`Profile document for friend ${friendId} does not exist.`);
+          }
         }
+
+        console.log("Friends Data:", friendsData); // Debug log
+        setFriends(friendsData);
       } catch (err) {
         console.error('Error fetching friends list:', err);
       }
@@ -209,8 +225,8 @@ export default function ClubDetails() {
     }
   };
 
-  // Assuming you have a function to handle book selection
-  const handleBookSelection = async (book: any) => {
+  // Function to handle book selection
+  const handleBookSelection = async (book: SearchResult) => {
     if (!clubId || !user || club?.creatorId !== user.uid) return;
 
     try {
@@ -224,6 +240,8 @@ export default function ClubDetails() {
         }
       });
       setIsSearchingNewBook(false); // Reset searching state
+      setSearchQuery(''); // Clear search query
+      setSearchResults([]); // Clear search results
       alert('New book selected successfully!');
     } catch (error) {
       console.error('Error selecting new book:', error);
@@ -282,37 +300,6 @@ export default function ClubDetails() {
     }
   };
 
-  // Function to accept invitation and add member to club
-  /* 
-  const handleAddMemberToClub = async (memberId: string) => {
-    if (!clubId || !club) return;
-
-    try {
-      // Update club document to add the member
-      const clubDocRef = doc(db, 'clubs', clubId);
-      
-      // Create a new members array if it doesn't exist
-      const updatedMembers = club.members ? [...club.members, memberId] : [memberId];
-      
-      await updateDoc(clubDocRef, {
-        members: updatedMembers,
-        memberCount: (club.memberCount || 0) + 1
-      });
-      
-      // Could add logic here to track that the invitation was accepted
-    } catch (error) {
-      console.error('Error adding member to club:', error);
-      alert('Failed to add member to club.');
-    }
-  };
-  */
-
-  // Function to navigate to book page
-  const handleBookClick = (bookKey: string) => {
-    const bookId = bookKey.split('/').pop();
-    router.push(`/books/${bookId}`);
-  };
-
   // Function to move current book to previous books
   const handleMarkBookAsRead = async () => {
     if (!clubId || !user || club?.creatorId !== user.uid || !club?.book) return;
@@ -342,6 +329,93 @@ export default function ClubDetails() {
       console.error('Error marking book as read:', error);
       alert('Failed to mark book as read.');
     }
+  };
+
+  // Book search functionality
+  const fetchSearchResults = useCallback(async (query: string) => {
+    const trimmedQuery = query.trim().toLowerCase();
+    if (!trimmedQuery) {
+      setSearchResults([]);
+      return;
+    }
+
+    // Check cache first
+    const cachedResults = searchCache.current.get(trimmedQuery);
+    if (cachedResults) {
+      setSearchResults(cachedResults);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const apiUrl = `https://openlibrary.org/search.json?title=${encodeURIComponent(trimmedQuery)}&language=eng&fields=key,title,author_name,cover_i,language,edition_count&limit=10`;
+
+      const response = await fetch(apiUrl);
+      const data = await response.json();
+
+      let filteredResults: SearchResult[] = data.docs
+        .filter((doc: SearchResult) => doc.language?.includes("eng"))
+        .map((result: SearchResult) => ({
+          key: result.key,
+          title: result.title,
+          author_name: result.author_name?.slice(0, 1),
+          cover_i: result.cover_i,
+          edition_count: result.edition_count || 1,
+        }));
+
+      // Deduplicate results by title + author
+      const seen = new Set();
+      filteredResults = filteredResults.filter((book) => {
+        const identifier = `${book.title.toLowerCase()}|${book.author_name?.[0]?.toLowerCase()}`;
+        if (seen.has(identifier)) {
+          return false;
+        }
+        seen.add(identifier);
+        return true;
+      });
+
+      // Sort results for better relevancy
+      filteredResults.sort((a, b) => {
+        const exactMatchA = a.title.toLowerCase() === trimmedQuery;
+        const exactMatchB = b.title.toLowerCase() === trimmedQuery;
+
+        if (exactMatchA && !exactMatchB) return -1;
+        if (exactMatchB && !exactMatchA) return 1;
+
+        const editionCountA = a.edition_count ?? 0;
+        const editionCountB = b.edition_count ?? 0;
+
+        if (editionCountA > editionCountB) return -1;
+        if (editionCountA < editionCountB) return 1;
+
+        return 0;
+      });
+
+      // Update cache
+      searchCache.current.set(trimmedQuery, filteredResults);
+      setSearchResults(filteredResults);
+    } catch (error) {
+      console.error("Search error:", error);
+    } finally {
+      setIsSearching(false);
+    }
+  }, []);
+
+  const debouncedSearch = useCallback(
+    debounce((query: string) => fetchSearchResults(query), 300),
+    [fetchSearchResults]
+  );
+
+  const handleBookClick = (bookKey: string) => {
+    // Navigate to book page
+    router.push(`/books/${bookKey.split('/').pop()}`);
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    setShowResults(query.length > 0);
+    debouncedSearch(query);
   };
 
   if (loading) {
@@ -425,27 +499,61 @@ export default function ClubDetails() {
                   Current Book
                 </h2>
                 <p className="text-[#DFDDCE]">No book selected for this club yet</p>
-                <button
-                  onClick={() => router.push('/books')}
-                  className="mt-2 bg-[#3D2F2A] text-[#DFDDCE] px-4 py-2 rounded-lg hover:bg-[#5A7463] transition-colors"
-                >
-                  Search for a New Book
-                </button>
-              </div>
-            )}
 
-            {isSearchingNewBook && (
-              <div className="mt-6 p-4 bg-[#847266] rounded-lg shadow-lg">
-                <h2 className="text-xl font-semibold text-[#DFDDCE] mb-3">
-                  Search for a New Book
-                </h2>
-                <p className="text-[#DFDDCE]">You've finished reading the current book. Start searching for a new one!</p>
-                <button
-                  onClick={() => router.push('/books')}
-                  className="mt-2 bg-[#3D2F2A] text-[#DFDDCE] px-4 py-2 rounded-lg hover:bg-[#5A7463] transition-colors"
-                >
-                  Search for a New Book
-                </button>
+                {/* Integrated Search Section */}
+                <div className="mt-4">
+                  <h2 className="text-xl font-semibold text-[#DFDDCE] mb-3">
+                    Search for a New Book
+                  </h2>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={handleSearchChange}
+                      placeholder="Search for a book by title"
+                      className="w-full px-4 py-2 rounded-lg bg-[#DFDDCE] text-[#3D2F2A] placeholder:text-[#3D2F2A]/55"
+                    />
+                    
+                    {/* Search Results Dropdown */}
+                    {showResults && searchResults.length > 0 && (
+                      <div className="absolute z-10 mt-1 w-full bg-[#DFDDCE] rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        {searchResults.map((result) => (
+                          <div 
+                            key={result.key}
+                            onClick={() => handleBookSelection(result)}
+                            className="p-2 border-b border-[#92A48A] hover:bg-[#92A48A] cursor-pointer"
+                          >
+                            <div className="flex items-center">
+                              {result.cover_i ? (
+                                <img 
+                                  src={`https://covers.openlibrary.org/b/id/${result.cover_i}-S.jpg`} 
+                                  alt={result.title}
+                                  className="w-10 h-12 object-cover mr-2"
+                                />
+                              ) : (
+                                <div className="w-10 h-12 bg-[#3D2F2A] flex items-center justify-center text-[#DFDDCE] mr-2">
+                                  No Cover
+                                </div>
+                              )}
+                              <div>
+                                <p className="font-semibold text-[#3D2F2A]">{result.title}</p>
+                                <p className="text-sm text-[#3D2F2A]/70">
+                                  {result.author_name?.[0] || 'Unknown author'}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {isSearching && (
+                      <div className="absolute right-3 top-2.5">
+                        <div className="animate-spin h-5 w-5 border-2 border-[#3D2F2A] border-t-transparent rounded-full"></div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
             
@@ -553,7 +661,7 @@ export default function ClubDetails() {
                   </>
                 ) : (
                   <div className="bg-[#847266] p-4 rounded-lg text-[#DFDDCE]">
-                    <p>You don't have any friends to invite, or all your friends are already members.</p>
+                    <p>You do not have any friends to invite, or all your friends are already members.</p>
                     <button
                       onClick={() => router.push('/friends')}
                       className="mt-3 bg-[#3D2F2A] text-[#DFDDCE] px-4 py-2 rounded-lg hover:bg-[#5A7463] transition-colors"
