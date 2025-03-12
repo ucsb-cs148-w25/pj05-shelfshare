@@ -4,7 +4,7 @@ import { useAuth } from '@/app/context/AuthContext';
 import { db } from '@/firebase';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
-import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, doc, deleteDoc, updateDoc, getDoc, getDocs} from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, doc, deleteDoc, updateDoc, getDoc, getDocs } from 'firebase/firestore';
 import { useParams, useRouter } from 'next/navigation';
 import debounce from 'lodash/debounce';
 
@@ -15,7 +15,7 @@ interface ClubData {
   memberCount: number;
   imageUrl: string;
   chapters?: { title: string; deadline: string }[];
-  creatorId?: string; 
+  creatorId?: string;
   members?: string[];
   book?: {
     key: string;
@@ -204,8 +204,8 @@ export default function ClubDetails() {
   const handleSubmitMessage = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!user || !clubId) {
-      alert('You need to be logged in to post a message.');
+    if (!user || !clubId || !club?.members?.includes(user.uid)) {
+      alert('You need to be a member of the club to post a message.');
       return;
     }
 
@@ -287,7 +287,7 @@ export default function ClubDetails() {
 
       setInviteSuccess(true);
       setSelectedFriend('');
-      
+
       // Wait 3 seconds and reset success message
       setTimeout(() => {
         setInviteSuccess(false);
@@ -303,26 +303,26 @@ export default function ClubDetails() {
   // Function to move current book to previous books
   const handleMarkBookAsRead = async () => {
     if (!clubId || !user || club?.creatorId !== user.uid || !club?.book) return;
-  
+
     try {
       const clubDocRef = doc(db, 'clubs', clubId);
       const currentBook = club.book;
       const currentDate = new Date().toISOString();
-      
+
       // Add current book to previous books with completed date
       const previousBook = {
         ...currentBook,
         completedDate: currentDate
       };
-      
+
       // Create new previousBooks array if it doesn't exist
       const previousBooks = club.previousBooks || [];
-      
+
       await updateDoc(clubDocRef, {
         previousBooks: [...previousBooks, previousBook],
         book: null // Clear current book
       });
-      
+
       setIsSearchingNewBook(true); // Set searching state to true
       alert('Book marked as read and moved to previous books!');
     } catch (error) {
@@ -411,6 +411,63 @@ export default function ClubDetails() {
     router.push(`/books/${bookKey.split('/').pop()}`);
   };
 
+  const handleJoinClub = async () => {
+    if (!clubId || !user) return;
+
+    try {
+      const clubDocRef = doc(db, 'clubs', clubId);
+      const clubDoc = await getDoc(clubDocRef);
+
+      if (clubDoc.exists()) {
+        const clubData = clubDoc.data() as ClubData;
+        const currentMembers = clubData.members || [];
+        const currentMemberCount = clubData.memberCount || 0;
+
+        if (!currentMembers.includes(user.uid)) {
+          await updateDoc(clubDocRef, {
+            members: [...currentMembers, user.uid],
+            memberCount: currentMemberCount + 1,
+          });
+          alert('You have successfully joined the club!');
+        } else {
+          alert('You are already a member of this club.');
+        }
+      }
+    } catch (error) {
+      console.error('Error joining club:', error);
+      alert('Failed to join the club.');
+    }
+  };
+
+  const handleLeaveClub = async () => {
+    if (!clubId || !user) return;
+
+    try {
+      const clubDocRef = doc(db, 'clubs', clubId);
+      const clubDoc = await getDoc(clubDocRef);
+
+      if (clubDoc.exists()) {
+        const clubData = clubDoc.data() as ClubData;
+        const currentMembers = clubData.members || [];
+        const currentMemberCount = clubData.memberCount || 0;
+
+        if (currentMembers.includes(user.uid)) {
+          const updatedMembers = currentMembers.filter((memberId) => memberId !== user.uid);
+          await updateDoc(clubDocRef, {
+            members: updatedMembers,
+            memberCount: currentMemberCount - 1,
+          });
+          alert('You have successfully left the club.');
+        } else {
+          alert('You are not a member of this club.');
+        }
+      }
+    } catch (error) {
+      console.error('Error leaving club:', error);
+      alert('Failed to leave the club.');
+    }
+  };
+
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const query = e.target.value;
     setSearchQuery(query);
@@ -438,8 +495,9 @@ export default function ClubDetails() {
     <div className="bg-[#5A7463] min-h-screen flex items-center justify-center p-8">
       <div className="w-full max-w-4xl bg-[#92A48A] rounded-lg shadow-xl p-8">
         <div className="flex flex-col md:flex-row gap-8">
-          <div className="flex-shrink-0">
-            <div className="w-64 h-64 bg-[#3D2F2A] rounded-lg shadow-lg overflow-hidden flex items-center justify-center">
+          {/* Left Side: Club Image, Current Book, and Previously Read Books */}
+          <div className="flex-shrink-0 w-full md:w-1/3">
+            <div className="w-full h-64 bg-[#3D2F2A] rounded-lg shadow-lg overflow-hidden flex items-center justify-center">
               <Image
                 src={club.imageUrl || '/bookclub.png'}
                 alt={club.name}
@@ -448,8 +506,8 @@ export default function ClubDetails() {
                 className="object-cover"
               />
             </div>
-            
-            {/* Book Display Section */}
+
+            {/* Current Book Section */}
             {club.book ? (
               <div className="mt-6 p-4 bg-[#847266] rounded-lg shadow-lg">
                 <div className="flex justify-between items-center">
@@ -465,7 +523,7 @@ export default function ClubDetails() {
                     </button>
                   )}
                 </div>
-                <div 
+                <div
                   className="flex items-center cursor-pointer hover:bg-[#3D2F2A]/30 p-2 rounded-lg transition-colors"
                   onClick={() => handleBookClick(club.book!.key)}
                 >
@@ -500,63 +558,73 @@ export default function ClubDetails() {
                 </h2>
                 <p className="text-[#DFDDCE]">No book selected for this club yet</p>
 
-                {/* Integrated Search Section */}
-                <div className="mt-4">
-                  <h2 className="text-xl font-semibold text-[#DFDDCE] mb-3">
-                    Search for a New Book
-                  </h2>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={searchQuery}
-                      onChange={handleSearchChange}
-                      placeholder="Search for a book by title"
-                      className="w-full px-4 py-2 rounded-lg bg-[#DFDDCE] text-[#3D2F2A] placeholder:text-[#3D2F2A]/55"
-                    />
-                    
-                    {/* Search Results Dropdown */}
-                    {showResults && searchResults.length > 0 && (
-                      <div className="absolute z-10 mt-1 w-full bg-[#DFDDCE] rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        {searchResults.map((result) => (
-                          <div 
-                            key={result.key}
-                            onClick={() => handleBookSelection(result)}
-                            className="p-2 border-b border-[#92A48A] hover:bg-[#92A48A] cursor-pointer"
-                          >
-                            <div className="flex items-center">
-                              {result.cover_i ? (
-                                <img 
-                                  src={`https://covers.openlibrary.org/b/id/${result.cover_i}-S.jpg`} 
-                                  alt={result.title}
-                                  className="w-10 h-12 object-cover mr-2"
-                                />
-                              ) : (
-                                <div className="w-10 h-12 bg-[#3D2F2A] flex items-center justify-center text-[#DFDDCE] mr-2">
-                                  No Cover
+                {/* Search for New Book Section */}
+                {club.creatorId === user?.uid && (
+                  <div className="mt-4">
+                    <button
+                      onClick={() => setIsSearchingNewBook(!isSearchingNewBook)}
+                      className="bg-[#3D2F2A] text-[#DFDDCE] px-4 py-2 rounded-lg hover:bg-[#5A7463] transition-colors"
+                    >
+                      {isSearchingNewBook ? 'Cancel Search' : 'Search for a New Book'}
+                    </button>
+
+                    {isSearchingNewBook && (
+                      <div className="mt-4">
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={searchQuery}
+                            onChange={handleSearchChange}
+                            placeholder="Search for a book by title"
+                            className="w-full px-4 py-2 rounded-lg bg-[#DFDDCE] text-[#3D2F2A] placeholder:text-[#3D2F2A]/55"
+                          />
+
+                          {/* Search Results Dropdown */}
+                          {showResults && searchResults.length > 0 && (
+                            <div className="absolute z-10 mt-1 w-full bg-[#DFDDCE] rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                              {searchResults.map((result) => (
+                                <div
+                                  key={result.key}
+                                  onClick={() => handleBookSelection(result)}
+                                  className="p-2 border-b border-[#92A48A] hover:bg-[#92A48A] cursor-pointer"
+                                >
+                                  <div className="flex items-center">
+                                    {result.cover_i ? (
+                                      <img
+                                        src={`https://covers.openlibrary.org/b/id/${result.cover_i}-S.jpg`}
+                                        alt={result.title}
+                                        className="w-10 h-12 object-cover mr-2"
+                                      />
+                                    ) : (
+                                      <div className="w-10 h-12 bg-[#3D2F2A] flex items-center justify-center text-[#DFDDCE] mr-2">
+                                        No Cover
+                                      </div>
+                                    )}
+                                    <div>
+                                      <p className="font-semibold text-[#3D2F2A]">{result.title}</p>
+                                      <p className="text-sm text-[#3D2F2A]/70">
+                                        {result.author_name?.[0] || 'Unknown author'}
+                                      </p>
+                                    </div>
+                                  </div>
                                 </div>
-                              )}
-                              <div>
-                                <p className="font-semibold text-[#3D2F2A]">{result.title}</p>
-                                <p className="text-sm text-[#3D2F2A]/70">
-                                  {result.author_name?.[0] || 'Unknown author'}
-                                </p>
-                              </div>
+                              ))}
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {isSearching && (
-                      <div className="absolute right-3 top-2.5">
-                        <div className="animate-spin h-5 w-5 border-2 border-[#3D2F2A] border-t-transparent rounded-full"></div>
+                          )}
+
+                          {isSearching && (
+                            <div className="absolute right-3 top-2.5">
+                              <div className="animate-spin h-5 w-5 border-2 border-[#3D2F2A] border-t-transparent rounded-full"></div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
-                </div>
+                )}
               </div>
             )}
-            
+
             {/* Previously Read Books Section */}
             {club.previousBooks && club.previousBooks.length > 0 && (
               <div className="mt-6 p-4 bg-[#847266] rounded-lg shadow-lg">
@@ -565,7 +633,7 @@ export default function ClubDetails() {
                 </h2>
                 <div className="space-y-4 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
                   {club.previousBooks.map((book, index) => (
-                    <div 
+                    <div
                       key={index}
                       className="flex items-center cursor-pointer hover:bg-[#3D2F2A]/30 p-2 rounded-lg transition-colors"
                       onClick={() => handleBookClick(book.key)}
@@ -601,7 +669,9 @@ export default function ClubDetails() {
             )}
           </div>
 
-          <div className="flex-grow space-y-6">
+          {/* Right Side: Description, Chapters, and Discussion Forum */}
+          <div className="flex-grow w-full md:w-2/3 space-y-6">
+            {/* Join/Leave Club Button */}
             <div>
               <h1 className="text-4xl font-bold text-[#3D2F2A]">{club.name}</h1>
               <p className="text-[#3D2F2A] text-lg mt-2">
@@ -615,67 +685,30 @@ export default function ClubDetails() {
                   Delete Club
                 </button>
               )}
-            </div>
-
-            {/* Invite Friend to Club Section */}
-            {club.creatorId === user?.uid && (
-              <div className="p-4 bg-[#DFDDCE]/20 rounded-lg">
-                <h2 className="text-2xl font-semibold text-[#3D2F2A] mb-4">Invite Friend to Club</h2>
-                
-                {friends.length > 0 ? (
-                  <>
-                    <div className="space-y-4">
-                      <label htmlFor="friend-select" className="block text-[#3D2F2A] font-medium">
-                        Select a friend to invite:
-                      </label>
-                      <select
-                        id="friend-select"
-                        value={selectedFriend}
-                        onChange={(e) => setSelectedFriend(e.target.value)}
-                        className="w-full p-3 bg-[#847266] text-[#DFDDCE] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3D2F2A]"
-                      >
-                        <option value="">Choose a friend</option>
-                        {friends.map((friend) => (
-                          <option key={friend.id} value={friend.id}>
-                            {friend.username}
-                          </option>
-                        ))}
-                      </select>
-                      
-                      {inviteSuccess && (
-                        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mt-4">
-                          Invitation sent successfully!
-                        </div>
-                      )}
-                      
-                      <button
-                        onClick={handleInviteFriend}
-                        disabled={!selectedFriend || inviteLoading}
-                        className={`w-full bg-[#3D2F2A] text-[#DFDDCE] px-6 py-3 rounded-lg mt-2 hover:bg-[#847266] transition-colors ${
-                          !selectedFriend || inviteLoading ? 'opacity-50 cursor-not-allowed' : ''
-                        }`}
-                      >
-                        {inviteLoading ? 'Sending...' : 'Send Invitation'}
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <div className="bg-[#847266] p-4 rounded-lg text-[#DFDDCE]">
-                    <p>You do not have any friends to invite, or all your friends are already members.</p>
+              {club.creatorId !== user?.uid && (
+                <>
+                  {club.members?.includes(user?.uid) ? (
                     <button
-                      onClick={() => router.push('/friends')}
-                      className="mt-3 bg-[#3D2F2A] text-[#DFDDCE] px-4 py-2 rounded-lg hover:bg-[#5A7463] transition-colors"
+                      onClick={handleLeaveClub}
+                      className="bg-[#CD5C5C] text-white px-4 py-2 rounded-lg mt-2"
                     >
-                      Go to Friends Page
+                      Leave Club
                     </button>
-                  </div>
-                )}
-              </div>
-            )}
+                  ) : (
+                    <button
+                      onClick={handleJoinClub}
+                      className="bg-[#3D2F2A] text-white px-4 py-2 rounded-lg mt-2"
+                    >
+                      Join Club
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
 
             <div className="space-y-4">
               <h2 className="text-2xl font-semibold text-[#3D2F2A] mb-4">Description</h2>
-              <p className="text-[#3D2F2A] leading-relaxed">{club.description}</p>
+              <p className="w-full flex bg-[#847266] text-[#DFDDCE] rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[#3D2F2A] px-6 py-3">{club.description}</p>
             </div>
 
             {/* Display Chapters */}
@@ -684,7 +717,7 @@ export default function ClubDetails() {
                 <h2 className="text-2xl font-semibold text-[#3D2F2A] mb-4">Chapters</h2>
                 <ul className="space-y-2">
                   {club.chapters.map((chapter, index) => (
-                    <li key={index} className="text-[#3D2F2A]">
+                    <li key={index} className="w-full flex bg-[#847266] text-[#DFDDCE] rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[#3D2F2A] px-6 py-3">
                       <strong>{chapter.title}</strong> - Due by{' '}
                       {new Date(chapter.deadline).toLocaleDateString()}
                     </li>
