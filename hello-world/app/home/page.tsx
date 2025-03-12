@@ -73,27 +73,32 @@ export default function Home() {
 
   // In your Home.tsx component, add a check for Spotify connection status
   useEffect(() => {
-    const checkSpotifyConnection = async () => {
-      if (!user) return;
-
-      try {
-        // Fetch the user document to check for Spotify token
-        const userRef = doc(db, "users", user.uid);
-        const userDoc = await getDoc(userRef);
-        
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          // Check if user has a Spotify token
-          setSpotifyConnected(!!userData.spotifyToken);
-        }
-      } catch (error) {
-        console.error("Error checking Spotify connection:", error);
+    const checkSpotifyConnection = () => {
+      const accessToken = localStorage.getItem('spotify_access_token');
+      const tokenExpiry = localStorage.getItem('spotify_token_expiry');
+  
+      if (accessToken && tokenExpiry && parseInt(tokenExpiry) > Date.now()) {
+        console.log("Spotify token is still valid.");
+        setSpotifyConnected(true);
+      } else {
+        console.log("Spotify token expired or missing. Logging out.");
+        // If token expired, clear local storage
+        localStorage.removeItem('spotify_access_token');
+        localStorage.removeItem('spotify_refresh_token');
+        localStorage.removeItem('spotify_token_expiry');
+  
+        setSpotifyConnected(false);
+        alert("Your Spotify session has expired. Please log in again.");
       }
     };
-
+  
     checkSpotifyConnection();
-  }, [user]);
-
+    
+    // Check every 60 seconds for expiration
+    const intervalId = setInterval(checkSpotifyConnection, 60000);
+    
+    return () => clearInterval(intervalId);
+  }, []);
 
   // Fetch the reading goal and books read count
   useEffect(() => {
@@ -187,83 +192,69 @@ export default function Home() {
 
 
   const createSpotifyPlaylist = async () => {
-    if (!playlistData || !user) return;
+    if (!playlistData) {
+      console.error("❌ No playlist data available.");
+      alert("Something went wrong. Try generating the playlist again.");
+      return;
+    }
+  
+    const accessToken = localStorage.getItem('spotify_access_token');
+  
+    if (!accessToken) {
+      console.error("❌ No access token found.");
+      alert("Spotify authentication required. Please log in.");
+      return;
+    }
+  
+    console.log("🔄 Sending playlist to Spotify:", playlistData);
   
     try {
-      // Fetch the user's Spotify token from Firestore
-      const userRef = doc(db, "users", user.uid);
-      const userDoc = await getDoc(userRef);
-  
-      if (!userDoc.exists()) {
-        throw new Error("User data not found");
-      }
-  
-      const userData = userDoc.data();
-      const accessToken = userData.spotifyToken;
-      const idToken = await user.getIdToken();
-  
-      if (!accessToken) {
-        throw new Error("Spotify access token missing. Please reconnect Spotify.");
-      }
-  
-      // Send the playlist data to your API to create it in Spotify
       const response = await fetch('/api/ai-recommend/create-spotify-playlist', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          playlistData, 
-          accessToken, 
-          userId: user.uid ,
-          idToken,
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playlistData, accessToken }),
       });
-  
-      if (!response.ok) {
-        throw new Error('Failed to create Spotify playlist');
-      }
   
       const data = await response.json();
   
-      if (data.playlistUrl) {
-        window.open(data.playlistUrl, '_blank');
+      if (!response.ok) {
+        console.error("❌ Failed to create playlist:", data);
+        alert(`Error creating playlist: ${data.error}`);
+        return;
       }
+  
+      console.log("✅ Created Spotify playlist:", data.playlistUrl);
+      window.open(data.playlistUrl, '_blank');
     } catch (error) {
-      console.error('Error creating Spotify playlist:', error);
+      console.error("❌ Unexpected error:", error);
+      alert("Failed to create Spotify playlist.");
     }
   };
-  
   
 
 
   const handleSpotifyLogin = () => {
     const CLIENT_ID = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
-    const REDIRECT_URI = process.env.NEXT_PUBLIC_SPOTIFY_REDIRECT_URI || window.location.origin + '/spotify-callback';
-    
-    // Define the scopes you need (adjust as necessary)
+    const REDIRECT_URI = process.env.NEXT_PUBLIC_SPOTIFY_REDIRECT_URI || `${window.location.origin}/spotify-callback`;
+  
     const scopes = [
       'user-read-private',
       'user-read-email',
-      'user-top-read',
-      'user-library-read',
-      'playlist-read-private'
+      'playlist-modify-public',
+      'playlist-modify-private'
     ].join(' ');
-    
-    // Generate a random state value for security
+  
     const state = generateRandomString(16);
-    // Store the state in localStorage to verify when the user returns
     localStorage.setItem('spotify_auth_state', state);
-    
-    // Create the authorization URL
+  
     const authUrl = new URL('https://accounts.spotify.com/authorize');
     authUrl.searchParams.append('response_type', 'code');
     authUrl.searchParams.append('client_id', CLIENT_ID as string);
     authUrl.searchParams.append('scope', scopes);
     authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
     authUrl.searchParams.append('state', state);
-    
-    // Redirect to Spotify authorization page
+  
+    console.log('Redirecting to Spotify:', authUrl.toString());
     window.location.href = authUrl.toString();
   };
 

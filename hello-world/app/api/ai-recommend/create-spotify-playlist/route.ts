@@ -1,77 +1,119 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import admin from 'firebase-admin';
 
-if (!admin.apps.length) {
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
+export async function POST(req: NextRequest) {
+  console.log("📥 Received request to create Spotify playlist");
+
+  try {
+    const { playlistData, accessToken } = await req.json();
+
+    if (!playlistData || !playlistData.name || !playlistData.tracks || playlistData.tracks.length === 0) {
+      return NextResponse.json({ error: "Invalid playlist data" }, { status: 400 });
+    }
+
+    console.log("✅ Creating Spotify playlist:", playlistData.name);
+
+    // Step 1: Create a new playlist on the user's Spotify account
+    const userProfileResponse = await fetch('https://api.spotify.com/v1/me', {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+
+    if (!userProfileResponse.ok) {
+      throw new Error('Failed to fetch Spotify user profile');
+    }
+
+    const userProfile = await userProfileResponse.json();
+    const userId = userProfile.id;
+
+    console.log("🎵 Spotify User ID:", userId);
+
+    // Step 2: Create the Playlist
+    const createPlaylistResponse = await fetch(`https://api.spotify.com/v1/users/${userId}/playlists`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        name: playlistData.name,
+        description: playlistData.description,
+        public: false, // Set to true if you want it public
+      }),
+    });
+
+    if (!createPlaylistResponse.ok) {
+      const errorData = await createPlaylistResponse.json();
+      console.error("❌ Spotify API Error (Creating Playlist):", errorData);
+      return NextResponse.json({ error: "Failed to create playlist in Spotify" }, { status: 500 });
+    }
+
+    const playlist = await createPlaylistResponse.json();
+    console.log("✅ Playlist created:", playlist.id);
+
+    // Step 3: Convert Track Names to Spotify URIs
+    const trackUris = await getSpotifyTrackUris(playlistData.tracks, accessToken);
+
+    if (trackUris.length === 0) {
+      return NextResponse.json({ error: "No valid tracks found on Spotify" }, { status: 400 });
+    }
+
+    console.log("🎵 Adding tracks to playlist:", trackUris);
+
+    // Step 4: Add Tracks to Playlist
+    const addTracksResponse = await fetch(`https://api.spotify.com/v1/playlists/${playlist.id}/tracks`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ uris: trackUris }),
+    });
+
+    if (!addTracksResponse.ok) {
+      const errorData = await addTracksResponse.json();
+      console.error("❌ Spotify API Error (Adding Tracks):", errorData);
+      return NextResponse.json({ error: "Failed to add tracks to playlist" }, { status: 500 });
+    }
+
+    console.log("✅ Tracks added successfully!");
+
+    return NextResponse.json({ playlistUrl: playlist.external_urls.spotify });
+
+  } catch (error: unknown) {
+    console.error("❌ Error in create-spotify-playlist:", error);
+
+    let errorMessage = "Unknown error";
+    if (error instanceof Error) {
+        errorMessage = error.message;
+    }
+
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
+}
 }
 
-export async function POST(request: NextRequest) {
-  try {
-    const { playlistData, accessToken, userId, idToken } = await request.json();
+// Function to search for track URIs on Spotify
+async function getSpotifyTrackUris(tracks: { title: string; artist: string }[], accessToken: string) {
+  const trackUris: string[] = [];
 
-    if (!playlistData || !accessToken || !userId || !idToken) {
-      return NextResponse.json(
-        { error: "Missing required fields (playlistData, accessToken, userId, idToken)" },
-        { status: 400 }
-      );
-    }
+  for (const track of tracks) {
+    const query = encodeURIComponent(`${track.title} ${track.artist}`);
+    const searchUrl = `https://api.spotify.com/v1/search?q=${query}&type=track&limit=1`;
 
-    console.log("User ID from request:", userId);
-
-    // Verify Firebase ID Token
-    let decodedToken;
     try {
-      decodedToken = await admin.auth().verifyIdToken(idToken);
-      console.log("Decoded token:", decodedToken);
-    } catch (error: any) {
-      console.error("Invalid Firebase ID Token:", error);
-      return NextResponse.json(
-        { error: "Unauthorized request - Invalid Firebase ID Token" },
-        { status: 401 }
-      );
+      const response = await fetch(searchUrl, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (!response.ok) continue;
+
+      const data = await response.json();
+      if (data.tracks.items.length > 0) {
+        trackUris.push(data.tracks.items[0].uri);
+      }
+    } catch (error) {
+      console.error(`⚠ Failed to fetch track: ${track.title} by ${track.artist}`, error);
     }
-
-    // Ensure the user making the request is the same as the authenticated user
-    if (decodedToken.uid !== userId) {
-      console.error("User ID mismatch - Unauthorized");
-      return NextResponse.json(
-        { error: "Unauthorized request - User ID mismatch" },
-        { status: 403 }
-      );
-    }
-
-    // Get user document
-    const userRef = doc(db, "users", userId);
-    const userDoc = await getDoc(userRef);
-
-    if (!userDoc.exists()) {
-      console.error("User document not found in Firestore");
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    console.log("User found, updating Spotify token...");
-
-    // Update Firestore with the Spotify token
-    await setDoc(userRef, {
-      spotifyToken: accessToken,
-      spotifyTokenExpiry: Date.now() + 3600 * 1000, // Token expires in 1 hour
-    }, { merge: true });
-
-    return NextResponse.json({ success: true });
-
-  } catch (error) {
-    console.error("Server error creating playlist:", error);
-    return NextResponse.json(
-      { error: "Internal server error", details: (error as any).message || "Unknown error" },
-      { status: 500 }
-    );
   }
+
+  return trackUris;
 }

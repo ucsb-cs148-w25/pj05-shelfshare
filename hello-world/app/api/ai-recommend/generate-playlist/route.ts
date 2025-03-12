@@ -8,7 +8,7 @@ interface Playlist {
 }
 
 export async function POST(req: NextRequest) {
-  console.log("Received request for playlist generation");
+  console.log("📥 Received request for playlist generation");
 
   const { bookTitle } = await req.json();
   if (!bookTitle) {
@@ -19,13 +19,13 @@ export async function POST(req: NextRequest) {
   const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY as string);
   const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-  // Create the AI prompt for generating a playlist
+  // Create AI prompt
   const prompt = `
     Create a reading playlist of 10-15 songs for the book titled "${bookTitle}".
-    The response should be in JSON format:
+    The response must be in JSON format with this structure:
     {
-      "name": "Playlist name that relates to the book",
-      "description": "A short description of how this playlist enhances the reading experience",
+      "name": "A unique playlist name inspired by the book",
+      "description": "A short description explaining why these songs match the book's themes",
       "tracks": [
         {
           "title": "Song title",
@@ -34,42 +34,51 @@ export async function POST(req: NextRequest) {
         }
       ]
     }
-    Ensure the playlist aligns with the genre and themes of the book.
+    DO NOT include any extra text, explanations, or formatting like Markdown.
   `;
 
-  console.log("Sending prompt to Gemini API:", prompt);
+  console.log("📝 Sending prompt to Gemini API:", prompt);
 
   try {
     const response = await model.generateContent(prompt);
     const playlist = await parseResponse(response, bookTitle);
-    
+
     return NextResponse.json(playlist);
-  } catch (error: any) {
-    console.error("Error generating playlist:", error?.message || error);
+  } catch (error: unknown) {
+    console.error("❌ Error generating playlist:", error);
+
+    let errorMessage = "Unknown error";
+    if (error instanceof Error) {
+        errorMessage = error.message;
+    }
+
     return NextResponse.json(
-      { error: "Failed to generate playlist recommendations", details: error?.message || "Unknown error" },
-      { status: 500 }
+        { error: "Failed to generate playlist recommendations", details: errorMessage },
+        { status: 500 }
     );
-  }
+}
 }
 
 // Function to parse AI response
 async function parseResponse(response: GenerateContentResult, bookTitle: string): Promise<Playlist> {
   const text = await response.response.text();
-  console.log("Raw AI response:", text);
+  console.log("📄 Raw AI response:", text);
 
-  // Remove Markdown code blocks and ensure proper JSON format
+  // Remove Markdown code blocks if present
   const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
 
   try {
-    if (cleanedText.startsWith('{')) {
-      return JSON.parse(cleanedText) as Playlist;
-    } else {
-      console.warn("AI response is not valid JSON:", cleanedText);
-      throw new Error("Invalid JSON response");
+    const parsedData = JSON.parse(cleanedText) as Playlist;
+
+    // Validate the structure of the parsed playlist
+    if (!parsedData.name || !parsedData.tracks || parsedData.tracks.length === 0) {
+      console.warn("⚠ AI response missing required fields, falling back to mock playlist.");
+      return generateMockPlaylist(bookTitle);
     }
+
+    return parsedData;
   } catch (e) {
-    console.error("Error parsing Gemini response:", e);
+    console.error("❌ Error parsing Gemini response:", e);
     return generateMockPlaylist(bookTitle);
   }
 }
