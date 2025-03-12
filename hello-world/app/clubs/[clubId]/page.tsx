@@ -4,7 +4,7 @@ import { useAuth } from '@/app/context/AuthContext';
 import { db } from '@/firebase';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
-import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, doc, deleteDoc, updateDoc, getDoc, getDocs } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, doc, deleteDoc, updateDoc, getDoc } from 'firebase/firestore';
 import { useParams, useRouter } from 'next/navigation';
 import debounce from 'lodash/debounce';
 
@@ -43,12 +43,6 @@ interface DiscussionMessage {
   } | null;
 }
 
-interface FriendData {
-  id: string;
-  username: string;
-  profilePicUrl?: string;
-}
-
 interface SearchResult {
   key: string;
   title: string;
@@ -72,11 +66,6 @@ export default function ClubDetails() {
 
   const [profilePicture, setProfilePicture] = useState('upload-pic.png');
   const [username, setUsername] = useState('username');
-
-  const [friends, setFriends] = useState<FriendData[]>([]); // Store friend data objects
-  const [selectedFriend, setSelectedFriend] = useState<string>('');
-  const [inviteLoading, setInviteLoading] = useState<boolean>(false);
-  const [inviteSuccess, setInviteSuccess] = useState<boolean>(false);
 
   const [isSearchingNewBook, setIsSearchingNewBook] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -143,63 +132,6 @@ export default function ClubDetails() {
     };
   }, [clubId, user]);
 
-  // Fetch the user's friends list with profile data
-  useEffect(() => {
-    if (!user) return;
-
-    const fetchFriends = async () => {
-      try {
-        // Reference to the user's friends subcollection
-        const friendsCollectionRef = collection(db, 'users', user.uid, 'friends');
-
-        // Fetch all documents in the friends subcollection
-        const friendsSnapshot = await getDocs(friendsCollectionRef);
-
-        // Extract friend IDs from the documents
-        const friendIds: string[] = [];
-        friendsSnapshot.forEach((doc) => {
-          const friendData = doc.data();
-          if (friendData.id) { // Assuming each friend document has an `id` field
-            friendIds.push(friendData.id);
-          }
-        });
-
-        console.log("Friend IDs:", friendIds); // Debug log
-
-        // If club members exist, filter out friends who are already members
-        const currentMembers: string[] = club?.members || [];
-        const nonMemberFriendIds = friendIds.filter((id: string) => !currentMembers.includes(id));
-
-        console.log("Non-member Friend IDs:", nonMemberFriendIds); // Debug log
-
-        // Fetch friend profile data from the `profile` collection
-        const friendsData: FriendData[] = [];
-        for (const friendId of nonMemberFriendIds) {
-          const profileRef = doc(db, 'profile', friendId);
-          const profileDoc = await getDoc(profileRef);
-
-          if (profileDoc.exists()) {
-            const profileData = profileDoc.data();
-            friendsData.push({
-              id: friendId,
-              username: profileData.username || 'Unknown User',
-              profilePicUrl: profileData.profilePicUrl || 'upload-pic.png',
-            });
-          } else {
-            console.log(`Profile document for friend ${friendId} does not exist.`);
-          }
-        }
-
-        console.log("Friends Data:", friendsData); // Debug log
-        setFriends(friendsData);
-      } catch (err) {
-        console.error('Error fetching friends list:', err);
-      }
-    };
-
-    fetchFriends();
-  }, [user, club?.members]);
-
   // Function to post a new discussion message
   const handleSubmitMessage = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -259,44 +191,6 @@ export default function ClubDetails() {
     } catch (error) {
       console.error('Error deleting club:', error);
       alert('Failed to delete club.');
-    }
-  };
-
-  // Function to invite a friend to the club
-  const handleInviteFriend = async () => {
-    if (!selectedFriend || !clubId || !user || !club) {
-      return;
-    }
-
-    setInviteLoading(true);
-    setInviteSuccess(false);
-
-    try {
-      // Create a notification in the friend's notifications collection
-      const friendNotificationsRef = collection(db, 'users', selectedFriend, 'notifications');
-      await addDoc(friendNotificationsRef, {
-        type: 'club_invitation',
-        clubId: clubId,
-        clubName: club.name,
-        senderId: user.uid,
-        senderName: username || user.displayName || 'A friend',
-        status: 'pending',
-        createdAt: serverTimestamp(),
-        read: false
-      });
-
-      setInviteSuccess(true);
-      setSelectedFriend('');
-
-      // Wait 3 seconds and reset success message
-      setTimeout(() => {
-        setInviteSuccess(false);
-      }, 3000);
-    } catch (error) {
-      console.error('Error inviting friend to club:', error);
-      alert('Failed to send invitation.');
-    } finally {
-      setInviteLoading(false);
     }
   };
 
@@ -687,7 +581,7 @@ export default function ClubDetails() {
               )}
               {club.creatorId !== user?.uid && (
                 <>
-                  {club.members?.includes(user?.uid) ? (
+                  {club.members?.includes(user?.uid ?? '') ? (
                     <button
                       onClick={handleLeaveClub}
                       className="bg-[#CD5C5C] text-white px-4 py-2 rounded-lg mt-2"
