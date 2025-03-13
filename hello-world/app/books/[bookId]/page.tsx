@@ -7,7 +7,7 @@ import { db } from '@/firebase';
 // import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, doc, getDocs, writeBatch, FieldValue } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, doc, getDocs, FieldValue } from "firebase/firestore";
 import { useParams } from 'next/navigation';
 import BookActions from '@/app/components/BookActions';
 import FriendActivity from '@/app/components/FriendActivity';
@@ -327,11 +327,11 @@ export default function BookDetails() {
 
   const sendNotificationsToFriends = async (
     reviewData: ReviewData, 
-    bookDetails: BookDetailsForNotification) => {
-    if (!user || userFriends.length === 0) return;
+    bookDetails: BookDetailsForNotification
+  ) => {
+    if (!user) return;
     
     const timestamp = serverTimestamp();
-    const batch = writeBatch(db);
     
     // Prepare notification data
     const notificationData = {
@@ -348,18 +348,28 @@ export default function BookDetails() {
       read: false
     };
     
-    // Add a notification for each friend
-    userFriends.forEach(friend => {
-      const notificationRef = doc(collection(db, "users", friend.id, "notifications"));
-      batch.set(notificationRef, notificationData);
-    });
-    
-    // Commit the batch
+    // Add notification for the current user
     try {
-      await batch.commit();
-      console.log("Notifications sent to all friends");
+      // Add to the current user's notifications 
+      await addDoc(collection(db, "users", user.uid, "notifications"), notificationData);
+      console.log("Added review notification to current user's timeline");
+      
+      // Then add notifications to all friends' timelines
+      if (userFriends.length > 0) {
+        console.log(`Attempting to add notifications to ${userFriends.length} friends' timelines`);
+        
+        const addPromises = userFriends.map(friend => {
+          if (!friend.id) return Promise.resolve(); // Skip if no valid friend ID
+          
+          return addDoc(collection(db, "users", friend.id, "notifications"), notificationData)
+            .then(() => console.log(`Successfully added notification to friend ${friend.id}`))
+            .catch(err => console.error(`Failed to add notification to friend ${friend.id}:`, err));
+        });
+        
+        await Promise.allSettled(addPromises);
+      }
     } catch (error) {
-      console.error("Error sending notifications:", error);
+      console.error("Error adding notifications:", error);
     }
   };
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useAuth } from '../context/AuthContext';
-import { useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation'; // Import the useRouter hook
 import { useEffect, useState } from 'react';
 import React from "react";
 import Image from "next/image";
@@ -30,8 +30,9 @@ const FriendActivityPage: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [displayCount, setDisplayCount] = useState(5);
   const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'mine' | 'friends'>('all');
   const { user } = useAuth();
-  const router = useRouter();
+  const router = useRouter(); // Initialize the useRouter hook
 
   useEffect(() => {
     if (!user) return;
@@ -47,9 +48,11 @@ const FriendActivityPage: React.FC = () => {
         ...doc.data()
       })) as Notification[];
       
+      // Filter to only review notifications
       const reviewNotifications = notificationsData.filter(notif => notif.type === 'review');
       setNotifications(reviewNotifications);
       
+      // Mark all as read
       reviewNotifications.forEach(async (notification) => {
         if (!notification.read) {
           await updateDoc(doc(db, "users", user.uid, "notifications", notification.id), {
@@ -62,36 +65,64 @@ const FriendActivityPage: React.FC = () => {
     return () => unsubscribe();
   }, [user]);
 
-  useEffect(() => {
-    if (!user) {
-      router.push('/');
-    }
-  }, [user, router]);
-
+  // Define the handleNotificationClick function
   const handleNotificationClick = (bookId: string) => {
+    // Navigate to the book's detail page or perform any other action
     router.push(`/books/${bookId}`);
   };
 
-  const filteredNotifications = notifications.filter(notification =>
-    notification.senderName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    notification.bookTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    notification.reviewText.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Apply filters based on user selection
+  const applyFilters = (notificationsList: Notification[]) => {
+    let filtered = notificationsList;
+    
+    // Apply source filter (mine/friends/all)
+    if (filterType === 'mine') {
+      filtered = filtered.filter(notif => notif.senderId === user?.uid);
+    } else if (filterType === 'friends') {
+      filtered = filtered.filter(notif => notif.senderId !== user?.uid);
+    }
+    
+    // Apply search query filter
+    return filtered.filter(notification =>
+      notification.senderName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      notification.bookTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      notification.reviewText.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  };
 
+  const filteredNotifications = applyFilters(notifications);
   const displayedNotifications = filteredNotifications.slice(0, displayCount);
 
-  if (!user) {
-    return null;
-  }
+  // Rest of your component remains the same...
 
   return (
     <div className="bg-custom-green min-h-screen overflow-y-auto flex flex-col items-center p-6">
-      {/* Set width to 80% and center the content */}
       <div className="bg-[#92A48A] rounded-lg w-2/3 p-4">
-        {/* Center the heading */}
         <h1 className="text-2xl font-bold text-custom-brown mb-6 text-center">Timeline Activity</h1>
         
-        {/* Center the search bar */}
+        {/* Add filter buttons */}
+        <div className="flex justify-center mb-4 space-x-2">
+          <button 
+            onClick={() => setFilterType('all')}
+            className={`px-4 py-2 rounded-lg ${filterType === 'all' ? 'bg-custom-brown text-white' : 'bg-custom-tan text-custom-brown'}`}
+          >
+            All Reviews
+          </button>
+          <button 
+            onClick={() => setFilterType('mine')}
+            className={`px-4 py-2 rounded-lg ${filterType === 'mine' ? 'bg-custom-brown text-white' : 'bg-custom-tan text-custom-brown'}`}
+          >
+            My Reviews
+          </button>
+          <button 
+            onClick={() => setFilterType('friends')}
+            className={`px-4 py-2 rounded-lg ${filterType === 'friends' ? 'bg-custom-brown text-white' : 'bg-custom-tan text-custom-brown'}`}
+          >
+            Friends Reviews
+          </button>
+        </div>
+        
+        {/* Search bar */}
         <div className="flex justify-center">
           <input
             type="text"
@@ -101,7 +132,6 @@ const FriendActivityPage: React.FC = () => {
             className="w-full max-w-2xl p-2 mb-4 border border-custom-brown rounded-lg text-custom-brown"
           />
         </div>
-        
         {displayedNotifications.length > 0 ? (
           <div className="w-full max-w-2xl mx-auto">
             <div className="space-y-4">
@@ -109,7 +139,7 @@ const FriendActivityPage: React.FC = () => {
                 <div
                   key={notification.id}
                   className={`text-custom-brown bg-custom-tan p-4 rounded-2xl shadow-md flex items-start space-x-4 cursor-pointer hover:bg-opacity-90 transition-colors ${
-                    notification.senderId === user.uid ? 'ml-auto' : 'mr-auto'
+                    user && notification.senderId === user.uid ? 'ml-auto' : 'mr-auto'
                   }`}
                   onClick={() => handleNotificationClick(notification.bookId)}
                 >
@@ -123,7 +153,7 @@ const FriendActivityPage: React.FC = () => {
                   <div className="flex-grow">
                     <h3 className="text-lg font-semibold">{notification.senderName}</h3>
                     <p className="text-custom-brown font-medium">
-                      Reviewed <span className="italic">{notification.bookTitle}</span> {" "}
+                      {user && notification.senderId === user.uid ? 'You' : notification.senderName} reviewed <span className="italic">{notification.bookTitle}</span> {" "}
                       and rated it {notification.rating} stars
                     </p>
                     <p className="text-custom-brown mt-1">{notification.reviewText}</p>
