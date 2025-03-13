@@ -198,7 +198,9 @@ export default function CreateClub() {
   
       // Upload custom image to Firebase Storage if provided
       if (clubImage) {
-        const storageRef = ref(storage, `club-images/${clubImage.name}`);
+        // Create a unique filename using userId and timestamp
+        const uniqueFileName = `${user?.uid}_${Date.now()}_${clubImage.name.replace(/\s+/g, '_')}`;
+        const storageRef = ref(storage, `club-images/${uniqueFileName}`);
         await uploadBytes(storageRef, clubImage);
         imageUrl = await getDownloadURL(storageRef);
       }
