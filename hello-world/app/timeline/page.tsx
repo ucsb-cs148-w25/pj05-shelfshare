@@ -129,11 +129,11 @@ const FriendActivityPage: React.FC = () => {
             placeholder="Search timeline..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full max-w-2xl p-2 mb-4 border border-custom-brown rounded-lg text-custom-brown"
+            className="w-full max-w-4xl p-2 mb-4 border border-custom-brown rounded-lg text-custom-brown"
           />
         </div>
         {displayedNotifications.length > 0 ? (
-          <div className="w-full max-w-2xl mx-auto">
+          <div className="w-full max-w-4xl mx-auto">
             <div className="space-y-4">
               {displayedNotifications.map((notification) => (
                 <div
@@ -186,17 +186,24 @@ const FriendActivityPage: React.FC = () => {
               </div>
               ))}
             </div>
-            {/* Center the "Show More" button */}
+            {/* Center the "Show More" and "Show Less" buttons with spacing */}
             {filteredNotifications.length > displayCount && (
-              <div className="flex justify-center">
+              <div className="flex justify-center space-x-4 mt-4">
                 <button
                   onClick={() => setDisplayCount(prev => prev + 5)}
-                  className="w-full max-w-2xl mt-4 p-2 bg-custom-brown text-white rounded-lg hover:bg-opacity-90 transition-colors"
+                  className="w-full max-w-4xl p-2 bg-custom-brown text-white rounded-lg hover:bg-opacity-90 transition-colors"
                 >
                   Show More
                 </button>
+                <button
+                  onClick={() => setDisplayCount(5)} // Reset displayCount to the initial value (5)
+                  className="w-full max-w-4xl p-2 bg-custom-brown text-white rounded-lg hover:bg-opacity-90 transition-colors"
+                >
+                  Show Less
+                </button>
               </div>
             )}
+
           </div>
         ) : (
           <div className="text-center text-custom-brown mt-8 p-6 bg-custom-tan rounded-lg">
