@@ -198,27 +198,38 @@ export default function CreateClub() {
   
       // Upload custom image to Firebase Storage if provided
       if (clubImage) {
-        // Create a unique filename using userId and timestamp
-        const uniqueFileName = `${user?.uid}_${Date.now()}_${clubImage.name.replace(/\s+/g, '_')}`;
-        const storageRef = ref(storage, `club-images/${uniqueFileName}`);
-        await uploadBytes(storageRef, clubImage);
-        imageUrl = await getDownloadURL(storageRef);
+        try {
+          console.log('Starting image upload...');
+          const uniqueFileName = `${user?.uid}_${Date.now()}_${clubImage.name.replace(/\s+/g, '_')}`;
+          const storageRef = ref(storage, `club-images/${uniqueFileName}`);
+          console.log('Uploading bytes...');
+          await uploadBytes(storageRef, clubImage);
+          console.log('Getting download URL...');
+          imageUrl = await getDownloadURL(storageRef);
+          console.log('Image uploaded successfully:', imageUrl);
+        } catch (uploadError) {
+          console.error('Image upload error:', uploadError);
+          // Continue with default image instead of failing completely
+          setError('Image upload failed, using default image instead.');
+          imageUrl = '/bookclub.png';
+        }
       }
   
       // Save club data to Firestore
+      console.log('Creating club document with image:', imageUrl);
       const clubData = {
         name: clubName,
         description: clubDescription,
-        memberCount: 1, // Default member count
-        imageUrl: imageUrl, // Use uploaded image or default
-        chapters: chapters, // Include chapters with deadlines
-        creatorId: user?.uid, // Store the creator's UID
+        memberCount: 1,
+        imageUrl: imageUrl,
+        chapters: chapters,
+        creatorId: user?.uid,
         book: selectedBook ? {
           key: selectedBook.key,
           title: selectedBook.title,
           author: selectedBook.author_name?.[0] || 'Unknown',
           coverId: selectedBook.cover_i,
-        } : null, // Add the selected book or null if none is selected
+        } : null,
       };
   
       const docRef = await addDoc(collection(db, 'clubs'), clubData);
@@ -229,8 +240,7 @@ export default function CreateClub() {
     } catch (error) {
       console.error('Error creating club:', error);
       setError('Failed to create club. Please try again.');
-    } finally {
-      setLoading(false);
+      setLoading(false); // Make sure to reset loading state on error
     }
   };
 

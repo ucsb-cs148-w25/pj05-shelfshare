@@ -136,7 +136,13 @@ export default function ClubDetails() {
   const handleSubmitMessage = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    if (!user || !clubId || !club?.members?.includes(user.uid)) {
+    if (!user || !clubId) {
+      alert('You need to be logged in to post a message.');
+      return;
+    }
+
+    // Allow club creator to post messages regardless of member status
+    if (club?.creatorId !== user.uid && !club?.members?.includes(user.uid)) {
       alert('You need to be a member of the club to post a message.');
       return;
     }
@@ -336,6 +342,12 @@ export default function ClubDetails() {
   const handleLeaveClub = async () => {
     if (!clubId || !user) return;
 
+    // Don't allow creator to leave their own club
+    if (club?.creatorId === user.uid) {
+      alert('As the creator, you cannot leave your own club. You can delete it if you wish.');
+      return;
+    }
+
     try {
       const clubDocRef = doc(db, 'clubs', clubId);
       const clubDoc = await getDoc(clubDocRef);
@@ -385,6 +397,12 @@ export default function ClubDetails() {
     );
   }
 
+  // Determine if current user is creator
+  const isCreator = club.creatorId === user?.uid;
+  
+  // Determine if current user is a member
+  const isMember = club.members?.includes(user?.uid ?? '') || false;
+
   return (
     <div className="bg-[#5A7463] min-h-screen flex items-center justify-center p-8">
       <div className="w-full max-w-4xl bg-[#92A48A] rounded-lg shadow-xl p-8">
@@ -408,7 +426,7 @@ export default function ClubDetails() {
                   <h2 className="text-xl font-semibold text-[#DFDDCE] mb-3">
                     Current Book
                   </h2>
-                  {club.creatorId === user?.uid && (
+                  {isCreator && (
                     <button
                       onClick={handleMarkBookAsRead}
                       className="text-sm bg-[#3D2F2A] text-[#DFDDCE] px-2 py-1 rounded hover:bg-[#5A7463] transition-colors"
@@ -453,7 +471,7 @@ export default function ClubDetails() {
                 <p className="text-[#DFDDCE]">No book selected for this club yet</p>
 
                 {/* Search for New Book Section */}
-                {club.creatorId === user?.uid && (
+                {isCreator && (
                   <div className="mt-4">
                     <button
                       onClick={() => setIsSearchingNewBook(!isSearchingNewBook)}
@@ -571,7 +589,7 @@ export default function ClubDetails() {
               <p className="text-[#3D2F2A] text-lg mt-2">
                 Members: {club.memberCount}
               </p>
-              {club.creatorId === user?.uid && (
+              {isCreator && (
                 <button
                   onClick={handleDeleteClub}
                   className="bg-[#CD5C5C] text-white px-4 py-2 rounded-lg mt-2"
@@ -579,9 +597,9 @@ export default function ClubDetails() {
                   Delete Club
                 </button>
               )}
-              {club.creatorId !== user?.uid && (
+              {!isCreator && (
                 <>
-                  {club.members?.includes(user?.uid ?? '') ? (
+                  {isMember ? (
                     <button
                       onClick={handleLeaveClub}
                       className="bg-[#CD5C5C] text-white px-4 py-2 rounded-lg mt-2"
@@ -623,20 +641,28 @@ export default function ClubDetails() {
             {/* Discussion Forum */}
             <div className="mt-8">
               <h2 className="text-2xl font-semibold text-[#3D2F2A] mb-4">Discussion Forum</h2>
-              <form onSubmit={handleSubmitMessage} className="space-y-4">
-                <textarea
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  className="w-full h-32 p-4 bg-[#847266] text-[#DFDDCE] rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[#3D2F2A]"
-                  placeholder="Write your message here..."
-                />
-                <button
-                  type="submit"
-                  className="bg-[#3D2F2A] text-[#DFDDCE] px-6 py-2 rounded-lg hover:bg-[#847266] transition-colors"
-                >
-                  Post Message
-                </button>
-              </form>
+              
+              {/* Only show form if the user is a member or creator */}
+              {(isMember || isCreator) ? (
+                <form onSubmit={handleSubmitMessage} className="space-y-4">
+                  <textarea
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    className="w-full h-32 p-4 bg-[#847266] text-[#DFDDCE] rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[#3D2F2A]"
+                    placeholder="Write your message here..."
+                  />
+                  <button
+                    type="submit"
+                    className="bg-[#3D2F2A] text-[#DFDDCE] px-6 py-2 rounded-lg hover:bg-[#847266] transition-colors"
+                  >
+                    Post Message
+                  </button>
+                </form>
+              ) : (
+                <div className="bg-[#847266] p-4 rounded-lg mb-4">
+                  <p className="text-[#DFDDCE]">You need to join the club to participate in discussions.</p>
+                </div>
+              )}
 
               <div className="mt-8 space-y-4">
                 <h3 className="text-xl font-semibold text-[#3D2F2A]">Discussion</h3>
