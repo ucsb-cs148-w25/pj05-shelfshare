@@ -24,6 +24,8 @@
 | 2/26/2024 | Hannah Shakouri        | Lecture 13 stand-up                       |
 | 2/28/2025 | Charlene Patenaude     | Lab 08 stand-up                           |
 | 3/03/2024 | Hannah Shakouri        | Lecture 14 stand-up                       |
+| 3/05/2025 | Charlene Patenaude     | Lecture 15 stand-up                       |
+| 3/07/2025 | Charlene Patenaude     | Lab 09 stand-up                           |
 
 # Roles
 

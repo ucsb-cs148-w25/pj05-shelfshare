@@ -35,6 +35,7 @@ interface ClubData {
 interface DiscussionMessage {
   userId: string;
   userName: string;
+  profilePicture: string;
   id?: string;
   text: string;
   date: {
@@ -151,7 +152,8 @@ export default function ClubDetails() {
       try {
         await addDoc(collection(db, 'clubs', clubId, 'discussions'), {
           userId: user.uid,
-          userName: user.displayName || 'Anonymous',
+          userName: username || 'Anonymous',
+          profilePicture: profilePicture,
           text: newMessage,
           date: serverTimestamp(),
         });

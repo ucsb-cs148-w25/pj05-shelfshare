@@ -4,8 +4,9 @@ import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { db } from '@/firebase';
-import { collection, query, where, getDocs, getDoc, doc, setDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, getDoc, doc, setDoc, onSnapshot, Timestamp } from 'firebase/firestore';
 import '../globals.css';
+import Image from 'next/image';
 
 import dynamic from "next/dynamic";
 import dotenv from "dotenv";
@@ -32,6 +33,16 @@ interface dataLibrary {
   }
 }
 
+interface BookItem {
+  id: string;
+  bookId: string;
+  title: string;
+  author: string;
+  coverUrl: string;
+  dateAdded: Timestamp | Date;
+  shelfType?: string;
+}
+
 export default function Home() {
   const { user } = useAuth();
   const router = useRouter();
@@ -45,6 +56,7 @@ export default function Home() {
   const [inputGoal, setInputGoal] = useState('');
   const [isEditingGoal, setIsEditingGoal] = useState(false);
   const [goalError, setGoalError] = useState('');
+  const [currentlyReading, setCurrentlyReading] = useState<BookItem[]>([]);
 
   // Redirect to login page if user is not authenticated
   useEffect(() => {
@@ -81,6 +93,26 @@ export default function Home() {
 
     fetchReadingGoalAndBooksRead();
   }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const shelvesRef = collection(db, "users", user.uid, "shelves");
+    const q = query(shelvesRef, where("shelfType", "==", "currently-reading"));
+    
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const booksData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        dateAdded: doc.data().dateAdded instanceof Timestamp ? doc.data().dateAdded : new Date()
+      })) as BookItem[];
+      
+      setCurrentlyReading(booksData);
+    });
+    
+    return () => unsubscribe();
+  }, [user]);
+
 
   const handleSetGoal = async () => {
     const goal = parseInt(inputGoal, 10);
@@ -181,72 +213,172 @@ export default function Home() {
     <div className="min-h-screen" 
       style={{ backgroundColor: '#5A7463', fontFamily: 'Outfit, sans-serif' }}>
       
-      {/* Main Grid Container */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-20 gap-y-8 ml-20 mr-20">
-        {/* Map Section (Left Side) */}
-        <div>
-          <h2 className="font-bold items-center text-3xl mt-6"
-          style={{ color: '#DFDDCE', fontFamily: 'Outfit, sans-serif' }}>
-            Find Your Local Library
-          </h2>
-          <div className="p-4 rounded-lg w-full h-auto overflow-hidden"
-              style={{ backgroundColor: '#DFDDCE'}}>
-            <input
-              type="text"
-              placeholder="Enter zip-code"
-              className="flex-grow p-2 border rounded-lg mb-4"
-              style={{
-                backgroundColor: '#847266', // Tan background for search bar
-                color: '#3D2F2A', // Brown text color
-              }}
-              onChange={(e) => setZipCode(e.target.value)}
-            />
-            <button className="px-4 py-2 rounded-[15px] shadow-md font-bold mb-6 ml-2"
-              style={{
+      {/* Main Container - Flex instead of Grid */}
+      <div className="flex flex-col md:flex-row gap-8 p-8">
+        
+        {/* Left Column */}
+        <div className="md:w-1/2 flex flex-col gap-8">
+          {/* Currently Reading Section */}
+          <div className="p-4">
+            <div className="flex justify-between items-center mb-2">
+              <h2 className="font-bold text-3xl"
+                style={{ color: '#DFDDCE', fontFamily: 'Outfit, sans-serif' }}>
+                Currently Reading
+              </h2>
+              
+            </div>
+            <div className="relative bg-light-brown border-t-8 border-b-8 border-[#3D2F2A] h-72 rounded-lg overflow-hidden">
+              {/* Left scroll button */}
+              <button 
+                onClick={() => {
+                  const container = document.getElementById('home-currently-reading-container');
+                  if (container) container.scrollBy({ left: -170, behavior: 'smooth' });
+                }} 
+                className="absolute left-0 top-0 h-full w-10 flex items-center justify-center bg-custom-brown text-custom-tan z-10 hover:bg-[#2E221E] transition-colors"
+                style={{ borderRight: '2px solid #3D2F2A' }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+              </button>
+              
+              {/* Right scroll button */}
+              <button 
+                onClick={() => {
+                  const container = document.getElementById('home-currently-reading-container');
+                  if (container) container.scrollBy({ left: 170, behavior: 'smooth' });
+                }}
+                className="absolute right-0 top-0 h-full w-10 flex items-center justify-center bg-custom-brown text-custom-tan z-10 hover:bg-[#2E221E] transition-colors"
+                style={{ borderLeft: '2px solid #3D2F2A' }}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+              </button>
+              
+              {/* Books container */}
+              <div 
+                id="home-currently-reading-container" 
+                className="relative bottom-1 flex space-x-5 overflow-x-auto no-scrollbar h-full items-center" 
+                style={{ width: 'calc(100% - 20px)', marginLeft: '10px', marginRight: '10px', paddingRight: '50px', paddingLeft: '50px' }}
+              >
+                {currentlyReading.length > 0 ? (
+                  currentlyReading.map((book) => (
+                    <div 
+                      key={book.id} 
+                      className="flex-shrink-0 cursor-pointer relative group mt-4" 
+                      onClick={() => router.push(`/books/${book.bookId}`)}
+                    >
+                      <Image 
+                        src={book.coverUrl} 
+                        alt={book.title} 
+                        width={128} 
+                        height={144} 
+                        className="w-[150px] h-[250px] rounded-lg object-cover bg-custom-brown shadow-md transform transition-transform duration-300 hover:scale-105" 
+                      />
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex items-center justify-center w-full h-full text-custom-tan text-lg italic">
+                    Track what you&apos;re reading
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          {/* Map Section */}
+          <div className="p-4">
+            <h2 className="font-bold items-center text-3xl"
+            style={{ color: '#DFDDCE', fontFamily: 'Outfit, sans-serif' }}>
+              Find Your Local Library
+            </h2>
+            <div className="p-4 rounded-lg w-full h-auto overflow-hidden"
+                style={{ backgroundColor: '#DFDDCE'}}>
+              <input
+                type="text"
+                placeholder="Enter zip-code"
+                className="flex-grow p-2 border rounded-lg mb-4"
+                style={{
+                  backgroundColor: '#847266',
+                  color: '#3D2F2A',
+                }}
+                onChange={(e) => setZipCode(e.target.value)}
+              />
+              <button className="px-4 py-2 rounded-[15px] shadow-md font-bold mb-6 ml-2"
+                style={{
+                  backgroundColor: '#3D2F2A',
+                  color: '#DFDDCE',
+                  fontFamily: 'Outfit, sans-serif',
+                }} 
+                onClick={() => {
+                  findTop5LibrariesByZip();
+                  setClose(true);
+                }}>
+                Search
+              </button>
+              <button className="ml-2 mt-1" hidden={!(isLoaded && close)} onClick={() => {setIsLoaded(false); setClose(true)}}
+                style={{width: "25px", height: "25px"}}> <img src="close.png"/> </button>
+              <div style={{
                 backgroundColor: '#3D2F2A',
                 color: '#DFDDCE',
                 fontFamily: 'Outfit, sans-serif',
-              }} 
-              onClick={() => {
-                findTop5LibrariesByZip();
-                setClose(true);
               }}>
-              Search
-            </button>
-            <button className="ml-2 mt-1" hidden={!(isLoaded && close)} onClick={() => {setIsLoaded(false); setClose(true)}}
-              style={{width: "25px", height: "25px"}}> <img src="close.png"/> </button>
-            <div style={{
-              backgroundColor: '#3D2F2A',
-              color: '#DFDDCE',
-              fontFamily: 'Outfit, sans-serif',
-            }}>
-              {(isLoaded && close) && (
-                <div className="ml-2" style={{backgroundColor: '#3D2F2A'}}> 
-                  <h3>Nearby Libraries:</h3>
-                  <ul>
-                    {libraries.map((lib, index) => (
-                      <li key={index}>{lib.name}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </div>
-            <div style={{
-              backgroundColor: '#847266', // Tan background for search bar
-              color: '#3D2F2A', // Brown text color
-            }}>
-              {isLoaded && close && (
-                <LibraryMap libraries={libraries} mapCenterCoord={mapCenter} />
-              )}
+                {(isLoaded && close) && (
+                  <div className="ml-2" style={{backgroundColor: '#3D2F2A'}}> 
+                    <h3>Nearby Libraries:</h3>
+                    <ul>
+                      {libraries.map((lib, index) => (
+                        <li key={index}>{lib.name}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+              <div style={{
+                backgroundColor: '#847266',
+                color: '#3D2F2A',
+              }}>
+                {isLoaded && close && (
+                  <LibraryMap libraries={libraries} mapCenterCoord={mapCenter} />
+                )}
+              </div>
             </div>
           </div>
         </div>
+        
+        {/* Right Column */}
+        <div className="md:w-1/2 flex flex-col gap-8">
+          {/* Add Friend Section */}
+          <div className="p-4">
+            <h2 className="font-bold text-3xl mb-4"
+              style={{ color: '#DFDDCE', fontFamily: 'Outfit, sans-serif' }}>
+              Add Friend
+            </h2>
+            <div className="flex space-x-2 mb-4 w-full">
+              <input
+                type="text"
+                placeholder="Add Friend!"
+                className="flex-grow p-2 border rounded-lg"
+                style={{
+                  backgroundColor: '#DFDDCE',
+                  color: '#3D2F2A',
+                }}
+              />
+              <button className="px-4 py-2 rounded-[15px] shadow-md font-bold"
+                style={{
+                  backgroundColor: '#3D2F2A',
+                  color: '#DFDDCE',
+                  fontFamily: 'Outfit, sans-serif',
+                }}>
+                Add
+              </button>
+            </div>
+          </div>
 
-        {/* Right Side: Reading Challenge and Add Friends */}
-        <div>
           {/* Yearly Reading Challenge Section */}
-          <div>
-            <h2 className="font-bold items-center text-3xl mt-6"
+          <div className="p-4">
+            <h2 className="font-bold items-center text-3xl"
             style={{ color: '#DFDDCE', fontFamily: 'Outfit, sans-serif' }}>
               2025 Reading Challenge</h2>
             <div className="bg-[#DFDDCE] p-4 rounded-lg shadow-lg mt-2">
@@ -263,7 +395,7 @@ export default function Home() {
                       value={inputGoal}
                       onChange={(e) => {
                         setInputGoal(e.target.value);
-                        setGoalError(''); // Clear error when user types
+                        setGoalError('');
                       }}
                     />
                     <button
@@ -301,34 +433,7 @@ export default function Home() {
               )}
             </div>
           </div>
-
-          {/* Add Friend Section */}
-          <div className="flex items-center space-x-2 mt-6">
-            <h2 className="font-bold text-3xl"
-              style={{ color: '#DFDDCE', fontFamily: 'Outfit, sans-serif' }}>
-              Add Friend
-            </h2>
-
-            <div className="flex space-x-2 mb-4 w-full"> {/* Added w-full for full width */}
-              <input
-                type="text"
-                placeholder="Add Friend!"
-                className="flex-grow p-2 border rounded-lg"
-                style={{
-                  backgroundColor: '#DFDDCE', // Tan background for search bar
-                  color: '#3D2F2A', // Brown text color
-                }}
-              />
-              <button className="px-4 py-2 rounded-[15px] shadow-md font-bold"
-                style={{
-                  backgroundColor: '#3D2F2A',
-                  color: '#DFDDCE',
-                  fontFamily: 'Outfit, sans-serif',
-                }}>
-                Add
-              </button>
-            </div>
-          </div>
+  
         </div>
       </div>
     </div>
