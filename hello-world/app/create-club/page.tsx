@@ -38,7 +38,7 @@ export default function CreateClub() {
   const [clubName, setClubName] = useState<string>('');
   const [clubDescription, setClubDescription] = useState<string>('');
   const [clubImage, setClubImage] = useState<File | null>(null);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>("/bookclub.png");
   const [loading, setLoading] = useState<boolean>(false);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [newChapterTitle, setNewChapterTitle] = useState<string>('');
@@ -53,22 +53,31 @@ export default function CreateClub() {
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const searchCache = useRef(new Map<string, SearchResult[]>());
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      // Validate file type and size
-      if (!file.type.startsWith('image/')) {
-        setError('Please upload a valid image file.');
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) { // 5MB limit
-        setError('Image size must be less than 5MB.');
-        return;
-      }
-      setError(null);
-      setClubImage(file);
-      setPreviewImage(URL.createObjectURL(file)); // Generate a preview URL
+    if (!file) {
+      return;
     }
+    
+    // Validate file type and size
+    if (!file.type.startsWith('image/')) {
+      setError('Please upload a valid image file.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      setError('Image size must be less than 5MB.');
+      return;
+    }
+    
+    setError(null);
+    setClubImage(file);
+    
+    const localPreviewUrl = URL.createObjectURL(file);
+    setPreviewImage(localPreviewUrl);
+
+    const base64Image = await convertToBase64(file);
+    setPreviewImage(base64Image);
+    URL.revokeObjectURL(localPreviewUrl);
   };
 
   const handleAddChapter = () => {
@@ -83,6 +92,15 @@ export default function CreateClub() {
       setNewChapterTitle('');
       setNewChapterDeadline(null);
     }
+  };
+
+  const convertToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
   };
 
   // Book search functionality
@@ -196,8 +214,12 @@ export default function CreateClub() {
     try {
       let imageUrl = '/bookclub.png'; // Default image URL
   
+      // If we have a base64 image, use it directly
+      if (previewImage && previewImage !== '/bookclub.png') {
+        imageUrl = previewImage;
+      }
       // Upload custom image to Firebase Storage if provided
-      if (clubImage) {
+      else if (clubImage) {
         try {
           console.log('Starting image upload...');
           const uniqueFileName = `${user?.uid}_${Date.now()}_${clubImage.name.replace(/\s+/g, '_')}`;
