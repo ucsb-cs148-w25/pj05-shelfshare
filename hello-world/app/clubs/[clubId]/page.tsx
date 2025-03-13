@@ -673,7 +673,7 @@ export default function ClubDetails() {
                     <div key={message.id} className="bg-[#847266] p-6 rounded-lg relative">
                       <div className="flex items-start space-x-4">
                         <Image
-                          src={profilePicture}
+                          src={message.profilePicture}
                           alt="Profile"
                           width={24}
                           height={24}
@@ -683,7 +683,7 @@ export default function ClubDetails() {
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center space-x-2">
                               <span className="font-medium text-[#DFDDCE]">
-                                {username}
+                                {message.userName}
                               </span>
                             </div>
                             <span className="text-sm text-[#DFDDCE]">
