@@ -7,6 +7,7 @@ import { db } from '@/firebase';
 import { collection, query, where, getDocs, getDoc, doc, setDoc, onSnapshot, Timestamp } from 'firebase/firestore';
 import '../globals.css';
 import Image from 'next/image';
+import { sendFriendRequest, unsendFriendRequest } from '../context/friends'; 
 
 import dynamic from "next/dynamic";
 import dotenv from "dotenv";
@@ -57,6 +58,12 @@ interface BookItem {
 
 }
 
+interface UserProfile {
+  id: string;
+  name: string;
+  username?: string;
+}
+
 export default function Home() {
   const { user } = useAuth();
   const router = useRouter();
@@ -82,6 +89,14 @@ export default function Home() {
   const [goalError, setGoalError] = useState('');
   const [currentlyReading, setCurrentlyReading] = useState<BookItem[]>([]);
 
+
+  // New state for friend functionality
+  const [friendSearch, setFriendSearch] = useState("");
+  const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
+  const [sentRequests, setSentRequests] = useState<string[]>([]);
+  const [friends, setFriends] = useState<string[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [searchResultMessage, setSearchResultMessage] = useState("");
 
   // Redirect to login page if user is not authenticated
   // useEffect(() => {
@@ -151,6 +166,33 @@ useEffect(() => {
   }
 }, [user, router, isAuthenticating]);
 
+
+  useEffect(() => {
+    if (!user) return;
+  
+    // Track sent friend requests
+    const sentRequestsQuery = query(
+      collection(db, "users", user.uid, "sentFriendRequests")
+    );
+  
+    const unsubscribeSentRequests = onSnapshot(sentRequestsQuery, (snapshot) => {
+      setSentRequests(snapshot.docs.map((doc) => doc.id));
+    });
+  
+    // Track current friends
+    const friendsQuery = query(collection(db, "users", user.uid, "friends"));
+    
+    const unsubscribeFriends = onSnapshot(friendsQuery, (snapshot) => {
+      const friendsList = snapshot.docs.map((doc) => doc.id);
+      setFriends(friendsList);
+    });
+  
+    return () => {
+      unsubscribeSentRequests();
+      unsubscribeFriends();
+    };
+  }, [user]);
+
   // Fetch the reading goal and books read count
   useEffect(() => {
     const fetchReadingGoalAndBooksRead = async () => {
@@ -199,6 +241,67 @@ useEffect(() => {
     return () => unsubscribe();
   }, [user]);
 
+  // New function to search for users
+const searchUsers = async () => {
+  if (!user || !friendSearch.trim()) {
+    setShowSearchResults(false);
+    return;
+  }
+
+  setShowSearchResults(true);
+  setSearchResults([]);
+  setSearchResultMessage("Searching...");
+
+  const usersQuery = query(collection(db, "users"));
+  const querySnapshot = await getDocs(usersQuery);
+  
+  const results: UserProfile[] = [];
+  
+  // First pass: Direct name match
+  querySnapshot.forEach((docSnapshot) => {
+    if (docSnapshot.id === user.uid) return; // Skip current user
+    
+    const userData = docSnapshot.data();
+    const name = userData.name?.toLowerCase() || '';
+    const username = userData.username?.toLowerCase() || '';
+    const email = userData.email?.toLowerCase() || '';
+    const searchTerm = friendSearch.toLowerCase();
+    
+    if (name.includes(searchTerm) || username.includes(searchTerm) || email.includes(searchTerm)) {
+      results.push({
+        id: docSnapshot.id,
+        name: userData.name || "Unknown User",
+        username: userData.username
+      });
+    }
+  });
+  
+  if (results.length === 0) {
+    setSearchResultMessage("No users found. Try a different search term.");
+  } else {
+    setSearchResultMessage("");
+  }
+  
+  setSearchResults(results);
+};
+
+// Handle sending a friend request
+const handleSendFriendRequest = async (friendId: string) => {
+  if (!user) return;
+  
+  await sendFriendRequest(user.uid, friendId);
+  // Update local state to reflect the sent request
+  setSentRequests(prev => [...prev, friendId]);
+};
+
+// Handle canceling a friend request
+const handleUnsendRequest = async (friendId: string) => {
+  if (!user) return;
+  
+  await unsendFriendRequest(user.uid, friendId);
+  // Update local state to reflect the canceled request
+  setSentRequests(prev => prev.filter(id => id !== friendId));
+};
 
   const handleSetGoal = async () => {
     const goal = parseInt(inputGoal, 10);
@@ -566,6 +669,78 @@ if (!user && !isAuthenticating) {
         
         {/* Right Column */}
         <div className="md:w-1/2 flex flex-col gap-8">
+          {/* Add Friend Section */}
+          <div className="p-4">
+            <h2 className="font-bold text-3xl mb-4"
+              style={{ color: '#DFDDCE', fontFamily: 'Outfit, sans-serif' }}>
+              Add Friend
+            </h2>
+            <div className="relative mb-4 w-full">
+              <input
+                type="text"
+                placeholder="Search by name or email"
+                className="w-full p-3 border rounded-lg pr-24"
+                style={{
+                  backgroundColor: '#DFDDCE',
+                  color: '#3D2F2A',
+                }}
+                value={friendSearch}
+                onChange={(e) => setFriendSearch(e.target.value)}
+              />
+              <button 
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-2 rounded-[15px] shadow-md font-bold"
+                style={{
+                  backgroundColor: '#3D2F2A',
+                  color: '#DFDDCE',
+                  fontFamily: 'Outfit, sans-serif',
+                }}
+                onClick={searchUsers}>
+                Search
+              </button>
+            </div>
+            
+            {/* Search Results */}
+            {showSearchResults && (
+              <div className="bg-[#DFDDCE] p-4 rounded-lg mt-2 max-h-60 overflow-y-auto">
+                {searchResultMessage ? (
+                  <p className="text-[#3D2F2A]">{searchResultMessage}</p>
+                ) : (
+                  <ul className="divide-y divide-gray-300">
+                    {searchResults.map((user) => (
+                      <li key={user.id} className="py-2 flex justify-between items-center">
+                        <div>
+                          <p className="font-semibold text-[#3D2F2A]">{user.name}</p>
+                          {user.username && (
+                            <p className="text-xs text-gray-500">@{user.username}</p>
+                          )}
+                        </div>
+                        <div>
+                          {friends.includes(user.id) ? (
+                            <span className="text-[#5A7463] font-medium">Already friends</span>
+                          ) : sentRequests.includes(user.id) ? (
+                            <button
+                              onClick={() => handleUnsendRequest(user.id)}
+                              className="px-3 py-1 rounded-lg text-sm bg-[#847266] text-[#DFDDCE]"
+                            >
+                              Cancel Request
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleSendFriendRequest(user.id)}
+                              className="px-3 py-1 rounded-lg text-sm bg-[#5A7463] text-[#DFDDCE]"
+                            >
+                              Add Friend
+                            </button>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
+
 
           {/* Yearly Reading Challenge Section */}
           <div className="p-4">
