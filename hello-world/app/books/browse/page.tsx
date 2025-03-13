@@ -570,7 +570,7 @@ export default function Browse() {
           {filteredBooks.length > 0 ? (
             filteredBooks.map((book) => (
               <Link key={book.key} href={`/books/${book.key}`} passHref>
-                <div className="bg-[#92A48A] p-4 rounded-lg shadow-lg cursor-pointer transition transform hover:scale-105 h-[400px] flex flex-col">
+                <div className="bg-[#92A48A] p-4 rounded-lg shadow-lg cursor-pointer transition transform hover:scale-105 flex flex-col h-[430px]"> 
                   <div className="w-full h-56 bg-[#3D2F2A] rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
                     {book.cover_i ? (
                       <Image
@@ -595,7 +595,9 @@ export default function Browse() {
                     <div className="mt-auto">
                       <div className="flex items-center gap-4">
                         <StarRating rating={book.rating || 0} />
-                        {book.genre !== 'Popular' && (
+                      </div>
+                      <div className="mt-2">
+                      {book.genre !== 'Popular' && (
                         <span className="px-3 py-1 bg-[#DFDDCE] text-[#3D2F2A] text-sm font-bold rounded-[15px] inline-block">
                           {book.genre || 'General'}
                         </span>
