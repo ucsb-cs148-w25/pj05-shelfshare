@@ -9,15 +9,23 @@ interface BookActionsProps {
   title: string;
   author: string;
   coverUrl: string;
+  genres?: string[]; //genres as a prop
   onDelete?: () => void; // Optional callback for delete operation
   showDeleteOnly?: boolean; // Optional prop to show only delete button
 }
+
+const CORE_GENRES = [
+  'Fiction', 'Non-Fiction', 'Fantasy', 'Mystery', 'Romance',
+  'Science Fiction', 'Biography', 'History', 'Young Adult',
+  "Children's", 'Horror', 'Poetry', 'Drama', 'Animals & Nature'
+];
 
 const BookActions = ({ 
   bookId,
   title,
   author,
   coverUrl,
+  genres,
   onDelete,
   showDeleteOnly = false
 }: BookActionsProps) => {
@@ -25,6 +33,7 @@ const BookActions = ({
   const [isFavorite, setIsFavorite] = useState(false);
   const [customShelves, setCustomShelves] = useState<{id: string, name: string}[]>([]);
   const { user } = useAuth();
+
 
   useEffect(() => {
     const checkFavoriteStatus = async () => {
@@ -131,6 +140,7 @@ const BookActions = ({
         author,
         coverUrl,
         shelfType,
+        genre: (genres || []).filter(g => CORE_GENRES.includes(g)).slice(0, 2).join('#') || 'Unspecified',
         dateAdded: new Date(),
         dateFinished: shelfType === 'finished' ? new Date() : null, // Store the finish date if applicable
       });
@@ -167,6 +177,7 @@ const BookActions = ({
           author,
           coverUrl,
           shelfId,
+          genre: (genres || []).filter(g => CORE_GENRES.includes(g)).slice(0, 2).join('#') || 'Unspecified', // Use genres prop
           dateAdded: new Date()
         });
       }

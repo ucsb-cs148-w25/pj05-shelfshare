@@ -38,19 +38,22 @@ export async function POST(req: Request) {
   const parseResponse = async (response: GenerateContentResult): Promise<BookRecommendation[]> => {
     const text = await response.response.text();
     console.log("Raw AI response:", text);
-  
-    
-      // Remove Markdown code blocks (triple backticks) and "json" prefix if present
-      const cleanedText = text.replace(/```json/g, '').replace(/```/g, '').trim();
-  
-      // Check if the cleaned text is valid JSON
-      if (cleanedText.startsWith('[') || cleanedText.startsWith('{')) {
+
+    // Use a regular expression to extract the JSON part from the response
+    const jsonMatch = text.match(/```json\s*(\[.*?\])\s*```/s);
+
+    if (jsonMatch && jsonMatch[1]) {
+      try {
+        const cleanedText = jsonMatch[1].trim();
         return JSON.parse(cleanedText) as BookRecommendation[];
-      } else {
-        console.warn("AI response is not valid JSON:", cleanedText);
-        return []; // Return an empty array for non-JSON responses
+      } catch (error) {
+        console.error("Failed to parse JSON:", error);
+        return []; // Return an empty array if parsing fails
       }
-    
+    } else {
+      console.warn("No valid JSON found in AI response:", text);
+      return []; // Return an empty array if no JSON is found
+    }
   };
 
   return NextResponse.json({
@@ -58,4 +61,4 @@ export async function POST(req: Request) {
     newGenres: await parseResponse(responses[1]),
     //topBooks: await parseResponse(responses[2]),
   });
-  } 
+}

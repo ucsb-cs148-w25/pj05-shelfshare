@@ -10,6 +10,7 @@ import Image from 'next/image';
 import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, doc, getDocs, writeBatch, FieldValue } from "firebase/firestore";
 import { useParams } from 'next/navigation';
 import BookActions from '@/app/components/BookActions';
+import FriendActivity from '@/app/components/FriendActivity';
 
 interface ProfileItem {
   email: string;
@@ -22,15 +23,17 @@ interface ProfileItem {
 
 interface BookData {
   title: string;
-  description?: string | { value: string };
+  description?: string;
   covers?: number[];
   authors?: string[];
   rating?: number;
+  genres?: string[];
 }
 
 interface Review {
   userId: string;
   userName: string;
+  userProfilePic: string;
   id?: string;
   text: string;
   rating: number;
@@ -43,6 +46,7 @@ interface Review {
 interface ReviewData {
   userId: string;
   userName: string;
+  userProfilePic: string;
   text: string;
   rating: number;
   date: 
@@ -66,11 +70,88 @@ interface Friend {
   username?: string;
 }
 
+const normalizeGenre = (rawGenre: string) => {
+  const genreMap: Record<string, string> = {
+    'juvenile fiction': 'Young Adult',
+    'bildungsroman': 'Coming of Age',
+    'detective': 'Mystery',
+    'mystery': 'Mystery',
+    'historical fiction': 'Historical Fiction',
+    'science fiction': 'Sci-Fi',
+    'speculative fiction': 'Sci-Fi/Fantasy',
+    'suspense': 'Thriller',
+    'thriller': 'Thriller',
+    'fiction': 'Fiction',
+    'nonfiction': 'Non-Fiction',
+    'fantasy': 'Fantasy',
+    'romance': 'Romance',
+    'biography': 'Biography',
+    'history': 'History',
+    'young adult': 'Young Adult',
+    'children': "Children's",
+    'kids': "Children's",
+    'horror': 'Horror',
+    'poetry': 'Poetry',
+    'drama': 'Drama',
+    'animals': 'Animals & Nature',
+    'nature': 'Animals & Nature',
+    'time travel': 'Sci-Fi',
+    'detective stories': 'Mystery',
+    'picture books': "Children's",
+    'social life and customs': 'History',
+    'romantic suspense fiction': 'Romance',
+    'short stories': 'Fiction',
+    'adventure stories': 'Adventure',
+    'psychological fiction': 'Drama',
+    
+    //spanish
+    'Pece': 'Animals & Nature',
+    'animales': 'Animals & Nature',
+    'caseros': 'Animals & Nature',
+    'historias juveniles': 'Young Adult',
+    'ficción juvenil': 'Young Adult',
+    'cuentos infantiles': "Children's",
+    'literatura juvenil': 'Young Adult',
+    'novela policíaca': 'Mystery',
+    'cuentos de animales': 'Animals & Nature',
+    'aventura': 'Adventure',
+
+    //common Open Library special categories
+    'missing persons': 'Mystery',
+    'stories in rhyme': 'Poetry',
+    'journalists': 'Non-Fiction',
+    'unspoken': 'Drama'
+  };
+  
+  const cleanGenre = rawGenre
+    .toLowerCase()
+    .replace(/[^a-z\s]/gi, '')
+    .trim();
+
+  const exactMatch = genreMap[cleanGenre];
+  if (exactMatch) return exactMatch;
+
+  const partialMatch = Object.keys(genreMap).find(key => 
+    cleanGenre.includes(key.toLowerCase())
+  );
+
+  return partialMatch ? genreMap[partialMatch] : 'Other';
+};
+
+
+
 export default function BookDetails() {
   const { bookId } = useParams<{ bookId: string }>();
   const { user } = useAuth();
 
-  const [book, setBook] = useState<BookData | null>(null);
+  const [book, setBook] = useState<BookData | null>({
+    title: '',
+    description: '',
+    covers: [],
+    authors: [],
+    rating: 0,
+    genres: []
+  });
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -81,6 +162,26 @@ export default function BookDetails() {
   const [profilePicture, setProfilePicture] = useState("upload-pic.png");
   const [username, setUsername] = useState("username");
   const [userFriends, setUserFriends] = useState<Friend[]>([]);
+
+  // Function to clean description text by removing HTML tags and URLs
+  const cleanDescriptionText = (description: string | { value: string } | undefined): string => {
+    // Default text if no description is available
+    if (!description) return "No description available.";
+    
+    // Extract the string value from the description object if needed
+    const descriptionText = typeof description === "string" 
+      ? description 
+      : description.value || "No description available.";
+    
+    // Remove HTML tags
+    const withoutHtml = descriptionText.replace(/<\/?[^>]+(>|$)/g, " ");
+    
+    // Remove URLs (http:// or https:// followed by non-whitespace characters)
+    const withoutUrls = withoutHtml.replace(/https?:\/\/\S+/g, "");
+    
+    // Clean up extra whitespace (multiple spaces, line breaks)
+    return withoutUrls.replace(/\s+/g, " ").trim();
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -108,17 +209,27 @@ export default function BookDetails() {
         if (!res.ok) throw new Error("Failed to fetch book details.");
         const data = await res.json();
 
-        const ratingRes = await fetch(`https://openlibrary.org/works/${bookId}/ratings.json`);
-        let rating = 0;
-        if (ratingRes.ok) {
-          const ratingData = await ratingRes.json();
-          rating = ratingData.summary?.average || 0;
-        }
+        const genres = data.subjects
+          ?.map((subject: string) => {
+            const baseSubject = typeof subject === 'string' 
+              ? subject.split(' -- ')[0] 
+              : 'Unknown';
+            return normalizeGenre(baseSubject);
+          })
+          .filter((genre: string) => genre !== 'Other') 
+          .filter((genre: string, index: number, self: string[]) => 
+            self.indexOf(genre) === index
+          ) || [];
 
-        const cleanDescription =
-          typeof data.description === "string"
-            ? data.description
-            : data.description?.value || "No description available.";
+          const ratingRes = await fetch(`https://openlibrary.org/works/${bookId}/ratings.json`);
+          let rating = 0;
+          if (ratingRes.ok) {
+            const ratingData = await ratingRes.json();
+            rating = ratingData.summary?.average || 0;
+          }
+
+        // Use the new cleaning function
+        const cleanDescription = cleanDescriptionText(data.description);
 
         const authors = await Promise.all(
           (data.authors || []).map(async (author: Author) => {
@@ -133,6 +244,7 @@ export default function BookDetails() {
           description: cleanDescription,
           rating,
           authors,
+          genres,
         });
       } catch (err: unknown) {
         if (err instanceof Error) {
@@ -195,6 +307,9 @@ export default function BookDetails() {
   }
 
   const StarRating: React.FC<StarRatingProps> = ({ rating, maxStars = 5, isInput = false }) => {
+    // Round the rating for visual display purposes only
+    const displayRating = Math.round(rating * 2) / 2; // Rounds to nearest 0.5
+    
     return (
       <div className="flex space-x-1">
         {[...Array(maxStars)].map((_, index) => (
@@ -216,9 +331,9 @@ export default function BookDetails() {
           >
             <span 
               className={`text-2xl ${isInput ? 'cursor-pointer' : 'cursor-default'} ${
-                index + 1 <= rating 
+                index + 1 <= displayRating 
                   ? "text-[#3D2F2A]" 
-                  : index + 0.5 === rating 
+                  : index + 0.5 === displayRating 
                   ? "relative overflow-hidden inline before:content-['★'] before:absolute before:text-[#3D2F2A] before:overflow-hidden before:w-[50%] text-[#DFDDCE]" 
                   : "text-[#DFDDCE]"
               }`}
@@ -280,7 +395,8 @@ export default function BookDetails() {
     if (newReview.trim() && userRating > 0) {
       const reviewData = {
         userId: user.uid || "Unknown User",
-        userName: user.displayName || "Anonymous",
+        userName: username || "Anonymous",
+        userProfilePic: profilePicture || "/user-circle.png",
         text: newReview,
         rating: userRating,
         date: serverTimestamp(),
@@ -329,10 +445,7 @@ export default function BookDetails() {
     );
   }
 
-  const description =
-    typeof book.description === 'string'
-      ? book.description
-      : book.description?.value || 'No description available.';
+  const description = book.description || 'No description available.';
 
   const coverId = book.covers && book.covers[0];
   const coverImageUrl = coverId && coverId > 0
@@ -360,6 +473,7 @@ export default function BookDetails() {
                 title={book.title}
                 author={book.authors?.[0] || "Unknown Author"}
                 coverUrl={coverImageUrl}
+                genres={book.genres || []}
               />
             </div>
           </div>
@@ -369,7 +483,7 @@ export default function BookDetails() {
               <h1 className="text-4xl font-bold text-[#DFDDCE]">{book.title}</h1>
               {book.authors?.length ? (
                 <p className="text-[#DFDDCE] text-lg mt-2">
-                  By: {book.authors.join(', ')}
+                  By: {book.authors[0]}
                 </p>
               ) : (
                 <p className="text-[#DFDDCE] text-lg mt-2">Author unknown</p>
@@ -388,6 +502,9 @@ export default function BookDetails() {
                 {description}
               </p>
             </div>
+
+            {/* Friend Activity Section */}
+            {user && <FriendActivity bookId={bookId as string} />}
 
             <div className="mt-8">
               <h2 className="text-2xl font-semibold text-[#DFDDCE] mb-4">Leave A Review:</h2>
@@ -413,21 +530,32 @@ export default function BookDetails() {
               <div className="mt-8 space-y-4">
                 <h3 className="text-xl font-semibold text-[#DFDDCE]">Reviews</h3>
                 {reviews.map((review) => (
+          
                   <div key={review.id} className="bg-[#847266] p-6 rounded-lg relative">
                     <div className="flex items-start space-x-4">
+                      <div className="w-12 h-12 rounded-full flex-shrink-0 overflow-hidden">
                       <Image 
-                        src={profilePicture}
-                        alt="Profile"
+                        src={review.userProfilePic || "/user-circle.png"}
+                        alt={`${review.userName}'s profile`}
                         width={24}
                         height={24}
-                        className="w-12 h-12 rounded-full flex-shrink-0"
+                        className="w-full h-full object-cover"
+                            unoptimized
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = "/upload-pic.png";
+                            }}
                       />
+                      </div>
                       <div className="flex-grow">
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center space-x-2">
                             <span className="font-medium text-[#DFDDCE]">
-                              {username}
+                              {review.userName || "Anonymous"}
                             </span>
+                              {review.userId === user?.uid && (
+                                <span className="text-xs bg-[#3D2F2A] text-[#DFDDCE] px-2 py-0.5 rounded">You</span>
+                              )}
                           </div>
                           <span className="text-sm text-[#DFDDCE]">
                             {review.date?.seconds 
@@ -455,5 +583,3 @@ export default function BookDetails() {
     </div>
   );
 }
-
-
