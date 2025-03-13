@@ -458,11 +458,11 @@ const handleUnsendRequest = async (friendId: string) => {
               style={{ color: '#DFDDCE', fontFamily: 'Outfit, sans-serif' }}>
               Add Friend
             </h2>
-            <div className="flex space-x-2 mb-4 w-full">
+            <div className="relative mb-4 w-full">
               <input
                 type="text"
                 placeholder="Search by name or email"
-                className="flex-grow p-2 border rounded-lg"
+                className="w-full p-3 border rounded-lg pr-24"
                 style={{
                   backgroundColor: '#DFDDCE',
                   color: '#3D2F2A',
@@ -470,7 +470,8 @@ const handleUnsendRequest = async (friendId: string) => {
                 value={friendSearch}
                 onChange={(e) => setFriendSearch(e.target.value)}
               />
-              <button className="px-4 py-2 rounded-[15px] shadow-md font-bold"
+              <button 
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-2 rounded-[15px] shadow-md font-bold"
                 style={{
                   backgroundColor: '#3D2F2A',
                   color: '#DFDDCE',
