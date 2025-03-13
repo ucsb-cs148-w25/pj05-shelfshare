@@ -137,46 +137,53 @@ const FriendActivityPage: React.FC = () => {
             <div className="space-y-4">
               {displayedNotifications.map((notification) => (
                 <div
-                  key={notification.id}
-                  className={`text-custom-brown bg-custom-tan p-4 rounded-2xl shadow-md flex items-start space-x-4 cursor-pointer hover:bg-opacity-90 transition-colors ${
-                    user && notification.senderId === user.uid ? 'ml-auto' : 'mr-auto'
-                  }`}
-                  onClick={() => handleNotificationClick(notification.bookId)}
-                >
-                  <Image
-                    src={notification.senderProfilePic || "/dark-user-circle.svg"}
-                    alt="User Icon"
-                    width={40}
-                    height={40}
-                    className="w-10 h-10 rounded-full"
-                  />
-                  <div className="flex-grow">
-                    <h3 className="text-lg font-semibold">{notification.senderName}</h3>
-                    <p className="text-custom-brown font-medium">
-                      {user && notification.senderId === user.uid ? 'You' : notification.senderName} reviewed <span className="italic">{notification.bookTitle}</span> {" "}
-                      and rated it {notification.rating} stars
-                    </p>
-                    <p className="text-custom-brown mt-1">{notification.reviewText}</p>
-                    <p className="text-xs text-custom-brown opacity-70 mt-2">
-                      {notification.date?.seconds 
-                        ? new Date(notification.date.seconds * 1000).toLocaleDateString("en-US", { 
-                            month: "short", 
-                            day: "numeric", 
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit"
-                          })
-                        : "Just now"}
-                    </p>
-                  </div>
-                  <Image
-                    src={notification.bookCover || "/placeholder.png"}
-                    alt={notification.bookTitle}
-                    width={64}
-                    height={80}
-                    className="w-16 h-20 object-cover rounded-lg"
-                  />
+                key={notification.id}
+                className={`text-custom-brown bg-custom-tan p-4 rounded-2xl shadow-md flex items-start space-x-4 cursor-pointer hover:bg-opacity-90 transition-all duration-300 ${
+                  filterType === 'all'
+                    ? user && notification.senderId === user.uid
+                      ? 'ml-[150px]' // Shift user's own reviews 150px to the right
+                      : 'mr-[150px]' // Shift friends' reviews 150px to the left
+                    : user && notification.senderId === user.uid
+                    ? 'ml-auto' // Default behavior for "My Reviews" filter
+                    : 'mr-auto' // Default behavior for "Friends Reviews" filter
+                }`}
+                onClick={() => handleNotificationClick(notification.bookId)}
+              >
+                {/* Notification content remains the same */}
+                <Image
+                  src={notification.senderProfilePic || "/dark-user-circle.svg"}
+                  alt="User Icon"
+                  width={40}
+                  height={40}
+                  className="w-10 h-10 rounded-full"
+                />
+                <div className="flex-grow">
+                  <h3 className="text-lg font-semibold">{notification.senderName}</h3>
+                  <p className="text-custom-brown font-medium">
+                    {user && notification.senderId === user.uid ? 'You' : notification.senderName} reviewed <span className="italic">{notification.bookTitle}</span> {" "}
+                    and rated it {notification.rating} stars
+                  </p>
+                  <p className="text-custom-brown mt-1">{notification.reviewText}</p>
+                  <p className="text-xs text-custom-brown opacity-70 mt-2">
+                    {notification.date?.seconds 
+                      ? new Date(notification.date.seconds * 1000).toLocaleDateString("en-US", { 
+                          month: "short", 
+                          day: "numeric", 
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit"
+                        })
+                      : "Just now"}
+                  </p>
                 </div>
+                <Image
+                  src={notification.bookCover || "/placeholder.png"}
+                  alt={notification.bookTitle}
+                  width={64}
+                  height={80}
+                  className="w-16 h-20 object-cover rounded-lg"
+                />
+              </div>
               ))}
             </div>
             {/* Center the "Show More" button */}
