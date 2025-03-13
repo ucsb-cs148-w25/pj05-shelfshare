@@ -2,9 +2,9 @@
 
 import { useRouter } from 'next/navigation';
 import React, { useState } from 'react';
-import { db, storage } from '@/firebase';
+import { db } from '@/firebase';
 import { collection, addDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+// import { uploadBytes } from 'firebase/storage';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { useAuth } from '@/app/context/AuthContext'; // Import useAuth
@@ -19,19 +19,27 @@ export default function CreateClub() {
   const { user } = useAuth(); // Get the current user
   const [clubName, setClubName] = useState<string>('');
   const [clubDescription, setClubDescription] = useState<string>('');
-  const [clubImage, setClubImage] = useState<File | null>(null);
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
+  // const [clubImage, setClubImage] = useState<File | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>("/bookclub.png");
   const [loading, setLoading] = useState<boolean>(false);
   const [chapters, setChapters] = useState<Chapter[]>([]);
   const [newChapterTitle, setNewChapterTitle] = useState<string>('');
   const [newChapterDeadline, setNewChapterDeadline] = useState<Date | null>(null);
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file) {
-      setClubImage(file);
-      setPreviewImage(URL.createObjectURL(file)); // Generate a preview URL
+    if (!file) {
+      // setClubImage(file);
+      // setPreviewImage(URL.createObjectURL(file)); // Generate a preview URL
+      return;
     }
+    const localPreviewUrl = URL.createObjectURL(file);
+    setPreviewImage(localPreviewUrl);
+
+    const base64Image = await convertToBase64(file);
+    setPreviewImage(base64Image);
+    URL.revokeObjectURL(localPreviewUrl);
+
   };
 
   const handleAddChapter = () => {
@@ -48,41 +56,61 @@ export default function CreateClub() {
     }
   };
 
+  const convertToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
+
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setLoading(true);
 
     try {
-      let imageUrl = '/bookclub.png'; // Default image URL
+        const imageUrl = '/bookclub.png'; // Default image URL
 
-      // Upload custom image to Firebase Storage if provided
-      if (clubImage) {
-        const storageRef = ref(storage, `club-images/${clubImage.name}`);
-        await uploadBytes(storageRef, clubImage);
-        imageUrl = await getDownloadURL(storageRef);
-      }
+        // Upload custom image to Firebase Storage if provided
+        // if (clubImage) {
+        //     console.log("Uploading image:", clubImage.name);
+        //     const storageRef = ref(storage, `club-images/${clubImage.name}`);
+        //     await uploadBytes(storageRef, clubImage);
+        //     console.log("Image uploaded successfully");
 
-      // Save club data to Firestore
-      const clubData = {
-        name: clubName,
-        description: clubDescription,
-        memberCount: 1, // Default member count
-        imageUrl: imageUrl, // Use uploaded image or default
-        chapters: chapters, // Include chapters with deadlines
-        creatorId: user?.uid, // Store the creator's UID
-      };
+        //     imageUrl = await getDownloadURL(storageRef);
+        //     console.log("Generated Image URL:", imageUrl);
+        // }
 
-      const docRef = await addDoc(collection(db, 'clubs'), clubData);
-      console.log('Club created with ID:', docRef.id);
+        // // Ensure image URL is valid before saving to Firestore
+        // if (!imageUrl) {
+        //     console.error("Image upload failed, URL is undefined");
+        //     return;
+        // }
 
-      // Redirect to the specific club's page
-      router.push(`/clubs/${docRef.id}`);
+        // Save club data to Firestore
+        const clubData = {
+            name: clubName,
+            description: clubDescription,
+            memberCount: 1, // Default member count
+            imageUrl: previewImage || imageUrl, // Use uploaded image or default
+            chapters: chapters, // Include chapters with deadlines
+            creatorId: user?.uid, // Store the creator's UID
+        };
+
+        console.log("Saving club to Firestore...");
+        const docRef = await addDoc(collection(db, 'clubs'), clubData);
+        console.log("Club created with ID:", docRef.id);
+
+        // Redirect to the specific club's page
+        router.push(`/clubs/${docRef.id}`);
     } catch (error) {
-      console.error('Error creating club:', error);
+        console.error("Error creating club:", error);
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
+};
 
   return (
     <div className="bg-[#5A7463] min-h-screen p-8 flex items-center justify-center">
