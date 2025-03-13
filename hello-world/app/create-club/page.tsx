@@ -192,17 +192,17 @@ export default function CreateClub() {
     event.preventDefault();
     setLoading(true);
     setError(null);
-
+  
     try {
       let imageUrl = '/bookclub.png'; // Default image URL
-
+  
       // Upload custom image to Firebase Storage if provided
       if (clubImage) {
         const storageRef = ref(storage, `club-images/${clubImage.name}`);
         await uploadBytes(storageRef, clubImage);
         imageUrl = await getDownloadURL(storageRef);
       }
-
+  
       // Save club data to Firestore
       const clubData = {
         name: clubName,
@@ -218,10 +218,10 @@ export default function CreateClub() {
           coverId: selectedBook.cover_i,
         } : null, // Add the selected book or null if none is selected
       };
-
+  
       const docRef = await addDoc(collection(db, 'clubs'), clubData);
       console.log('Club created with ID:', docRef.id);
-
+  
       // Redirect to the specific club's page
       router.push(`/clubs/${docRef.id}`);
     } catch (error) {
