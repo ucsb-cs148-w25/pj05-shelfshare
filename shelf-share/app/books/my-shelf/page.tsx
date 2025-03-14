@@ -91,6 +91,7 @@ export default function UserLists() {
   const [reloadTrigger, setReloadTrigger] = useState(0);
   const [scrollPositions, setScrollPositions] = useState<{ [key: string]: number }>({});
   const [maxScrolls, setMaxScrolls] = useState<{ [key: string]: number }>({});
+  const [scrollDirection, setScrollDirection] = useState<'up' | 'down' | null>(null);
 
   // Use this function to trigger a reload when needed
   const triggerReload = useCallback(() => {
@@ -269,6 +270,53 @@ export default function UserLists() {
     });
   }, [defaultShelves, customShelves]);
 
+  useEffect(() => {
+    const handleDragOver = (e: DragEvent) => {
+      if (!draggedBook) return;
+  
+      const { clientY } = e;
+      const { innerHeight } = window;
+  
+      if (clientY < 100) {
+        setScrollDirection('up');
+      } else if (clientY > innerHeight - 100) {
+        setScrollDirection('down');
+      } else {
+        setScrollDirection(null);
+      }
+    };
+  
+    document.addEventListener('dragover', handleDragOver);
+  
+    return () => {
+      document.removeEventListener('dragover', handleDragOver);
+    };
+  }, [draggedBook]);
+
+  useEffect(() => {
+    if (!scrollDirection) return;
+  
+    const scrollStep = 10; // Adjust the scroll speed as needed
+    const scrollInterval = setInterval(() => {
+      if (scrollDirection === 'up') {
+        window.scrollBy(0, -scrollStep);
+      } else if (scrollDirection === 'down') {
+        window.scrollBy(0, scrollStep);
+      }
+    }, 20); // Adjust the interval as needed
+  
+    return () => clearInterval(scrollInterval);
+  }, [scrollDirection]);
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    e.stopPropagation();
+    if (e.currentTarget instanceof HTMLElement) {
+      e.currentTarget.style.opacity = '1';
+    }
+    setDraggedBook(null);
+    setScrollDirection(null); // Reset scroll direction
+  };
+
   const leftShadowStyle: React.CSSProperties = {
     position: 'absolute',
     left: '30px',
@@ -348,14 +396,6 @@ export default function UserLists() {
     if (e.currentTarget instanceof HTMLElement) {
       e.currentTarget.style.opacity = '0.5';
     }
-  };
-
-  const handleDragEnd = (e: React.DragEvent) => {
-    e.stopPropagation();
-    if (e.currentTarget instanceof HTMLElement) {
-      e.currentTarget.style.opacity = '1';
-    }
-    setDraggedBook(null);
   };
 
   const handleDragOver = (e: React.DragEvent, sectionType: string) => {
