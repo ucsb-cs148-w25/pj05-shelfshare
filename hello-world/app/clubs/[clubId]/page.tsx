@@ -323,12 +323,25 @@ export default function ClubDetails() {
     try {
       let imageUrl = club?.imageUrl || '/bookclub.png';
   
-      // Check if there's a new image file uploaded
-      if (newClubImage) {
-        const uniqueFileName = `${user.uid}_${Date.now()}_${newClubImage.name.replace(/\s+/g, '_')}`;
-        const storageRef = ref(storage, `club-images/${uniqueFileName}`);
-        await uploadBytes(storageRef, newClubImage);
-        imageUrl = await getDownloadURL(storageRef);
+      if (newPreviewImage && newPreviewImage !== '/bookclub.png') {
+        imageUrl = newPreviewImage;
+      }
+      else if (newClubImage) {
+        try {
+          console.log('Starting image upload...');
+          const uniqueFileName = `${user?.uid}_${Date.now()}_${newClubImage.name.replace(/\s+/g, '_')}`;
+          const storageRef = ref(storage, `club-images/${uniqueFileName}`);
+          console.log('Uploading bytes...');
+          await uploadBytes(storageRef, newClubImage);
+          console.log('Getting download URL...');
+          imageUrl = await getDownloadURL(storageRef);
+          console.log('Image uploaded successfully:', imageUrl);
+        } catch (uploadError) {
+          console.error('Image upload error:', uploadError);
+          // Continue with default image instead of failing completely
+          setError('Image upload failed, using default image instead.');
+          imageUrl = '/bookclub.png';
+        }
       }
   
       const updatedClubData = {
@@ -810,22 +823,24 @@ export default function ClubDetails() {
               <p className="text-[#3D2F2A] text-lg mt-2">
                 Members: {club.memberCount}
               </p>
-              {isCreator && (
-                <button
-                  onClick={handleDeleteClub}
-                  className="bg-[#CD5C5C] text-white px-4 py-2 rounded-lg mt-2"
-                >
-                  Delete Club
-                </button>
-              )}
-              {isCreator && (
-                <button
-                  onClick={handleEditClub}
-                  className="bg-[#3D2F2A] text-white px-4 py-2 rounded-lg mt-2"
-                >
-                  Edit Club
-                </button>
-              )}
+              <div className='flex space-x-4 mt-4'>
+                {isCreator && (
+                  <button
+                    onClick={handleDeleteClub}
+                    className="bg-[#CD5C5C] text-white px-4 py-2 rounded-lg mt-2"
+                  >
+                    Delete Club
+                  </button>
+                )}
+                {isCreator && (
+                  <button
+                    onClick={handleEditClub}
+                    className="bg-[#3D2F2A] text-white px-4 py-2 rounded-lg mt-2"
+                  >
+                    Edit Club
+                  </button>
+                )}
+              </div>
               {!isCreator && (
                 <>
                   {isMember ? (
