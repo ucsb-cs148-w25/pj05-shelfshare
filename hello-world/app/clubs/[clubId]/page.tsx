@@ -1,12 +1,13 @@
 'use client';
 
 import { useAuth } from '@/app/context/AuthContext';
-import { db } from '@/firebase';
+import { db, storage } from '@/firebase';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, doc, deleteDoc, updateDoc, getDoc } from 'firebase/firestore';
 import { useParams, useRouter } from 'next/navigation';
 import debounce from 'lodash/debounce';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 interface ClubData {
   id: string;
@@ -405,6 +406,50 @@ export default function ClubDetails() {
   // Determine if current user is a member
   const isMember = club.members?.includes(user?.uid ?? '') || false;
 
+  const [isEditMode, setIsEditMode] = useState<boolean>(false);
+  const [editableName, setEditableName] = useState<string>('');
+  const [editableDescription, setEditableDescription] = useState<string>('');
+  const [editableChapters, setEditableChapters] = useState<Chapter[]>([]);
+  const [editableImage, setEditableImage] = useState<File | null>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (club) {
+      setEditableName(club.name);
+      setEditableDescription(club.description);
+      setEditableChapters(club.chapters || []);
+      setPreviewImage(club.imageUrl || '/bookclub.png');
+    }
+  }, [club]);
+
+  const handleSaveChanges = async () => {
+    if (!clubId || !user || !club) return;
+
+    try {
+      const clubDocRef = doc(db, 'clubs', clubId);
+      const updates: Partial<ClubData> = {
+        name: editableName,
+        description: editableDescription,
+        chapters: editableChapters,
+      };
+
+      if (editableImage) {
+        const uniqueFileName = `${user.uid}_${Date.now()}_${editableImage.name.replace(/\s+/g, '_')}`;
+        const storageRef = ref(storage, `club-images/${uniqueFileName}`);
+        await uploadBytes(storageRef, editableImage);
+        const imageUrl = await getDownloadURL(storageRef);
+        updates.imageUrl = imageUrl;
+      }
+
+      await updateDoc(clubDocRef, updates);
+      setIsEditMode(false);
+      alert('Club details updated successfully!');
+    } catch (error) {
+      console.error('Error updating club details:', error);
+      alert('Failed to update club details.');
+    }
+  };
+
   return (
     <div className="bg-[#5A7463] min-h-screen flex items-center justify-center p-8">
       <div className="w-full max-w-4xl bg-[#92A48A] rounded-lg shadow-xl p-8">
@@ -413,7 +458,7 @@ export default function ClubDetails() {
           <div className="flex-shrink-0 w-full md:w-1/3">
             <div className="w-full h-64 bg-[#3D2F2A] rounded-lg shadow-lg overflow-hidden flex items-center justify-center">
               <Image
-                src={club.imageUrl || '/bookclub.png'}
+                src={previewImage || '/bookclub.png'}
                 alt={club.name}
                 width={256}
                 height={256}
@@ -587,14 +632,31 @@ export default function ClubDetails() {
           <div className="flex-grow w-full md:w-2/3 space-y-6">
             {/* Join/Leave Club Button */}
             <div>
-              <h1 className="text-4xl font-bold text-[#3D2F2A]">{club.name}</h1>
+              {isEditMode ? (
+                <input
+                  type="text"
+                  value={editableName}
+                  onChange={(e) => setEditableName(e.target.value)}
+                  className="w-full px-4 py-2 rounded-lg bg-[#847266] text-[#DFDDCE]"
+                />
+              ) : (
+                <h1 className="text-4xl font-bold text-[#3D2F2A]">{club.name}</h1>
+              )}
               <p className="text-[#3D2F2A] text-lg mt-2">
                 Members: {club.memberCount}
               </p>
               {isCreator && (
                 <button
+                  onClick={() => setIsEditMode(!isEditMode)}
+                  className="bg-[#3D2F2A] text-[#DFDDCE] px-4 py-2 rounded-lg mt-2"
+                >
+                  {isEditMode ? 'Cancel Edit' : 'Edit Club'}
+                </button>
+              )}
+              {isCreator && (
+                <button
                   onClick={handleDeleteClub}
-                  className="bg-[#CD5C5C] text-white px-4 py-2 rounded-lg mt-2"
+                  className="bg-[#CD5C5C] text-white px-4 py-2 rounded-lg mt-2 ml-2"
                 >
                   Delete Club
                 </button>
@@ -622,22 +684,79 @@ export default function ClubDetails() {
 
             <div className="space-y-4">
               <h2 className="text-2xl font-semibold text-[#3D2F2A] mb-4">Description</h2>
-              <p className="w-full flex bg-[#847266] text-[#DFDDCE] rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[#3D2F2A] px-6 py-3">{club.description}</p>
+              {isEditMode ? (
+                <textarea
+                  value={editableDescription}
+                  onChange={(e) => setEditableDescription(e.target.value)}
+                  className="w-full px-4 py-2 rounded-lg bg-[#847266] text-[#DFDDCE]"
+                />
+              ) : (
+                <p className="w-full flex bg-[#847266] text-[#DFDDCE] rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[#3D2F2A] px-6 py-3">{club.description}</p>
+              )}
             </div>
 
             {/* Display Chapters */}
-            {club.chapters && club.chapters.length > 0 && (
+            {isEditMode ? (
               <div>
-                <h2 className="text-2xl font-semibold text-[#3D2F2A] mb-4">Chapters</h2>
-                <ul className="space-y-2">
-                  {club.chapters.map((chapter, index) => (
-                    <li key={index} className="w-full flex bg-[#847266] text-[#DFDDCE] rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[#3D2F2A] px-6 py-3">
+                <label className="block text-lg font-bold text-[#3D2F2A]">Chapters</label>
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    value={newChapterTitle}
+                    onChange={(e) => setNewChapterTitle(e.target.value)}
+                    placeholder="Chapter Title"
+                    className="w-full px-4 py-2 rounded-lg bg-[#847266] text-[#DFDDCE] placeholder:text-[#3D2F2A]/55"
+                  />
+                  <DatePicker
+                    selected={newChapterDeadline}
+                    onChange={(date: Date | null) => setNewChapterDeadline(date)}
+                    placeholderText="Deadline"
+                    className="w-full px-4 py-2 rounded-lg bg-[#847266] text-[#DFDDCE] placeholder:text-[#3D2F2A]/55"
+                    dateFormat="yyyy/MM/dd"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (newChapterTitle && newChapterDeadline) {
+                        setEditableChapters([
+                          ...editableChapters,
+                          {
+                            title: newChapterTitle,
+                            deadline: newChapterDeadline.toISOString(),
+                          },
+                        ]);
+                        setNewChapterTitle('');
+                        setNewChapterDeadline(null);
+                      }
+                    }}
+                    className="bg-[#3D2F2A] text-[#DFDDCE] px-4 py-2 rounded-lg"
+                  >
+                    Add
+                  </button>
+                </div>
+                <ul className="mt-2">
+                  {editableChapters.map((chapter, index) => (
+                    <li key={index} className="text-[#DFDDCE]">
                       <strong>{chapter.title}</strong> - Due by{' '}
                       {new Date(chapter.deadline).toLocaleDateString()}
                     </li>
                   ))}
                 </ul>
               </div>
+            ) : (
+              club.chapters && club.chapters.length > 0 && (
+                <div>
+                  <h2 className="text-2xl font-semibold text-[#3D2F2A] mb-4">Chapters</h2>
+                  <ul className="space-y-2">
+                    {club.chapters.map((chapter, index) => (
+                      <li key={index} className="w-full flex bg-[#847266] text-[#DFDDCE] rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[#3D2F2A] px-6 py-3">
+                        <strong>{chapter.title}</strong> - Due by{' '}
+                        {new Date(chapter.deadline).toLocaleDateString()}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )
             )}
 
             {/* Discussion Forum */}
@@ -708,6 +827,15 @@ export default function ClubDetails() {
             </div>
           </div>
         </div>
+
+        {isEditMode && (
+          <button
+            onClick={handleSaveChanges}
+            className="bg-[#3D2F2A] text-[#DFDDCE] px-4 py-2 rounded-lg mt-4"
+          >
+            Save Changes
+          </button>
+        )}
       </div>
     </div>
   );
