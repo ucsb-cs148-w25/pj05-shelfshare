@@ -414,9 +414,7 @@ export default function Browse() {
       
       setBooks(currentBooks);
       
-      if (filtered.length < 20) {
-        setFilterMessage(`Showing ${filtered.length} results for your filter criteria.`);
-      }
+      
       
       setLoading(false);
     }
