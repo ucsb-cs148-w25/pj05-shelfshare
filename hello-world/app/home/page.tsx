@@ -914,33 +914,7 @@ if (!user && !isAuthenticating) {
           </div>
 
 
-          {/* Add Friend Section */}
-          <div className="flex items-center space-x-2 mt-6">
-            <h2 className="font-bold text-3xl"
-              style={{ color: '#DFDDCE', fontFamily: 'Outfit, sans-serif' }}>
-              Add Friend
-            </h2>
-
-            <div className="flex space-x-2 mb-4 w-full"> {/* Added w-full for full width */}
-              <input
-                type="text"
-                placeholder="Add Friend!"
-                className="flex-grow p-2 border rounded-lg"
-                style={{
-                  backgroundColor: '#DFDDCE', // Tan background for search bar
-                  color: '#3D2F2A', // Brown text color
-                }}
-              />
-              <button className="px-4 py-2 rounded-[15px] shadow-md font-bold"
-                style={{
-                  backgroundColor: '#3D2F2A',
-                  color: '#DFDDCE',
-                  fontFamily: 'Outfit, sans-serif',
-                }}>
-                Add
-              </button>
-            </div>
-          </div>
+          
 
   
 
