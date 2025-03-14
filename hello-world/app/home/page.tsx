@@ -607,201 +607,7 @@ if (!user && !isAuthenticating) {
             </div>
           </div>
           
-          {/* Map Section */}
-          <div className="p-4">
-            <h2 className="font-bold items-center text-3xl"
-            style={{ color: '#DFDDCE', fontFamily: 'Outfit, sans-serif' }}>
-              Find Your Local Library
-            </h2>
-            <div className="p-4 rounded-lg w-full h-auto overflow-hidden"
-                style={{ backgroundColor: '#DFDDCE'}}>
-              <input
-                type="text"
-                placeholder="Enter zip-code"
-                className="flex-grow p-2 border rounded-lg mb-4"
-                style={{
-                  backgroundColor: '#847266',
-                  color: '#3D2F2A',
-                }}
-                onChange={(e) => setZipCode(e.target.value)}
-              />
-              <button className="px-4 py-2 rounded-[15px] shadow-md font-bold mb-6 ml-2"
-                style={{
-                  backgroundColor: '#3D2F2A',
-                  color: '#DFDDCE',
-                  fontFamily: 'Outfit, sans-serif',
-                }} 
-                onClick={() => {
-                  findTop5LibrariesByZip();
-                  setClose(true);
-                }}>
-                Search
-              </button>
-              <button className="ml-2 mt-1" hidden={!(isLoaded && close)} onClick={() => {setIsLoaded(false); setClose(true)}}
-                style={{width: "25px", height: "25px"}}> <img src="close.png"/> </button>
-              <div style={{
-                backgroundColor: '#3D2F2A',
-                color: '#DFDDCE',
-                fontFamily: 'Outfit, sans-serif',
-              }}>
-                {(isLoaded && close) && (
-                  <div className="ml-2" style={{backgroundColor: '#3D2F2A'}}> 
-                    <h3>Nearby Libraries:</h3>
-                    <ul>
-                      {libraries.map((lib, index) => (
-                        <li key={index}>{lib.name}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
-              <div style={{
-                backgroundColor: '#847266',
-                color: '#3D2F2A',
-              }}>
-                {isLoaded && close && (
-                  <LibraryMap libraries={libraries} mapCenterCoord={mapCenter} />
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Right Column */}
-        <div className="md:w-1/2 flex flex-col gap-8">
-          {/* Add Friend Section */}
-          <div className="p-4">
-            <h2 className="font-bold text-3xl mb-4"
-              style={{ color: '#DFDDCE', fontFamily: 'Outfit, sans-serif' }}>
-              Add Friend
-            </h2>
-            <div className="relative mb-4 w-full">
-              <input
-                type="text"
-                placeholder="Search by name or email"
-                className="w-full p-3 border rounded-lg pr-24"
-                style={{
-                  backgroundColor: '#DFDDCE',
-                  color: '#3D2F2A',
-                }}
-                value={friendSearch}
-                onChange={(e) => setFriendSearch(e.target.value)}
-              />
-              <button 
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-2 rounded-[15px] shadow-md font-bold"
-                style={{
-                  backgroundColor: '#3D2F2A',
-                  color: '#DFDDCE',
-                  fontFamily: 'Outfit, sans-serif',
-                }}
-                onClick={searchUsers}>
-                Search
-              </button>
-            </div>
-            
-            {/* Search Results */}
-            {showSearchResults && (
-              <div className="bg-[#DFDDCE] p-4 rounded-lg mt-2 max-h-60 overflow-y-auto">
-                {searchResultMessage ? (
-                  <p className="text-[#3D2F2A]">{searchResultMessage}</p>
-                ) : (
-                  <ul className="divide-y divide-gray-300">
-                    {searchResults.map((user) => (
-                      <li key={user.id} className="py-2 flex justify-between items-center">
-                        <div>
-                          <p className="font-semibold text-[#3D2F2A]">{user.name}</p>
-                          {user.username && (
-                            <p className="text-xs text-gray-500">@{user.username}</p>
-                          )}
-                        </div>
-                        <div>
-                          {friends.includes(user.id) ? (
-                            <span className="text-[#5A7463] font-medium">Already friends</span>
-                          ) : sentRequests.includes(user.id) ? (
-                            <button
-                              onClick={() => handleUnsendRequest(user.id)}
-                              className="px-3 py-1 rounded-lg text-sm bg-[#847266] text-[#DFDDCE]"
-                            >
-                              Cancel Request
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handleSendFriendRequest(user.id)}
-                              className="px-3 py-1 rounded-lg text-sm bg-[#5A7463] text-[#DFDDCE]"
-                            >
-                              Add Friend
-                            </button>
-                          )}
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            )}
-          </div>
-
-
-          {/* Yearly Reading Challenge Section */}
-          <div className="p-4">
-            <h2 className="font-bold items-center text-3xl"
-            style={{ color: '#DFDDCE', fontFamily: 'Outfit, sans-serif' }}>
-              2025 Reading Challenge</h2>
-            <div className="bg-[#DFDDCE] p-4 rounded-lg shadow-lg mt-2">
-              {readingGoal === null || isEditingGoal ? (
-                <div>
-                  <p className="text-lg font-bold text-[#3D2F2A]">Set your reading goal for the year:</p>
-                  <div className="flex flex-col md:flex-row md:items-center gap-2">
-                    <input
-                      type="number"
-                      className={`p-2 border rounded-lg flex-grow mt-2 font-bold text-[#3D2F2A] placeholder-[#847266] ${
-                        goalError ? 'border-red-500' : ''
-                      }`}
-                      placeholder="Enter goal"
-                      value={inputGoal}
-                      onChange={(e) => {
-                        setInputGoal(e.target.value);
-                        setGoalError('');
-                      }}
-                    />
-                    <button
-                      className="mt-2 px-4 py-2 bg-[#3D2F2A] text-[#DFDDCE] rounded-lg font-bold"
-                      onClick={handleSetGoal}
-                    >
-                      Set Goal
-                    </button>
-                  </div>
-                  {goalError && (
-                    <p className="text-red-600 mt-1 text-sm font-medium">{goalError}</p>
-                  )}
-                </div>
-              ) : (
-                <div>
-                  <p className="text-lg font-bold text-[#3D2F2A]">Books Read: {booksRead} / {readingGoal}</p>
-                  {booksRead >= readingGoal && (
-                    <p className="text-lg font-bold text-[#3D2F2A] mt-2">
-                      🎉 Congratulations on reaching your yearly goal! 🎉
-                    </p>
-                  )}
-                  <div className="w-full bg-gray-300 rounded-full h-4 mt-2">
-                    <div
-                      className="bg-[#3D2F2A] h-4 rounded-full"
-                      style={{ width: `${progressPercentage}%` }}
-                    ></div>
-                  </div>
-                  <button
-                    className="mt-2 px-4 py-2 bg-[#847266] text-[#DFDDCE] rounded-lg font-bold"
-                    onClick={handleEditGoal}
-                  >
-                    Edit Goal
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-
-          {/* Spotify Connection Section */}
+          {/* Spotify Connection Section - MOVED TO BOTTOM LEFT */}
           <div className="mt-6">
             <h2 className="font-bold text-3xl"
               style={{ color: '#DFDDCE', fontFamily: 'Outfit, sans-serif' }}>
@@ -874,18 +680,6 @@ if (!user && !isAuthenticating) {
                       )}
                     </div>
                   )}
-                  
-                  {/* {!showPlaylistForm && (
-                    <button
-                      className="mt-2 px-4 py-2 bg-[#1DB954] text-white rounded-lg font-bold flex items-center"
-                      onClick={() => router.push('/create-playlist')}
-                    >
-                      <span className="mr-2">Create Reading Playlist</span>
-                      <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512">
-                        <path fill="currentColor" d="M248 8C111.1 8 0 119.1 0 256s111.1 248 248 248 248-111.1 248-248S384.9 8 248 8zm100.7 364.9c-4.2 0-6.8-1.3-10.7-3.6-62.4-37.6-135-39.2-206.7-24.5-3.9 1-9 2.6-11.9 2.6-9.7 0-15.8-7.7-15.8-15.8 0-10.3 6.1-15.2 13.6-16.8 81.9-18.1 165.6-16.5 237 30.6 6.1 3.9 9.7 7.4 9.7 16.5s-7.1 15.4-15.2 15.4zm26.9-65.6c-5.2 0-8.7-2.3-12.3-4.2-62.5-37-155.7-51.9-238.6-29.4-4.8 1.3-7.4 2.6-11.9 2.6-10.7 0-19.4-8.7-19.4-19.4s5.2-17.8 15.5-20.7c27.8-7.8 56.2-13.6 97.8-13.6 64.9 0 127.6 16.1 177 45.5 8.1 4.8 11.3 11 11.3 19.7-.1 10.8-8.5 19.5-19.4 19.5z"/>
-                      </svg>
-                    </button>
-                  )} */}
                 </div>
               ) : (
                 <div>
@@ -912,15 +706,199 @@ if (!user && !isAuthenticating) {
               )}
             </div>
           </div>
+        </div>
+        
+        {/* Right Column */}
+        <div className="md:w-1/2 flex flex-col gap-8">
+          {/* Yearly Reading Challenge Section - MOVED TO TOP RIGHT */}
+          <div className="p-4">
+            <h2 className="font-bold items-center text-3xl"
+            style={{ color: '#DFDDCE', fontFamily: 'Outfit, sans-serif' }}>
+              2025 Reading Challenge</h2>
+            <div className="bg-[#DFDDCE] p-4 rounded-lg shadow-lg mt-2">
+              {readingGoal === null || isEditingGoal ? (
+                <div>
+                  <p className="text-lg font-bold text-[#3D2F2A]">Set your reading goal for the year:</p>
+                  <div className="flex flex-col md:flex-row md:items-center gap-2">
+                    <input
+                      type="number"
+                      className={`p-2 border rounded-lg flex-grow mt-2 font-bold text-[#3D2F2A] placeholder-[#847266] ${
+                        goalError ? 'border-red-500' : ''
+                      }`}
+                      placeholder="Enter goal"
+                      value={inputGoal}
+                      onChange={(e) => {
+                        setInputGoal(e.target.value);
+                        setGoalError('');
+                      }}
+                    />
+                    <button
+                      className="mt-2 px-4 py-2 bg-[#3D2F2A] text-[#DFDDCE] rounded-lg font-bold"
+                      onClick={handleSetGoal}
+                    >
+                      Set Goal
+                    </button>
+                  </div>
+                  {goalError && (
+                    <p className="text-red-600 mt-1 text-sm font-medium">{goalError}</p>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <p className="text-lg font-bold text-[#3D2F2A]">Books Read: {booksRead} / {readingGoal}</p>
+                  {booksRead >= readingGoal && (
+                    <p className="text-lg font-bold text-[#3D2F2A] mt-2">
+                      🎉 Congratulations on reaching your yearly goal! 🎉
+                    </p>
+                  )}
+                  <div className="w-full bg-gray-300 rounded-full h-4 mt-2">
+                    <div
+                      className="bg-[#3D2F2A] h-4 rounded-full"
+                      style={{ width: `${progressPercentage}%` }}
+                    ></div>
+                  </div>
+                  <button
+                    className="mt-2 px-4 py-2 bg-[#847266] text-[#DFDDCE] rounded-lg font-bold"
+                    onClick={handleEditGoal}
+                  >
+                    Edit Goal
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
 
+          {/* Add Friend Section */}
+          <div className="p-4">
+            <h2 className="font-bold text-3xl mb-4"
+              style={{ color: '#DFDDCE', fontFamily: 'Outfit, sans-serif' }}>
+              Add Friend
+            </h2>
+            <div className="relative mb-4 w-full">
+              <input
+                type="text"
+                placeholder="Search by name or email"
+                className="w-full p-3 border rounded-lg pr-24"
+                style={{
+                  backgroundColor: '#DFDDCE',
+                  color: '#3D2F2A',
+                }}
+                value={friendSearch}
+                onChange={(e) => setFriendSearch(e.target.value)}
+              />
+              <button 
+                className="absolute right-2 top-1/2 transform -translate-y-1/2 px-4 py-2 rounded-[15px] shadow-md font-bold"
+                style={{
+                  backgroundColor: '#3D2F2A',
+                  color: '#DFDDCE',
+                  fontFamily: 'Outfit, sans-serif',
+                }}
+                onClick={searchUsers}>
+                Search
+              </button>
+            </div>
+            
+            {/* Search Results */}
+            {showSearchResults && (
+              <div className="bg-[#DFDDCE] p-4 rounded-lg mt-2 max-h-60 overflow-y-auto">
+                {searchResultMessage ? (
+                  <p className="text-[#3D2F2A]">{searchResultMessage}</p>
+                ) : (
+                  <ul className="divide-y divide-gray-300">
+                    {searchResults.map((user) => (
+                      <li key={user.id} className="py-2 flex justify-between items-center">
+                        <div>
+                          <p className="font-semibold text-[#3D2F2A]">{user.name}</p>
+                          {user.username && (
+                            <p className="text-xs text-gray-500">@{user.username}</p>
+                          )}
+                        </div>
+                        <div>
+                          {friends.includes(user.id) ? (
+                            <span className="text-[#5A7463] font-medium">Already friends</span>
+                          ) : sentRequests.includes(user.id) ? (
+                            <button
+                              onClick={() => handleUnsendRequest(user.id)}
+                              className="px-3 py-1 rounded-lg text-sm bg-[#847266] text-[#DFDDCE]"
+                            >
+                              Cancel Request
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleSendFriendRequest(user.id)}
+                              className="px-3 py-1 rounded-lg text-sm bg-[#5A7463] text-[#DFDDCE]"
+                            >
+                              Add Friend
+                            </button>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
 
-          
-
-  
-
+          {/* Map Section - MOVED TO BOTTOM RIGHT */}
+          <div className="p-4">
+            <h2 className="font-bold items-center text-3xl"
+            style={{ color: '#DFDDCE', fontFamily: 'Outfit, sans-serif' }}>
+              Find Your Local Library
+            </h2>
+            <div className="p-4 rounded-lg w-full h-auto overflow-hidden"
+                style={{ backgroundColor: '#DFDDCE'}}>
+              <input
+                type="text"
+                placeholder="Enter zip-code"
+                className="flex-grow p-2 border rounded-lg mb-4"
+                style={{
+                  backgroundColor: '#847266',
+                  color: '#3D2F2A',
+                }}
+                onChange={(e) => setZipCode(e.target.value)}
+              />
+              <button className="px-4 py-2 rounded-[15px] shadow-md font-bold mb-6 ml-2"
+                style={{
+                  backgroundColor: '#3D2F2A',
+                  color: '#DFDDCE',
+                  fontFamily: 'Outfit, sans-serif',
+                }} 
+                onClick={() => {
+                  findTop5LibrariesByZip();
+                  setClose(true);
+                }}>
+                Search
+              </button>
+              <button className="ml-2 mt-1" hidden={!(isLoaded && close)} onClick={() => {setIsLoaded(false); setClose(true)}}
+                style={{width: "25px", height: "25px"}}> <img src="close.png"/> </button>
+              <div style={{
+                backgroundColor: '#3D2F2A',
+                color: '#DFDDCE',
+                fontFamily: 'Outfit, sans-serif',
+              }}>
+                {(isLoaded && close) && (
+                  <div className="ml-2" style={{backgroundColor: '#3D2F2A'}}> 
+                    <h3>Nearby Libraries:</h3>
+                    <ul>
+                      {libraries.map((lib, index) => (
+                        <li key={index}>{lib.name}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+              <div style={{
+                backgroundColor: '#847266',
+                color: '#3D2F2A',
+              }}>
+                {isLoaded && close && (
+                  <LibraryMap libraries={libraries} mapCenterCoord={mapCenter} />
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
-      </div>
-      
+    </div>
   );
-}
