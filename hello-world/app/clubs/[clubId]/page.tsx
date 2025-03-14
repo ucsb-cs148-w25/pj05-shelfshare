@@ -538,7 +538,7 @@ export default function ClubDetails() {
             </div>
 
             {isEditModalOpen && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
                 <div className="bg-[#92A48A] rounded-lg shadow-xl p-8 w-full max-w-md">
                   <h2 className="text-2xl font-semibold text-[#3D2F2A] mb-6">Edit Club Details</h2>
                   <form onSubmit={handleEditClubSubmit} className="space-y-4">
