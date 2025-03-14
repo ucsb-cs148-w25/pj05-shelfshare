@@ -192,7 +192,7 @@ export default function ClubDetails() {
       setIsSearchingNewBook(false); // Reset searching state
       setSearchQuery(''); // Clear search query
       setSearchResults([]); // Clear search results
-      alert('New book selected successfully!');
+      //alert('New book selected successfully!');
     } catch (error) {
       console.error('Error selecting new book:', error);
       alert('Failed to select new book.');
@@ -424,7 +424,7 @@ export default function ClubDetails() {
       });
 
       setIsSearchingNewBook(true); // Set searching state to true
-      alert('Book marked as read and moved to previous books!');
+      //alert('Book marked as read and moved to previous books!');
     } catch (error) {
       console.error('Error marking book as read:', error);
       alert('Failed to mark book as read.');
@@ -453,7 +453,7 @@ export default function ClubDetails() {
             members: [...currentMembers, user.uid],
             memberCount: currentMemberCount + 1,
           });
-          alert('You have successfully joined the club!');
+          //alert('You have successfully joined the club!');
         } else {
           alert('You are already a member of this club.');
         }
@@ -488,7 +488,7 @@ export default function ClubDetails() {
             members: updatedMembers,
             memberCount: currentMemberCount - 1,
           });
-          alert('You have successfully left the club.');
+          //alert('You have successfully left the club.');
         } else {
           alert('You are not a member of this club.');
         }
