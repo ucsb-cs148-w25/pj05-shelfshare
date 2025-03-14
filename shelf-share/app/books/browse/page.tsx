@@ -506,65 +506,63 @@ export default function Browse() {
       </div>
 
       <div className="flex mt-6 gap-6">
-        <div className="p-4 rounded-lg bg-[#DFDDCE] h-[300px] w-[250px]">
-          <h3 className="text-2xl font-bold text-[#3D2F2A] mb-4">Filter By:</h3>
-          <div>
-            <label className="block text-xl font-bold text-[#3D2F2A]">Average Rating</label>
-            <div className="flex space-x-2 mt-1">
-              <input 
-                type="number" 
-                value={minRating} 
-                onChange={(e) => setMinRating(e.target.value)} 
-                className="w-16 px-2 py-1 rounded text-[#3D2F2A]" 
-                placeholder="Min" 
-              />
-              <span
-              className="py-1 rounded text-[#3D2F2A]" 
-              >to</span>
-              <input 
-                type="number" 
-                value={maxRating} 
-                onChange={(e) => setMaxRating(e.target.value)} 
-                className="w-16 px-2 py-1 rounded text-[#3D2F2A]" 
-                placeholder="Max" 
-              />
-            </div>
+      <div className="p-4 rounded-lg bg-[#DFDDCE] h-[300px] w-[250px] overflow-y-auto">
+        <h3 className="text-2xl font-bold text-[#3D2F2A] mb-4">Filter By:</h3>
+        <div>
+          <label className="block text-xl font-bold text-[#3D2F2A]">Average Rating</label>
+          <div className="flex space-x-2 mt-1">
+            <input
+              type="number"
+              value={minRating}
+              onChange={(e) => setMinRating(e.target.value)}
+              className="w-16 px-2 py-1 rounded text-[#3D2F2A]"
+              placeholder="Min"
+            />
+            <span className="py-1 rounded text-[#3D2F2A]">to</span>
+            <input
+              type="number"
+              value={maxRating}
+              onChange={(e) => setMaxRating(e.target.value)}
+              className="w-16 px-2 py-1 rounded text-[#3D2F2A]"
+              placeholder="Max"
+            />
           </div>
-              
-          <div className="mb-2 mt-4">
-            <label className="block text-xl font-bold text-[#3D2F2A]">Year Published</label>
-            <div className="flex space-x-2 mt-1">
-              <input 
-                type="number" 
-                value={minYear} 
-                onChange={(e) => setMinYear(e.target.value)} 
-                className="w-20 px-2 py-1 rounded text-[#3D2F2A]" 
-                placeholder="From" 
-              />
-              <span
-              className="py-1 rounded text-[#3D2F2A]" 
-              >to</span>
-              <input 
-                type="number" 
-                value={maxYear} 
-                onChange={(e) => setMaxYear(e.target.value)} 
-                className="w-20 px-2 py-1 rounded text-[#3D2F2A]" 
-                placeholder="To" 
-              />
-            </div>
-          </div>
-
-          <button 
-            onClick={applyFilters} 
-            className="mt-4 px-4 py-2 bg-[#3D2F2A] text-[#DFDDCE] rounded-[15px] shadow-md w-full"
-          >
-            APPLY
-          </button>
-          
-          {filterMessage && (
-            <p className="mt-4 text-[#3D2F2A] text-sm font-semibold">{filterMessage}</p>
-          )}
         </div>
+
+        <div className="mb-2 mt-4">
+          <label className="block text-xl font-bold text-[#3D2F2A]">Year Published</label>
+          <div className="flex space-x-2 mt-1">
+            <input
+              type="number"
+              value={minYear}
+              onChange={(e) => setMinYear(e.target.value)}
+              className="w-20 px-2 py-1 rounded text-[#3D2F2A]"
+              placeholder="From"
+            />
+            <span className="py-1 rounded text-[#3D2F2A]">to</span>
+            <input
+              type="number"
+              value={maxYear}
+              onChange={(e) => setMaxYear(e.target.value)}
+              className="w-20 px-2 py-1 rounded text-[#3D2F2A]"
+              placeholder="To"
+            />
+          </div>
+        </div>
+
+        <button
+          onClick={applyFilters}
+          className="mt-4 px-4 py-2 bg-[#3D2F2A] text-[#DFDDCE] rounded-[15px] shadow-md w-full"
+        >
+          APPLY
+        </button>
+
+        {filterMessage && (
+          <p className="mt-4 text-[#3D2F2A] text-sm font-semibold break-words max-w-full">
+            {filterMessage}
+          </p>
+        )}
+      </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 flex-1">
           {filteredBooks.length > 0 ? (
