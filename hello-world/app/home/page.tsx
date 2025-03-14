@@ -34,6 +34,19 @@ interface dataLibrary {
   }
 }
 
+
+interface TrackReccomendation {
+  title: string;
+  artist: string;
+  reason:string;
+}
+
+interface PlaylistData{
+  playlistName: string;
+  description: string;
+  tracks: TrackReccomendation[];
+}
+
 interface BookItem {
   id: string;
   bookId: string;
@@ -42,6 +55,7 @@ interface BookItem {
   coverUrl: string;
   dateAdded: Timestamp | Date;
   shelfType?: string;
+
 }
 
 interface UserProfile {
@@ -62,8 +76,19 @@ export default function Home() {
   const [booksRead, setBooksRead] = useState(0);
   const [inputGoal, setInputGoal] = useState('');
   const [isEditingGoal, setIsEditingGoal] = useState(false);
+
+  const [spotifyConnected, setSpotifyConnected] = useState(false);
+
+  // New states for book playlist recommendation
+  const [bookTitle, setBookTitle] = useState('');
+  const [isGeneratingPlaylist, setIsGeneratingPlaylist] = useState(false);
+  const [playlistData, setPlaylistData] = useState<PlaylistData | null>(null);
+  const [showPlaylistForm, setShowPlaylistForm] = useState(false);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+
   const [goalError, setGoalError] = useState('');
   const [currentlyReading, setCurrentlyReading] = useState<BookItem[]>([]);
+
 
   // New state for friend functionality
   const [friendSearch, setFriendSearch] = useState("");
@@ -74,11 +99,72 @@ export default function Home() {
   const [searchResultMessage, setSearchResultMessage] = useState("");
 
   // Redirect to login page if user is not authenticated
+  // useEffect(() => {
+  //   if (!user) {
+  //     router.push('/');
+  //   }
+  // }, [user, router]);
+
+
+  
+ // First useEffect - handle initial auth check and Spotify connection status
   useEffect(() => {
-    if (!user) {
-      router.push('/');
+  // Check if authentication is in progress from the callback
+  const authInProgress = sessionStorage.getItem('auth_in_progress') === 'true';
+  
+  if (authInProgress) {
+    // Clear the flag after we've handled it
+    sessionStorage.removeItem('auth_in_progress');
+    setIsAuthenticating(true);
+  }
+  
+  const checkSpotifyConnection = async () => {
+    if (authInProgress) {
+      setIsAuthenticating(true);
     }
-  }, [user, router]);
+  
+    const accessToken = localStorage.getItem('spotify_access_token');
+    const tokenExpiry = localStorage.getItem('spotify_token_expiry');
+  
+    if (accessToken && tokenExpiry && parseInt(tokenExpiry) > Date.now()) {
+      console.log("✅ Spotify token is still valid.");
+      setSpotifyConnected(true);
+      setIsAuthenticating(false);
+    } else {
+      console.log("⏳ Spotify token expired or missing. Waiting for re-authentication...");
+      setSpotifyConnected(false);
+  
+      // Remove expired tokens
+      localStorage.removeItem('spotify_access_token');
+      localStorage.removeItem('spotify_refresh_token');
+      localStorage.removeItem('spotify_token_expiry');
+  
+      if (!authInProgress) {
+        setTimeout(() => {
+          setIsAuthenticating(false);
+          if (user) { // Only show alert if user is logged in
+            //alert("Your Spotify session has expired. Please log in again.");
+          }
+        }, 3000);
+      }
+    }
+  };
+  
+  checkSpotifyConnection();
+  const intervalId = setInterval(checkSpotifyConnection, 60000); // Recheck every 60 seconds
+  
+  return () => clearInterval(intervalId);
+}, [user]); // Only depend on user, not on router or isAuthenticating
+
+// Second useEffect - handle redirects to login page
+useEffect(() => {
+  const authInProgress = sessionStorage.getItem('auth_in_progress') === 'true';
+  
+  if (!user && !isAuthenticating && !authInProgress) {
+    console.log("Redirecting to ShelfShare login...");
+    router.push('/');
+  }
+}, [user, router, isAuthenticating]);
 
 
   useEffect(() => {
@@ -250,6 +336,137 @@ const handleUnsendRequest = async (friendId: string) => {
   }
 
   const progressPercentage = Math.min((booksRead / (readingGoal || 1)) * 100, 100); // Cap progress at 100%
+
+  // New function to handle generating a playlist
+  const generatePlaylist = async () => {
+    if (!bookTitle.trim()) return;
+    
+    setIsGeneratingPlaylist(true);
+    
+    try {
+      const response = await fetch('/api/ai-recommend/generate-playlist', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          bookTitle,
+          // You could add these as optional inputs:
+          // bookAuthor, 
+          // bookGenre,
+          // mood
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate playlist');
+      }
+      
+      const data = await response.json();
+      setPlaylistData(data);
+      
+    } catch (error) {
+      console.error('Error generating playlist:', error);
+    } finally {
+      setIsGeneratingPlaylist(false);
+    }
+  };
+
+
+  const createSpotifyPlaylist = async () => {
+    if (!playlistData) {
+      console.error("❌ No playlist data available.");
+      //alert("Something went wrong. Try generating the playlist again.");
+      return;
+    }
+  
+    const accessToken = localStorage.getItem('spotify_access_token');
+  
+    if (!accessToken) {
+      console.error("❌ No access token found.");
+      //alert("Spotify authentication required. Please log in.");
+      return;
+    }
+  
+    console.log("🔄 Sending playlist to Spotify:", playlistData);
+  
+    try {
+      const response = await fetch('/api/ai-recommend/create-spotify-playlist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playlistData, accessToken }),
+      });
+  
+      const data = await response.json();
+  
+      if (!response.ok) {
+        console.error("❌ Failed to create playlist:", data);
+        //alert(`Error creating playlist: ${data.error}`);
+        return;
+      }
+  
+      console.log("✅ Created Spotify playlist:", data.playlistUrl);
+      window.open(data.playlistUrl, '_blank');
+    } catch (error) {
+      console.error("❌ Unexpected error:", error);
+      //alert("Failed to create Spotify playlist.");
+    }
+  };
+  
+
+
+  const handleSpotifyLogin = () => {
+    const CLIENT_ID = process.env.NEXT_PUBLIC_SPOTIFY_CLIENT_ID;
+    const REDIRECT_URI = process.env.NEXT_PUBLIC_SPOTIFY_REDIRECT_URI || `${window.location.origin}/spotify-callback`;
+  
+    const scopes = [
+      'user-read-private',
+      'user-read-email',
+      'playlist-modify-public',
+      'playlist-modify-private'
+    ].join(' ');
+  
+    const state = generateRandomString(16);
+    localStorage.setItem('spotify_auth_state', state);
+  
+    const authUrl = new URL('https://accounts.spotify.com/authorize');
+    authUrl.searchParams.append('response_type', 'code');
+    authUrl.searchParams.append('client_id', CLIENT_ID as string);
+    authUrl.searchParams.append('scope', scopes);
+    authUrl.searchParams.append('redirect_uri', REDIRECT_URI);
+    authUrl.searchParams.append('state', state);
+  
+    console.log('Redirecting to Spotify:', authUrl.toString());
+    window.location.href = authUrl.toString();
+  };
+
+  // Helper function to generate a random string for the state parameter
+  function generateRandomString(length: number) {
+    let text = '';
+    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    
+    for (let i = 0; i < length; i++) {
+      text += possible.charAt(Math.floor(Math.random() * possible.length));
+    }
+    
+    return text;
+  }
+
+  // Show a loading message while authenticating
+  if (isAuthenticating) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-xl font-bold" 
+           style={{ color: '#DFDDCE', backgroundColor: '#5A7463', fontFamily: 'Outfit, sans-serif' }}>
+        ⏳ Wait while we connect your Spotify...
+      </div>
+    );
+  }
+
+// Redirect to login page if user is not authenticated and not in the middle of Spotify authentication
+if (!user && !isAuthenticating) {
+  router.push('/');
+  return null; // Prevent rendering during redirect
+}
 
   const fetchCoordinates = async (zipCode: string) => {
     setIsLoaded(false);
@@ -524,6 +741,7 @@ const handleUnsendRequest = async (friendId: string) => {
             )}
           </div>
 
+
           {/* Yearly Reading Challenge Section */}
           <div className="p-4">
             <h2 className="font-bold items-center text-3xl"
@@ -581,9 +799,128 @@ const handleUnsendRequest = async (friendId: string) => {
               )}
             </div>
           </div>
+
+
+          {/* Spotify Connection Section */}
+          <div className="mt-6">
+            <h2 className="font-bold text-3xl"
+              style={{ color: '#DFDDCE', fontFamily: 'Outfit, sans-serif' }}>
+              Connect with Spotify
+            </h2>
+            <div className="bg-[#DFDDCE] p-4 rounded-lg shadow-lg mt-2">
+              {spotifyConnected ? (
+                <div>
+                  <div className="mb-4">
+                    <p className="text-lg font-bold text-[#3D2F2A]">
+                      ✅ Your Spotify account is connected
+                    </p>
+                    <p className="text-[#3D2F2A] mt-2">
+                      Track your audiobooks and share your reading playlists with friends.
+                    </p>
+                    
+                    {/* Toggle for playlist recommendation form */}
+                    <button
+                      className="mt-4 px-4 py-2 bg-[#3D2F2A] text-[#DFDDCE] rounded-lg font-bold"
+                      onClick={() => setShowPlaylistForm(!showPlaylistForm)}
+                    >
+                      {showPlaylistForm ? 'Hide Playlist Generator' : 'Get AI Reading Playlist'}
+                    </button>
+                  </div>
+                  
+                  {/* AI Reading Playlist Generator */}
+                  {showPlaylistForm && (
+                    <div className="mt-4 p-4 bg-[#847266] rounded-lg">
+                      <h3 className="text-lg font-bold text-[#DFDDCE] mb-2">Reading Playlist Generator</h3>
+                      <input
+                        type="text"
+                        className="p-2 border rounded-lg w-full mb-2 text-[#3D2F2A]"
+                        placeholder="Enter book title"
+                        value={bookTitle}
+                        onChange={(e) => setBookTitle(e.target.value)}
+                      />
+                      <button
+                        className="px-4 py-2 bg-[#3D2F2A] text-[#DFDDCE] rounded-lg font-bold w-full"
+                        onClick={generatePlaylist}
+                        disabled={isGeneratingPlaylist || !bookTitle.trim()}
+                      >
+                        {isGeneratingPlaylist ? 'Generating...' : 'Generate Playlist'}
+                      </button>
+                      
+                      {/* Display playlist recommendations */}
+                      {playlistData && (
+                        <div className="mt-4 bg-[#DFDDCE] p-3 rounded-lg text-[#3D2F2A]">
+                          <h3 className="text-xl font-bold">{playlistData.playlistName}</h3>
+                          <p className="text-sm mb-3">{playlistData.description}</p>
+                          
+                          <div className="max-h-60 overflow-y-auto pr-2">
+                            {playlistData.tracks.map((track, index) => (
+                              <div key={index} className="mb-2 pb-2 border-b border-[#847266]">
+                                <p className="font-bold">{track.title} - {track.artist}</p>
+                                <p className="text-sm">{track.reason}</p>
+                              </div>
+                            ))}
+                          </div>
+                          
+                          <button
+                            className="mt-3 px-4 py-2 bg-[#1DB954] text-white rounded-lg font-bold flex items-center justify-center w-full"
+                            onClick={createSpotifyPlaylist}
+                          >
+                            <span className="mr-2">Create in Spotify</span>
+                            <svg width="20" height="20" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512">
+                              <path fill="currentColor" d="M248 8C111.1 8 0 119.1 0 256s111.1 248 248 248 248-111.1 248-248S384.9 8 248 8zm100.7 364.9c-4.2 0-6.8-1.3-10.7-3.6-62.4-37.6-135-39.2-206.7-24.5-3.9 1-9 2.6-11.9 2.6-9.7 0-15.8-7.7-15.8-15.8 0-10.3 6.1-15.2 13.6-16.8 81.9-18.1 165.6-16.5 237 30.6 6.1 3.9 9.7 7.4 9.7 16.5s-7.1 15.4-15.2 15.4zm26.9-65.6c-5.2 0-8.7-2.3-12.3-4.2-62.5-37-155.7-51.9-238.6-29.4-4.8 1.3-7.4 2.6-11.9 2.6-10.7 0-19.4-8.7-19.4-19.4s5.2-17.8 15.5-20.7c27.8-7.8 56.2-13.6 97.8-13.6 64.9 0 127.6 16.1 177 45.5 8.1 4.8 11.3 11 11.3 19.7-.1 10.8-8.5 19.5-19.4 19.5z"/>
+                            </svg>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* {!showPlaylistForm && (
+                    <button
+                      className="mt-2 px-4 py-2 bg-[#1DB954] text-white rounded-lg font-bold flex items-center"
+                      onClick={() => router.push('/create-playlist')}
+                    >
+                      <span className="mr-2">Create Reading Playlist</span>
+                      <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512">
+                        <path fill="currentColor" d="M248 8C111.1 8 0 119.1 0 256s111.1 248 248 248 248-111.1 248-248S384.9 8 248 8zm100.7 364.9c-4.2 0-6.8-1.3-10.7-3.6-62.4-37.6-135-39.2-206.7-24.5-3.9 1-9 2.6-11.9 2.6-9.7 0-15.8-7.7-15.8-15.8 0-10.3 6.1-15.2 13.6-16.8 81.9-18.1 165.6-16.5 237 30.6 6.1 3.9 9.7 7.4 9.7 16.5s-7.1 15.4-15.2 15.4zm26.9-65.6c-5.2 0-8.7-2.3-12.3-4.2-62.5-37-155.7-51.9-238.6-29.4-4.8 1.3-7.4 2.6-11.9 2.6-10.7 0-19.4-8.7-19.4-19.4s5.2-17.8 15.5-20.7c27.8-7.8 56.2-13.6 97.8-13.6 64.9 0 127.6 16.1 177 45.5 8.1 4.8 11.3 11 11.3 19.7-.1 10.8-8.5 19.5-19.4 19.5z"/>
+                      </svg>
+                    </button>
+                  )} */}
+                </div>
+              ) : (
+                <div>
+                  <p className="text-lg font-bold text-[#3D2F2A]">
+                    Connect your Spotify account to:
+                  </p>
+                  <ul className="list-disc ml-5 my-2 text-[#3D2F2A]">
+                    <li>Track your audiobooks</li>
+                    <li>Create reading playlists</li>
+                    <li>Get AI song recommendations for your books</li>
+                    <li>Share music with reading buddies</li>
+                    
+                  </ul>
+                  <button
+                    className="mt-2 px-4 py-2 bg-[#1DB954] text-white rounded-lg font-bold flex items-center"
+                    onClick={handleSpotifyLogin}
+                  >
+                    <span className="mr-2">Connect with Spotify</span>
+                    <svg width="24" height="24" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 496 512">
+                      <path fill="currentColor" d="M248 8C111.1 8 0 119.1 0 256s111.1 248 248 248 248-111.1 248-248S384.9 8 248 8zm100.7 364.9c-4.2 0-6.8-1.3-10.7-3.6-62.4-37.6-135-39.2-206.7-24.5-3.9 1-9 2.6-11.9 2.6-9.7 0-15.8-7.7-15.8-15.8 0-10.3 6.1-15.2 13.6-16.8 81.9-18.1 165.6-16.5 237 30.6 6.1 3.9 9.7 7.4 9.7 16.5s-7.1 15.4-15.2 15.4zm26.9-65.6c-5.2 0-8.7-2.3-12.3-4.2-62.5-37-155.7-51.9-238.6-29.4-4.8 1.3-7.4 2.6-11.9 2.6-10.7 0-19.4-8.7-19.4-19.4s5.2-17.8 15.5-20.7c27.8-7.8 56.2-13.6 97.8-13.6 64.9 0 127.6 16.1 177 45.5 8.1 4.8 11.3 11 11.3 19.7-.1 10.8-8.5 19.5-19.4 19.5z"/>
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+
+          
+
   
+
         </div>
       </div>
-    </div>
+      </div>
+      
   );
 }
