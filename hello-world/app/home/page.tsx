@@ -143,7 +143,7 @@ export default function Home() {
         setTimeout(() => {
           setIsAuthenticating(false);
           if (user) { // Only show alert if user is logged in
-            alert("Your Spotify session has expired. Please log in again.");
+            //alert("Your Spotify session has expired. Please log in again.");
           }
         }, 3000);
       }
@@ -376,7 +376,7 @@ const handleUnsendRequest = async (friendId: string) => {
   const createSpotifyPlaylist = async () => {
     if (!playlistData) {
       console.error("❌ No playlist data available.");
-      alert("Something went wrong. Try generating the playlist again.");
+      //alert("Something went wrong. Try generating the playlist again.");
       return;
     }
   
@@ -384,7 +384,7 @@ const handleUnsendRequest = async (friendId: string) => {
   
     if (!accessToken) {
       console.error("❌ No access token found.");
-      alert("Spotify authentication required. Please log in.");
+      //alert("Spotify authentication required. Please log in.");
       return;
     }
   
@@ -401,7 +401,7 @@ const handleUnsendRequest = async (friendId: string) => {
   
       if (!response.ok) {
         console.error("❌ Failed to create playlist:", data);
-        alert(`Error creating playlist: ${data.error}`);
+        //alert(`Error creating playlist: ${data.error}`);
         return;
       }
   
@@ -409,7 +409,7 @@ const handleUnsendRequest = async (friendId: string) => {
       window.open(data.playlistUrl, '_blank');
     } catch (error) {
       console.error("❌ Unexpected error:", error);
-      alert("Failed to create Spotify playlist.");
+      //alert("Failed to create Spotify playlist.");
     }
   };
   
