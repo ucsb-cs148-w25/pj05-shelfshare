@@ -1,12 +1,15 @@
 'use client';
 
 import { useAuth } from '@/app/context/AuthContext';
-import { db } from '@/firebase';
+import { db, storage } from '@/firebase';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Image from 'next/image';
 import { collection, addDoc, serverTimestamp, query, onSnapshot, orderBy, doc, deleteDoc, updateDoc, getDoc } from 'firebase/firestore';
 import { useParams, useRouter } from 'next/navigation';
 import debounce from 'lodash/debounce';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 interface ClubData {
   id: string;
@@ -74,6 +77,13 @@ export default function ClubDetails() {
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [showResults, setShowResults] = useState<boolean>(false);
   const searchCache = useRef(new Map<string, SearchResult[]>());
+
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [newClubName, setNewClubName] = useState(club?.name || '');
+  const [newClubDescription, setNewClubDescription] = useState(club?.description || '');
+  const [newClubChapters, setNewClubChapters] = useState<{ title: string; deadline: string }[]>(club?.chapters || []);
+  const [newClubImage, setNewClubImage] = useState<File | null>(null);
+  const [newPreviewImage, setNewPreviewImage] = useState<string | null>(club?.imageUrl || '');
 
   // Fetch club details from Firestore
   useEffect(() => {
@@ -202,37 +212,6 @@ export default function ClubDetails() {
     }
   };
 
-  // Function to move current book to previous books
-  const handleMarkBookAsRead = async () => {
-    if (!clubId || !user || club?.creatorId !== user.uid || !club?.book) return;
-
-    try {
-      const clubDocRef = doc(db, 'clubs', clubId);
-      const currentBook = club.book;
-      const currentDate = new Date().toISOString();
-
-      // Add current book to previous books with completed date
-      const previousBook = {
-        ...currentBook,
-        completedDate: currentDate
-      };
-
-      // Create new previousBooks array if it doesn't exist
-      const previousBooks = club.previousBooks || [];
-
-      await updateDoc(clubDocRef, {
-        previousBooks: [...previousBooks, previousBook],
-        book: null // Clear current book
-      });
-
-      setIsSearchingNewBook(true); // Set searching state to true
-      alert('Book marked as read and moved to previous books!');
-    } catch (error) {
-      console.error('Error marking book as read:', error);
-      alert('Failed to mark book as read.');
-    }
-  };
-
   // Book search functionality
   const fetchSearchResults = useCallback(async (query: string) => {
     const trimmedQuery = query.trim().toLowerCase();
@@ -308,6 +287,137 @@ export default function ClubDetails() {
     [fetchSearchResults]
   );
 
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    setShowResults(query.length > 0);
+    debouncedSearch(query);
+  };
+
+  const handleEditClub = () => {
+    setNewClubName(club?.name || '');
+    setNewClubDescription(club?.description || '');
+    setNewClubChapters(club?.chapters || []);
+    setNewPreviewImage(club?.imageUrl || null);
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditClubSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+  
+    if (!clubId || !user || club?.creatorId !== user.uid) {
+      console.error('User not authorized or clubId missing');
+      return;
+    }
+  
+    // Validate chapters
+    const isValidChapters = newClubChapters.every(
+      (chapter) => chapter.title.trim() && chapter.deadline
+    );
+    
+    if (!isValidChapters) {
+      alert('Please ensure all chapters have a title and a deadline.');
+      return;
+    }
+  
+    try {
+      let imageUrl = club?.imageUrl || '/bookclub.png';
+  
+      // Check if there's a new image file uploaded
+      if (newClubImage) {
+        const uniqueFileName = `${user.uid}_${Date.now()}_${newClubImage.name.replace(/\s+/g, '_')}`;
+        const storageRef = ref(storage, `club-images/${uniqueFileName}`);
+        await uploadBytes(storageRef, newClubImage);
+        imageUrl = await getDownloadURL(storageRef);
+      }
+  
+      const updatedClubData = {
+        name: newClubName || club?.name,
+        description: newClubDescription || club?.description,
+        chapters: newClubChapters || club?.chapters,
+        imageUrl: imageUrl,
+      };
+  
+      console.log('Updating club with data:', updatedClubData);
+  
+      const clubDocRef = doc(db, 'clubs', clubId);
+      await updateDoc(clubDocRef, updatedClubData);
+  
+      setIsEditModalOpen(false);
+      alert('Club details updated successfully!');
+    } catch (error) {
+      console.error('Error updating club details:', error);
+      alert('Failed to update club details.');
+    }
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    // Validate file type and size
+    if (!file.type.startsWith('image/')) {
+      setError('Please upload a valid image file.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) { // 5MB limit
+      setError('Image size must be less than 5MB.');
+      return;
+    }
+
+    setError(null);
+    setNewClubImage(file);
+
+    const localPreviewUrl = URL.createObjectURL(file);
+    setNewPreviewImage(localPreviewUrl);
+
+    const base64Image = await convertToBase64(file);
+    setNewPreviewImage(base64Image);
+    URL.revokeObjectURL(localPreviewUrl);
+  };
+
+  const convertToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
+
+  // Function to move current book to previous books
+  const handleMarkBookAsRead = async () => {
+    if (!clubId || !user || club?.creatorId !== user.uid || !club?.book) return;
+
+    try {
+      const clubDocRef = doc(db, 'clubs', clubId);
+      const currentBook = club.book;
+      const currentDate = new Date().toISOString();
+
+      // Add current book to previous books with completed date
+      const previousBook = {
+        ...currentBook,
+        completedDate: currentDate
+      };
+
+      // Create new previousBooks array if it doesn't exist
+      const previousBooks = club.previousBooks || [];
+
+      await updateDoc(clubDocRef, {
+        previousBooks: [...previousBooks, previousBook],
+        book: null // Clear current book
+      });
+
+      setIsSearchingNewBook(true); // Set searching state to true
+      alert('Book marked as read and moved to previous books!');
+    } catch (error) {
+      console.error('Error marking book as read:', error);
+      alert('Failed to mark book as read.');
+    }
+  };
+
   const handleBookClick = (bookKey: string) => {
     // Navigate to book page
     router.push(`/books/${bookKey.split('/').pop()}`);
@@ -376,13 +486,6 @@ export default function ClubDetails() {
     }
   };
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const query = e.target.value;
-    setSearchQuery(query);
-    setShowResults(query.length > 0);
-    debouncedSearch(query);
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -420,6 +523,122 @@ export default function ClubDetails() {
                 className="object-cover"
               />
             </div>
+
+            {isEditModalOpen && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+                <div className="bg-[#92A48A] rounded-lg shadow-xl p-8 w-full max-w-md">
+                  <h2 className="text-2xl font-semibold text-[#3D2F2A] mb-6">Edit Club Details</h2>
+                  <form onSubmit={handleEditClubSubmit} className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-[#3D2F2A]">Club Name</label>
+                      <input
+                        type="text"
+                        value={newClubName}
+                        onChange={(e) => setNewClubName(e.target.value)}
+                        className="w-full px-4 py-2 bg-[#847266] text-[#DFDDCE] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#3D2F2A]"
+                        placeholder={club?.name} // Show existing name as placeholder
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#3D2F2A]">Description</label>
+                      <textarea
+                        value={newClubDescription}
+                        onChange={(e) => setNewClubDescription(e.target.value)}
+                        className="w-full h-32 px-4 py-2 bg-[#847266] text-[#DFDDCE] rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-[#3D2F2A]"
+                        placeholder={club?.description} // Show existing description as placeholder
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#3D2F2A]">Chapters</label>
+                      <div className="space-y-2">
+                        {newClubChapters.map((chapter, index) => (
+                          <div key={index} className="flex items-center space-x-2">
+                            {/* Chapter Title Input */}
+                            <input
+                              type="text"
+                              value={chapter.title}
+                              onChange={(e) => {
+                                const updatedChapters = [...newClubChapters];
+                                updatedChapters[index].title = e.target.value;
+                                setNewClubChapters(updatedChapters);
+                              }}
+                              className="w-full px-2 py-1 bg-[#847266] text-[#DFDDCE] rounded-lg"
+                              placeholder="Chapter Title"
+                            />
+                            {/* Chapter Deadline Date Picker */}
+                            <DatePicker
+                              selected={chapter.deadline ? new Date(chapter.deadline) : null}
+                              onChange={(date: Date | null) => {
+                                const updatedChapters = [...newClubChapters];
+                                updatedChapters[index].deadline = date ? date.toISOString() : '';
+                                setNewClubChapters(updatedChapters);
+                              }}
+                              placeholderText="Deadline"
+                              className="w-full px-2 py-1 bg-[#847266] text-[#DFDDCE] rounded-lg"
+                              dateFormat="yyyy/MM/dd"
+                            />
+                            {/* Remove Chapter Button */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updatedChapters = newClubChapters.filter((_, i) => i !== index);
+                                setNewClubChapters(updatedChapters);
+                              }}
+                              className="bg-[#CD5C5C] text-white px-2 py-1 rounded-lg"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                        {/* Add Chapter Button */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNewClubChapters([...(newClubChapters || []), { title: '', deadline: '' }]);
+                          }}
+                          className="bg-[#3D2F2A] text-white px-2 py-1 rounded-lg"
+                        >
+                          Add Chapter
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[#3D2F2A]">Club Image</label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="w-full px-4 py-2 bg-[#847266] text-[#DFDDCE] rounded-lg"
+                      />
+                      {newPreviewImage && (
+                        <div className="mt-4">
+                          <img
+                            src={newPreviewImage}
+                            alt="Club Preview"
+                            className="w-32 h-32 object-cover rounded-lg"
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex justify-end space-x-4">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditModalOpen(false)} 
+                      className="bg-[#CD5C5C] text-white px-4 py-2 rounded-lg hover:bg-[#5A7463] transition-colors"
+                    >
+                      Cancel
+                    </button>
+                      <button
+                        type="submit"
+                        className="bg-[#3D2F2A] text-white px-4 py-2 rounded-lg hover:bg-[#5A7463] transition-colors"
+                      >
+                        Save Changes
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
 
             {/* Current Book Section */}
             {club.book ? (
@@ -597,6 +816,14 @@ export default function ClubDetails() {
                   className="bg-[#CD5C5C] text-white px-4 py-2 rounded-lg mt-2"
                 >
                   Delete Club
+                </button>
+              )}
+              {isCreator && (
+                <button
+                  onClick={handleEditClub}
+                  className="bg-[#3D2F2A] text-white px-4 py-2 rounded-lg mt-2"
+                >
+                  Edit Club
                 </button>
               )}
               {!isCreator && (
