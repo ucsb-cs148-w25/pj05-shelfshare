@@ -902,3 +902,4 @@ if (!user && !isAuthenticating) {
       </div>
     </div>
   );
+}
