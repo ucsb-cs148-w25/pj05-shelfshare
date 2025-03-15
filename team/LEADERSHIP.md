@@ -26,19 +26,34 @@
 | 3/03/2024 | Hannah Shakouri        | Lecture 14 stand-up                       |
 | 3/05/2025 | Charlene Patenaude     | Lecture 15 stand-up                       |
 | 3/07/2025 | Charlene Patenaude     | Lab 09 stand-up                           |
+| 3/10/2024 | Hannah Shakouri        | Lecture 16 stand-up                       |
+| 3/12/2024 | Hannah Shakouri        | Lecture 17 stand-up                       |
+
 
 # Roles
 
-Scrum Master: Towela Phiri
+Product Owner: Bella Ward
 
-Project Owner: Bella Ward
+Scribe: Hannah Shakouri
 
-Scribe: Hannah Shakouri, Charlene Patenaude
+Scrum Master: Charlene Patenaude
 
 Retro Leader (Sprint01): Bella Ward
 
 Retro Leader (Sprint02): Sungchae Park
 
 Retro Leader (Sprint03): Srinidhi Sathish
+
+Testing/QA Coordinator: Bella Ward
+
+UX Coordinato: Hannah Shakouri
+
+Design Document Coordinator: Srinidhi Sathish
+
+Deployment Document Coordinator: Niyati Mummidivarapu
+
+User Manual Coordinator: Sungchae Park
+
+Final presentation leader : Hannah Shakouri - Towela Phiri
 
 
