@@ -31,25 +31,18 @@ Once the server is running, open your browser and navigate to http://localhost:3
 
 ### Functionality
 * Login with your Google account
-* View current home page functionalities
-* Access Navigation Bar at the top to access Browse Page, Timeline Page, Search Bar, and Profile Page
-* Find a book using the search bar
-* Rate and review a book on the book page
-* View your friend's activity on the Timeline page
-
-### Known Problems
-1. Adding friends not implemented
-2. Adding book to shelf not implemented
-3. Home page fields not populated
-4. Only the 'Books' functionality is implemented, 'Movies' and 'Music' not yet implemented
-
-  
+* Navigate through the home page and explore book related features
+* Access the Navigation Bar to visit the Browse, Book Club, Timeline, My Shelf, For You Page
+* Search for books using the search bar
+* Rate and review books on their respective book pages
+* Add books to your default/custom shelves
+* View your friends' reading activity and reviews on the Timeline page
 
 ## Tech Stack
 We’re using a modern tech stack to build our web app, focusing on simplicity, performance, and a great user experience. Our frontend is built with React and Next.js. On the backend, we’re using Firebase for authentication, real-time database management, and serverless functions. For styling, we chose Tailwind CSS, which makes it easy to create a clean, consistent, and responsive design. This stack helps us work efficiently while delivering a high-quality web app.
 
 ## User Roles
-The General User role represents the core audience of ShelfShare—media enthusiasts who want to connect, explore, and share their love for books, movies, and albums. These users can create a profile, rate and review media, build collections, and explore personalized recommendations tailored to their interests. They can also engage with the community by liking, commenting, sharing reviews, and following other users to stay connected.
+The General User role represents the core audience of ShelfShare—book enthusiasts who want to connect, explore, and share their love for reading. These users can create a profile, rate and review books, build collections, and explore personalized recommendations tailored to their interests. They can also engage with the community by liking, commenting, sharing reviews, and following other users to stay connected.
 
 
 ## Team Members
