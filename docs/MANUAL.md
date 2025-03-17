@@ -76,6 +76,7 @@
   5) assign a due date for reading chapters
   * Note that you could edit this information after you create your club by clicking edit club button on your club's page.
   * Only creator of the club can modify these information
+    
   <img width="563" alt="Screenshot 2025-03-17 at 12 59 23 AM" src="https://github.com/user-attachments/assets/21cf8f04-b981-47e4-b1dc-e4cbc3a49c63" />
 - Search book club by their name
 - Click on the club to join and start communicating with club members
