@@ -30,9 +30,9 @@
   <img width="843" alt="Screenshot 2025-03-17 at 12 45 20 AM" src="https://github.com/user-attachments/assets/17ab49af-c2e7-4ff7-a1d8-6545e221ff03" />
   
 - Generate a playlist that matches the book that you are currently reading by:
-  1) connect to spotify button
-  2) Typing the theme/book to read
-  3) Clicking the Generate Playlist button
+  1) Connect to spotify by clicking spotify button
+  2) Type the title of the book that you are currently reading
+  3) Click the Generate Playlist button
      
 <img width="837" alt="Screenshot 2025-03-17 at 12 41 48 AM" src="https://github.com/user-attachments/assets/b0f17e7c-0aaa-4af8-bae4-43b55bfd1f34" />
 
